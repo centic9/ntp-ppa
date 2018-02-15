@@ -1,0 +1,9 @@
+openssl_libdir.patch
+dfsg.patch
+includes.patch
+ntpdate-ipv6.patch
+ntpd-linux-caps-runtime.patch
+openssl-disable-check.patch
+libedit.patch
+sntp-sysexits.patch
+ntpd-increase-stack-size.patch
