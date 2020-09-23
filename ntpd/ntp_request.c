@@ -841,7 +841,7 @@ peer_info (
 		pp = findexistingpeer(&addr, NULL, NULL, -1, 0, NULL);
 		if (NULL == pp)
 			continue;
-		if (IS_IPV6(srcadr)) {
+		if (IS_IPV6(&pp->srcadr)) {
 			if (pp->dstadr)
 				ip->dstadr6 =
 				    (MDF_BCAST == pp->cast_flags)
@@ -1184,7 +1184,7 @@ mem_stats(
 
 	for (i = 0; i < NTP_HASH_SIZE; i++)
 		ms->hashcount[i] = (u_char)
-		    max((u_int)peer_hash_count[i], UCHAR_MAX);
+		    min((u_int)peer_hash_count[i], UCHAR_MAX);
 
 	(void) more_pkt();
 	flush_pkt();
@@ -1819,7 +1819,7 @@ do_restrict(
 	bad = 0;
 	while (items-- > 0 && !bad) {
 		memcpy(&cr, datap, item_sz);
-		cr.flags = ntohs(cr.flags);
+		cr.flags = ntohs(cr.flags);	/* XXX */
 		cr.mflags = ntohs(cr.mflags);
 		if (~RESM_NTPONLY & cr.mflags)
 			bad |= 1;
@@ -1854,7 +1854,7 @@ do_restrict(
 
 	while (items-- > 0) {
 		memcpy(&cr, datap, item_sz);
-		cr.flags = ntohs(cr.flags);
+		cr.flags = ntohs(cr.flags);	/* XXX: size */
 		cr.mflags = ntohs(cr.mflags);
 		cr.ippeerlimit = ntohs(cr.ippeerlimit);
 		if (client_v6_capable && cr.v6_flag) {
@@ -2536,7 +2536,15 @@ get_clock_info(
 		DTOLFP(clock_stat.fudgetime2, &ltmp);
 		HTONL_FP(&ltmp, &ic->fudgetime2);
 		ic->fudgeval1 = htonl((u_int32)clock_stat.fudgeval1);
+		/* [Bug3527] Backward Incompatible: ic->fudgeval2 is
+		 * a string, instantiated via memcpy() so there is no
+		 * endian issue to correct.
+		 */
+#ifdef DISABLE_BUG3527_FIX
 		ic->fudgeval2 = htonl(clock_stat.fudgeval2);
+#else
+		ic->fudgeval2 = clock_stat.fudgeval2;
+#endif
 
 		free_varlist(clock_stat.kv_list);
 

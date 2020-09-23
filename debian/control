@@ -31,8 +31,9 @@ Depends: adduser,
          ${shlibs:Depends}
 Recommends: sntp, ${perl:Depends}
 Suggests: ntp-doc
-Breaks: apparmor-profiles-extra (<< 1.8)
-Replaces: apparmor-profiles-extra (<< 1.8)
+Provides: time-daemon
+Replaces: time-daemon
+Conflicts: time-daemon
 Description: Network Time Protocol daemon and utility programs
  NTP, the Network Time Protocol, is used to keep computer clocks
  accurate by synchronizing them over the Internet or a local network,

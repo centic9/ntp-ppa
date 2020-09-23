@@ -500,6 +500,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libntp\ntp_calgps.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libntp\ntp_crypto_rnd.c"
 				>
 			</File>
@@ -660,6 +664,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\..\libntp\timespecops.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\..\libntp\uglydate.c"
 				>
 			</File>
@@ -685,6 +693,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\libntp\work_thread.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\libntp\xsbprintf.c"
 				>
 			</File>
 			<File
@@ -822,6 +834,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\..\include\ntp_calendar.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\..\include\ntp_calgps.h"
 				>
 			</File>
 			<File

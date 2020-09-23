@@ -1,13 +1,7 @@
 openssl_libdir.patch
 dfsg.patch
 includes.patch
-ntpdate-ipv6.patch
-ntpd-linux-caps-runtime.patch
 openssl-disable-check.patch
 libedit.patch
-reproducible-build.patch
-sntp-sysexits.patch
 debian-locfile.patch
 sntp-kod-location.patch
-disable-test-decodenetnum.patch
-CVE-2019-8936.patch

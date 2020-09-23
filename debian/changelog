@@ -1,12 +1,50 @@
-ntp (1:4.2.8p12+dfsg-4) unstable; urgency=medium
+ntp (1:4.2.8p15+dfsg-1) unstable; urgency=medium
 
-  * CVE-2019-8936: Crafted null dereference attack in authenticated
-    mode 6 packet (Closes: #924228)
-  * ntp: exit 0 from init script if daemon does not exist (Closes: #764546)
-  * Drop locking from ntp initscript/systemd-wrapper
-  * Only delete ntpd statistics files in cronjob (Closes: #772790)
+  * Reapply DFSG-cleanup.
 
- -- Bernhard Schmidt <berni@debian.org>  Thu, 21 Mar 2019 23:42:36 +0100
+ -- Bernhard Schmidt <berni@debian.org>  Wed, 23 Sep 2020 13:46:38 +0200
+
+ntp (1:4.2.8p15-1) unstable; urgency=medium
+
+  * New upstream version 4.2.8p15
+  * Build with -fcommon to fix FTBFS with GCC-10 (Closes: #957615)
+
+ -- Bernhard Schmidt <berni@debian.org>  Mon, 21 Sep 2020 23:07:42 +0200
+
+ntp (1:4.2.8p14+dfsg-2) unstable; urgency=medium
+
+  * Make test-suite non-fatal on ia64 ppc64 ppc64el where it still fails
+    - Also on m68k where we don't know yet due to Bug#931630
+  * Drop obsolete Breaks+Replaces from pre-oldstable
+  * Add Conflict/Replaces/Provides: time-daemon (Closes: #316549)
+
+ -- Bernhard Schmidt <berni@debian.org>  Tue, 10 Mar 2020 08:38:28 +0100
+
+ntp (1:4.2.8p14+dfsg-1) unstable; urgency=medium
+
+  * New upstream version 4.2.8p14+dfsg
+  * Drop patches applied upstream
+  * Enable testsuite on all architectures, should be fixed
+
+ -- Bernhard Schmidt <berni@debian.org>  Fri, 06 Mar 2020 19:38:49 +0100
+
+ntp (1:4.2.8p13+dfsg-2) unstable; urgency=medium
+
+  * Upload new upstream version to unstable
+  * AppArmor: fix path to Samba NTP signing socket (Closes: #928168)
+
+ -- Bernhard Schmidt <berni@debian.org>  Mon, 08 Jul 2019 00:22:04 +0200
+
+ntp (1:4.2.8p13+dfsg-1) experimental; urgency=medium
+
+   * New upstream version 4.2.8p13+dfsg
+     - CVE-2019-8936: Crafted null dereference attack in authenticated
+       mode 6 packet (Closes: #924228)
+   * ntp: exit 0 from init script if daemon does not exist (Closes: #764546)
+   * Drop locking from ntp initscript/systemd-wrapper
+   * Only delete ntpd statistics files in cronjob (Closes: #772790)
+
+ -- Bernhard Schmidt <berni@debian.org>  Thu, 21 Mar 2019 23:31:10 +0100
 
 ntp (1:4.2.8p12+dfsg-3) unstable; urgency=low
 

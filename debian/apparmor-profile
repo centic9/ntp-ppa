@@ -72,11 +72,8 @@
   # to be able to check for running ntpdate
   /run/lock/ntpdate wk,
 
-  # samba4 ntp signing socket
-  /{,var/}run/samba/ntp_signd/socket rw,
-
-  # samba4 winbindd pipe
-  /run/samba/winbindd/pipe rw,
+  # To sign replies to MS-SNTP clients by the smbd daemon /var/lib/samba
+  /var/lib/samba/ntp_signd/socket rw,
 
   # For use with clocks that report via shared memory (e.g. gpsd),
   # you may need to give ntpd access to all of shared memory, though
