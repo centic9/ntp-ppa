@@ -43,6 +43,8 @@ override_dh_install:
 	install -D -m 0755 debian/ntp.networkmanager debian/ntp/etc/NetworkManager/dispatcher.d/ntp
 	install -D -m 0644 debian/ntpdate.dhcp debian/ntpdate/etc/dhcp/dhclient-exit-hooks.d/ntpdate
 	install -D -m 0755 debian/ntpdate-debian debian/ntpdate/usr/sbin/ntpdate-debian
+	install -D -m 0644 debian/ntp-systemd-netif.path debian/ntp/lib/systemd/system/ntp-systemd-netif.path
+	install -D -m 0644 debian/ntp-systemd-netif.service debian/ntp/lib/systemd/system/ntp-systemd-netif.service
 
 	install -D -m 0644 debian/ntp.conf debian/ntp/etc/ntp.conf
 
@@ -63,6 +65,7 @@ override_dh_install:
 	rm -f debian/ntp-doc/usr/share/doc/ntp-doc/html/hints/solaris*
 
 override_dh_installinit:
+	dh_systemd_start -pntp ntp-systemd-netif.path
 	dh_installinit -pntp --error-handler=installinit_error --no-restart-after-upgrade
 	dh_installinit -pntpdate --no-restart-after-upgrade
 	dh_apparmor --profile-name=usr.sbin.ntpd -pntp

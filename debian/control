@@ -1,7 +1,8 @@
 Source: ntp
 Section: net
 Priority: optional
-Maintainer: Debian NTP Team <ntp@packages.debian.org>
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: Debian NTP Team <ntp@packages.debian.org>
 Uploaders: Kurt Roeckx <kurt@roeckx.be>,
            Bernhard Schmidt <berni@debian.org>
 Build-Depends: autogen,

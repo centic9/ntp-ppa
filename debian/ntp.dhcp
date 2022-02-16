@@ -17,12 +17,14 @@ ntp_servers_setup_remove() {
 
 
 ntp_servers_setup_add() {
-	if [ -e $NTP_DHCP_CONF ] && [ "$new_ntp_servers" = "$old_ntp_servers" ]; then
+	networkd_ntp=$(sed -n 's/NTP=//p' /run/systemd/netif/leases/* 2>/dev/null)
+
+	if [ -z "$new_ntp_servers" ] && [ -z "$networkd_ntp" ]; then
+		ntp_servers_setup_remove
 		return
 	fi
 
-	if [ -z "$new_ntp_servers" ]; then
-		ntp_servers_setup_remove
+	if [ -e $NTP_DHCP_CONF ] && [ "$new_ntp_servers" = "$old_ntp_servers" ] && [ -z "$networkd_ntp" ] ; then
 		return
 	fi
 
@@ -36,7 +38,7 @@ ntp_servers_setup_add() {
 	  echo "# here will be lost at the next DHCP event.  Edit $NTP_CONF instead."
 	  echo
 	  echo "# NTP server entries received from DHCP server"
-	  for server in $new_ntp_servers; do
+	  for server in $new_ntp_servers $networkd_ntp; do
 		echo "server $server iburst"
 	  done
 	  echo
