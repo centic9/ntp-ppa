@@ -1,93 +1,224 @@
-Source: ntp
+Source: ntpsec
 Section: net
 Priority: optional
-Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
-XSBC-Original-Maintainer: Debian NTP Team <ntp@packages.debian.org>
-Uploaders: Kurt Roeckx <kurt@roeckx.be>,
-           Bernhard Schmidt <berni@debian.org>
-Build-Depends: autogen,
-               debhelper (>= 10),
+Maintainer: Richard Laager <rlaager@debian.org>
+Build-Depends: asciidoctor,
+               bison,
+               debhelper-compat (= 13),
+               dh-apache2,
                dh-apparmor,
+               dh-python,
+               docbook-xsl,
+               libbsd-dev,
                libcap2-dev [linux-any],
-               libedit-dev,
-               libevent-dev,
-               libopts25-dev,
                libssl-dev,
+               netbase,
                pkg-config,
-               pps-tools [linux-any]
-Build-Conflicts: libavahi-compat-libdnssd-dev, libwww-dev, libwww-ssl-dev
-Standards-Version: 4.1.3.0
+               pps-tools [linux-any],
+               python3,
+               python3-dev,
+               python3-gps,
+               systemd,
+               xsltproc,
+               xz-utils,
+Build-Conflicts: libavahi-compat-libdnssd-dev,
+                 libwww-dev,
+                 libwww-ssl-dev,
+Standards-Version: 4.6.0
 Rules-Requires-Root: no
-Homepage: http://support.ntp.org/
-Vcs-Browser: https://salsa.debian.org/pkg-ntp-team/ntp
-Vcs-Git: https://salsa.debian.org/pkg-ntp-team/ntp.git
+Vcs-Browser: https://salsa.debian.org/debian/ntpsec
+Vcs-Git: https://salsa.debian.org/debian/ntpsec.git
+Homepage: https://www.ntpsec.org
 
-Package: ntp
+Package: ntpsec
 Architecture: any
+Pre-Depends: ${misc:Pre-Depends},
 Depends: adduser,
-         lsb-base (>= 3.2-13),
+         lsb-base,
          netbase,
+         python3,
+         python3-ntp (= ${binary:Version}),
          tzdata,
          ${misc:Depends},
-         ${shlibs:Depends}
-Recommends: sntp, ${perl:Depends}
-Suggests: ntp-doc
-Provides: time-daemon
-Replaces: time-daemon
-Conflicts: time-daemon
+         ${shlibs:Depends},
+Recommends: systemd | cron | cron-daemon,
+Suggests: apparmor,
+          certbot,
+          ntpsec-doc,
+          ntpsec-ntpviz,
+Breaks: ntp (<< 1:4.2.8p15+dfsg-2~),
+Conflicts: time-daemon,
+Provides: time-daemon,
+Replaces: ntp (<< 1:4.2.8p15+dfsg-2~),
+          time-daemon,
 Description: Network Time Protocol daemon and utility programs
  NTP, the Network Time Protocol, is used to keep computer clocks
  accurate by synchronizing them over the Internet or a local network,
  or by following an accurate hardware receiver that interprets GPS,
- DCF-77, NIST or similar time signals.
+ DCF-77, or similar time signals.
  .
  This package contains the NTP daemon and utility programs.  An NTP
  daemon needs to be running on each host that is to have its clock
  accuracy controlled by NTP.  The same NTP daemon is also used to
  provide NTP service to other hosts.
  .
+ This is the NTPsec version of NTP.  NTPsec is a secure, hardened,
+ and improved implementation derived from the original NTP project.
+ NTPsec supports Network Time Security (NTS) which provides
+ cryptographically authenticated time.
+ .
  For more information about the NTP protocol and NTP server
- configuration and operation, install the package "ntp-doc".
+ configuration and operation, install the package "ntpsec-doc".
 
-Package: ntpdate
+Package: ntpsec-ntpdate
 Architecture: any
-Depends: netbase, ${misc:Depends}, ${shlibs:Depends}
-Description: client for setting system time from NTP servers (deprecated)
+Depends: netbase,
+         ntpsec-ntpdig (= ${binary:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends},
+Breaks: ntpdate (<< 1:4.2.8p15+dfsg-2~),
+Replaces: ntpdate (<< 1:4.2.8p15+dfsg-2~),
+Description: client for setting system time from NTP servers
  NTP, the Network Time Protocol, is used to keep computer clocks
  accurate by synchronizing them over the Internet or a local network,
  or by following an accurate hardware receiver that interprets GPS,
- DCF-77, NIST or similar time signals.
+ DCF-77, or similar time signals.
  .
- ntpdate is deprecated. Please use sntp instead for manual or scripted
- NTP queries/syncs.
+ ntpdate is a simple NTP client that sets a system's clock to match
+ the time obtained by communicating with one or more NTP servers.  It
+ is not sufficient, however, for maintaining an accurate clock in the
+ long run.  ntpdate by itself is useful for occasionally setting the
+ time on machines that do not have full-time network access, such as
+ laptops.
+ .
+ This is the NTPsec version of ntpdate.  NTPsec is a secure, hardened,
+ and improved implementation derived from the original NTP project.
+ .
+ If the full NTP daemon from the package "ntpsec" is installed, then
+ ntpsec-ntpdate is not necessary.
 
-Package: ntp-doc
+Package: ntpsec-ntpdig
+Architecture: any
+Depends: python3 (>= 3.3),
+         python3-ntp (= ${binary:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends},
+Breaks: ntpsec-ntpdate (<< 1.2.1+dfsg1-5~),
+        sntp (<< 1:4.2.8p15+dfsg-2~),
+Replaces: ntpsec-ntpdate (<< 1.2.1+dfsg1-5~),
+          sntp (<< 1:4.2.8p15+dfsg-2~),
+Description: ntpdig SNTP client
+ NTP, the Network Time Protocol, is used to keep computer clocks
+ accurate by synchronizing them over the Internet or a local network,
+ or by following an accurate hardware receiver that interprets GPS,
+ DCF-77, or similar time signals.
+ .
+ ntpdig can be used as an SNTP client to query a NTP or SNTP server
+ and either display the time or set the local system's time.  It is not
+ sufficient, however, for maintaining an accurate clock in the long run.
+ .
+ This is the NTPsec version of ntpdig, which is equivalent to the sntp
+ utility.  NTPsec is a secure, hardened, and improved implementation
+ derived from the original NTP project.
+
+Package: ntpsec-ntpviz
+Architecture: any
+Depends: adduser,
+         fonts-liberation,
+         gnuplot-nox | gnuplot,
+         python3,
+         python3-ntp (= ${binary:Version}),
+         systemd | cron | cron-daemon,
+         ${misc:Depends},
+Recommends: ntpsec,
+            systemd | python3-psutil,
+            ${misc:Recommends},
+Suggests: python3-gps,
+Description: NTP statistics graphing utility
+ NTP, the Network Time Protocol, is used to keep computer clocks
+ accurate by synchronizing them over the Internet or a local network,
+ or by following an accurate hardware receiver that interprets GPS,
+ DCF-77, or similar time signals.
+ .
+ ntpviz analyzes NTP log files and generates statistical plots from
+ them.  The output is in the form of HTML with images.  If Apache is
+ installed, it will be served at: /ntpviz
+ .
+ This is part of NTPsec.  NTPsec is a secure, hardened, and improved
+ implementation derived from the original NTP project.
+
+Package: ntpsec-doc
 Architecture: all
-Depends: ${misc:Depends}
+Depends: ${misc:Depends},
+Breaks: ntp-doc (<< 1:4.2.8p15+dfsg-2~),
+Replaces: ntp-doc (<< 1:4.2.8p15+dfsg-2~),
 Section: doc
 Multi-Arch: foreign
 Description: Network Time Protocol documentation
  NTP, the Network Time Protocol, is used to keep computer clocks
  accurate by synchronizing them over the Internet or a local network,
  or by following an accurate hardware receiver that interprets GPS,
- DCF-77, NIST or similar time signals.
+ DCF-77, or similar time signals.
  .
- This package contains HTML documentation for the ntp packages (ntp,
- ntpdate).  Since there are no substantive man pages for ntp's
- programs and configuration files, this package is desirable for any
- setup beyond the simple default configuration.
+ This package contains HTML documentation for the ntpsec packages (ntpsec,
+ ntpsec-ntpdate).
+ .
+ This is part of NTPsec.  NTPsec is a secure, hardened, and improved
+ implementation derived from the original NTP project.
 
-Package: sntp
+Package: python3-ntp
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}
-Breaks: ntp (<<1:4.2.8p10+dfsg-3+exp3)
-Replaces: ntp (<<1:4.2.8p10+dfsg-3+exp3)
-Description: Network Time Protocol - sntp client
+Depends: python3,
+         ${misc:Depends},
+         ${python3:Depends},
+         ${shlibs:Depends},
+Provides: ${python3:Provides},
+Section: python
+Description: Python 3 NTP Helper Classes
  NTP, the Network Time Protocol, is used to keep computer clocks
  accurate by synchronizing them over the Internet or a local network,
  or by following an accurate hardware receiver that interprets GPS,
- DCF-77, NIST or similar time signals.
+ DCF-77, or similar time signals.
  .
- sntp can be used as an SNTP client to query a NTP or SNTP server and
- either display the time or set the local system's time. It is not
- sufficient, however, for maintaining an accurate clock in the long run.
+ This package contains the Python "ntp" module, which contains helper
+ classes for NTP utilities written in Python.
+ .
+ This is part of NTPsec.  NTPsec is a secure, hardened, and improved
+ implementation derived from the original NTP project.
+
+Package: ntp
+Architecture: all
+Section: oldlibs
+Depends: ntpsec,
+         ${misc:Depends},
+Description: Network Time Protocol daemon/utilities (transitional package)
+ This is a dummy transitional package to transition to NTPsec.
+ It can be safely removed.
+
+Package: ntp-doc
+Architecture: all
+Section: oldlibs
+Depends: ntpsec-doc,
+         ${misc:Depends},
+Description: Network Time Protocol docs (transitional package)
+ This is a dummy transitional package to transition to NTPsec.
+ It can be safely removed.
+
+Package: ntpdate
+Architecture: all
+Section: oldlibs
+Depends: ntpsec-ntpdate,
+         ${misc:Depends},
+Description: Network Time Protocol client (transitional package)
+ This is a dummy transitional package to transition to NTPsec.
+ It can be safely removed.
+
+Package: sntp
+Architecture: all
+Section: oldlibs
+Depends: ntpsec-ntpdig,
+         ${misc:Depends},
+Description: Network Time Protocol client (transitional package)
+ This is a transitional package to transition to NTPsec.
+ It can be safely removed once all uses of sntp(1) have been converted to
+ run ntpdig instead.

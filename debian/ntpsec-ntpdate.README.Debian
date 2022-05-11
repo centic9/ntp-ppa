@@ -1,0 +1,13 @@
+ntpdate doesn't parse the ntp.conf file.  The program ntpdate-debian is
+provided that reads its server list from /etc/default/ntpsec-ntpdate or
+alternatively from /etc/ntpsec/ntp.conf.
+
+ntpdate is run whenever a network interface is brought up.  To adjust
+this behavior, the file /etc/network/if-up.d/ntpsec-ntpdate should be
+edited.
+
+Note that ntpdate is *not* really intended to be used by hosts with
+good network connectivity.  The "ntpsec" package, which provides a
+persistent daemon that does a better job of keeping system time than
+even a cron'ed invocation of ntpdate, is a better choice for systems
+with good network connectivity.

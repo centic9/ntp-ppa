@@ -1,0 +1,6 @@
+# ntpsec-wait.service has WantedBy=time-sync.target, which is correct.
+ntpsec: systemd-service-file-refers-to-unusual-wantedby-target
+# These are included manually, as the postinst needs custom ordering.
+ntpsec: maintainer-script-should-not-use-dpkg-maintscript-helper
+# This is just a warning, and asciidoc is building this anyway.
+ntpsec: groff-message

@@ -1,3 +1,9 @@
-version=3
-opts=dversionmangle=s/\+dfsg(\.\d+)?$//;s/\.p/p/ \
-https://www.eecis.udel.edu/~ntp/ntp_spool/ntp4/ntp-4.2 ntp-(.+)\.(?:zip|tgz|tbz|txz|(?:tar\.(?:gz|bz2|xz)))
+version=4
+opts="\
+    pasv,\
+    compression=xz,repack,\
+    dversionmangle=s/\+dfsg\d*$//,\
+    oversionmangle=s/$/+dfsg1/,\
+    pgpsigurlmangle=s/$/.asc/" \
+  ftp://ftp.ntpsec.org/pub/releases/@PACKAGE@@ANY_VERSION@@ARCHIVE_EXT@ \
+  debian debian/repack-waf

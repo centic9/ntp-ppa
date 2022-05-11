@@ -1,0 +1,9 @@
+# Normally all the data is plotted.  This option limits the range of the plots
+# to the data between 1% and 99%.  This is useful for ignoring a few spikes in
+# the data.
+#--clip
+
+# Set the size of the output plots. SIZE can be one of s, m, or l.  Use s for
+# small screens (1024x768), m for medium screens (1388x768), or l for large
+# screens (1920x1080).  m is the default.
+#--width=m

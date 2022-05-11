@@ -1,0 +1,20 @@
+Description: Use /etc/ntpviz for header and footer
+ This provides conffiles in a reasonable location for the administrator to
+ customize the header and footer for ntpviz.
+Forwarded: not-needed
+Origin: vendor
+Author: Richard Laager <rlaager@debian.org>
+Last-Update: 2019-09-23
+--- a/docs/includes/ntpviz-body.adoc
++++ b/docs/includes/ntpviz-body.adoc
+@@ -183,6 +183,10 @@
+ generated index page, and the 'footer' file will be added almost at
+ the bottom of the body of the generated index page.
+ 
++As a special exception, the default cron job in the ntpsec-ntpviz package
++has symlinks such that it uses `/etc/ntpviz/day/header.html` and
++`/etc/ntpviz/week/header.html`.
++
+ The contents are at the discretion of the operator. One might put
+ links to other related web pages, or notes on the server OS, software
+ versions, hardware configuration, etc. into either of these files,

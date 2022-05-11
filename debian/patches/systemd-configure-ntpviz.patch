@@ -1,0 +1,30 @@
+Description: systemd: Configure ntpviz
+ - Configure ntpviz to match the cron.d jobs
+ - ntpd.service is called ntpsec.service in this package
+Forwarded: not-needed
+Author: Richard Laager <rlaager@debian.org>
+Last-Update: 2019-09-23
+--- a/etc/ntpviz-daily.service
++++ b/etc/ntpviz-daily.service
+@@ -4,6 +4,7 @@
+ Requisite=ntpsec.service
+ 
+ [Service]
+-Type=simple
++Type=oneshot
+ IOSchedulingClass=idle
+-ExecStart=@BINDIR@/ntpviz -w l -p 1 -o /var/www/localhost/htdocs/day
++ExecStart=@BINDIR@/ntpviz -p 1 -d /var/log/ntpsec -o /var/lib/ntpsec/ntpviz/day @/etc/ntpviz/options
++ExecStartPost=/usr/bin/find /var/lib/ntpsec/ntpviz/day -type f -mtime +1 -delete
+--- a/etc/ntpviz-weekly.service
++++ b/etc/ntpviz-weekly.service
+@@ -4,6 +4,7 @@
+ Requisite=ntpsec.service
+ 
+ [Service]
+-Type=simple
++Type=oneshot
+ IOSchedulingClass=idle
+-ExecStart=@BINDIR@/ntpviz -w l -p 7 -o /var/www/localhost/htdocs/week
++ExecStart=@BINDIR@/ntpviz -p 7 -d /var/log/ntpsec -o /var/lib/ntpsec/ntpviz/week @/etc/ntpviz/options
++ExecStartPost=/usr/bin/find /var/lib/ntpsec/ntpviz/week -type f -mtime +7 -delete

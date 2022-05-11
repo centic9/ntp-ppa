@@ -1,0 +1,71 @@
+#! /usr/bin/env python
+# coding: utf-8
+"""\
+Usage: cpu-temper-log
+
+Reads 'sensors -u' for temperature data.  Writes all temperatures found
+to stdout.  One temp per line, preceded by the unix UTC time in seconds,
+and an identifier.
+
+Before you can use this utility lm_sensors must be installed and
+configured.  See their documentation for that procedure.
+
+How many temperatures, which temeratures and in which order will depend
+on your lm_sensors configuration and your motherboard.
+
+Sample log from an Supermicro Quad Core Xeon:
+
+1471573103 LM0 37.000
+1471573103 LM1 35.000
+1471573103 LM2 31.000
+1471573103 LM3 31.000
+1471573103 LM4 30.000
+1471573104 LM0 37.000
+
+Field 1: unix time in seconds since the star of the epoch
+Field 2: Log source (LM)
+Field 3: temperature in degrees C
+
+Sample crontab usage:
+
+# take and log cpu temp every 5 mins
+*/5 * * * * /usr/local/sbin/cpu-temp-log >> /var/log/ntpstats/temps
+
+This file may only be useful as a template.  The way to read your system
+temperatures will be hardware specific.
+
+"""
+
+from __future__ import print_function, division
+
+import sys
+import re
+import time
+import subprocess
+
+try:
+    # sadly subprocess.check_output() is not in Python 2.6
+    proc = subprocess.Popen(["sensors", "-u"],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            universal_newlines=True)
+    output = proc.communicate()[0]
+except:
+    print("Unable to run 'sensors -u'")
+    exit(0)
+
+lines = output.split('\n')
+
+# this regex matches temperature output lines from 'sensors -u'
+pat = re.compile('^\s+temp\d+_input:\s+([\d\.]+).*$')
+
+now = int(time.time())
+
+line = ''
+index = 0
+for line in lines:
+    match = pat.match(line)
+    if match and match.group(1):
+        temp = match.group(1)
+        sys.stdout.write('%d LM%d %s\n' % (now, index, temp))
+        index += 1

@@ -1,0 +1,20 @@
+[Unit]
+Description=Network Time Service
+Documentation=man:ntpd(8)
+Wants=network.target
+ConditionCapability=CAP_SYS_TIME
+After=network.target nss-lookup.target
+Conflicts=systemd-timesyncd.service
+
+[Service]
+Type=forking
+PrivateTmp=true
+ExecStart=@SBINDIR@/ntpd -g -N -u ntp:ntp
+# Specifying -g on the command line allows ntpd to make large adjustments to
+# the clock on boot.  However, if Restart=yes is set, a malicious (or broken)
+# server could send the incorrect time, trip the panic threshold, and when
+# ntpd restarts, serve it the incorrect time (which would be accepted).
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

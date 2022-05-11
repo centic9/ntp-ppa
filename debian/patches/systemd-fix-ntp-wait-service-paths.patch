@@ -1,0 +1,17 @@
+Description: systemd: Fix ntp-wait.service paths
+ - ntpwait is installed to /usr/sbin.
+ - ntpd.service is called ntpsec.service in this package
+Forwarded: not-needed
+Author: Richard Laager <rlaager@debian.org>
+Last-Update: 2022-03-05
+--- a/etc/ntp-wait.service
++++ b/etc/ntp-wait.service
+@@ -8,7 +8,7 @@
+ 
+ [Service]
+ Type=oneshot
+-ExecStart=@BINDIR@/ntpwait -s 1 -n 30000
++ExecStart=@SBINDIR@/ntpwait -s 1 -n 30000
+ RemainAfterExit=yes
+ StandardOutput=null
+ 

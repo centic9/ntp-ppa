@@ -1,0 +1,17 @@
+Description: systemd: Use wrapper
+ We use a wrapper script for various reasons.  See the script for details.
+Forwarded: not-needed
+Author: Richard Laager <rlaager@debian.org>
+Last-Update: 2019-09-23
+--- a/etc/ntpd.service
++++ b/etc/ntpd.service
+@@ -9,7 +9,8 @@
+ [Service]
+ Type=forking
+ PrivateTmp=true
+-ExecStart=@SBINDIR@/ntpd -g -N -u ntp:ntp
++PIDFile=/run/ntpd.pid
++ExecStart=/usr/libexec/ntpsec/ntp-systemd-wrapper
+ # Specifying -g on the command line allows ntpd to make large adjustments to
+ # the clock on boot.  However, if Restart=yes is set, a malicious (or broken)
+ # server could send the incorrect time, trip the panic threshold, and when

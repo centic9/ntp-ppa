@@ -1,0 +1,16 @@
+#!/bin/sh
+
+set -e
+
+# These are included manually, as the postinst needs custom ordering.
+dpkg-maintscript-helper mv_conffile /etc/default/ntp /etc/default/ntpsec 1.1.0\+dfsg1-2\~ ntpsec -- "$@"
+dpkg-maintscript-helper mv_conffile /etc/init.d/ntp /etc/init.d/ntpsec 1.1.0\+dfsg1-2\~ ntpsec -- "$@"
+dpkg-maintscript-helper mv_conffile /etc/ntp.conf /etc/ntpsec/ntp.conf 1.1.0\+dfsg1-2\~ ntpsec -- "$@"
+
+installinit_error() {
+	status=$?
+	start-stop-daemon --stop --quiet --oknodo --pidfile /run/ntpd.pid && exit 0
+	exit $status
+}
+
+#DEBHELPER#

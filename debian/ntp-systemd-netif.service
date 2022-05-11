@@ -1,4 +1,0 @@
-[Service]
-Environment=reason=BOUND
-ExecStart=/bin/sh -c '. /etc/dhcp/dhclient-exit-hooks.d/ntp'
-

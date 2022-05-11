@@ -1,0 +1,7 @@
+[Unit]
+Description=Rotate ntpd stats
+Requisite=ntpsec.service
+
+[Service]
+Type=simple
+ExecStart=/usr/libexec/ntpsec/rotate-stats

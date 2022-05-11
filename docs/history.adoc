@@ -1,0 +1,66 @@
+== History of NTP
+
+// Early history was found at https://www.galsys.co.uk/about-NTP.html
+
+The first NTP implementation started around 1980 with an accuracy of
+only several hundred milliseconds. That very first implementation was
+documented in Internet Engineering Note
+https://www.rfc-editor.org/ien/ien173.txt[IEN-173]. Later the first
+specification appeared in
+https://www.rfc-editor.org/rfc/rfc778.txt[RFC 778], but it was still
+named Internet Clock Service. At that time clock synchronization was
+needed for the HELLO routing protocol. NTP was introduced in
+https://tools.ietf.org/rfc/rfc958.txt[RFC 958] for the first time,
+mainly describing the packets seen on the network as well as some
+basic calculations involved. Early versions of NTP did not compensate
+any frequency error.
+
+The first complete specification of the protocol and accompanying
+algorithms for NTP version 1 appeared 1988 in
+https://tools.ietf.org/rfc/rfc1059.txt[RFC 1059]. That version already
+had symmetric operation mode as well as client-server mode.
+
+Version 2 introducing symmetric-key authentication (using DES-CBC) was
+described in https://tools.ietf.org/rfc/rfc1119.txt[RFC 1119] only
+about one year later. About the same time another time synchronization
+protocol named Digital Time Synchronization Service (DTSS) was
+presented by Digital Equipment Corporation. At that time the software
+named xntp was written by Dennis Fergusson at the University of
+Toronto. That software evolved to the software distribution that is
+publicly available now.
+
+Combining the good ideas of DTSS with those of NTP produced a new
+specification for NTP version 3, namely
+https://tools.ietf.org/rfc/rfc1992.txt[RFC 1305], in 1992. That
+version introduced formal correctness principles and revised
+algorithms. Furthermore broadcast mode was added to the protocol.
+
+While NTP per se only deals with adjusting the operating system's
+clock, there was some parallel research on improving time keeping
+within the operating system's
+kernel. https://tools.ietf.org/rfc/rfc1589.txt[RFC 1589] (A kernel
+model for precision timekeeping) described a new implementation and
+interface in 1994. That implementation could keep time with a
+precision of up to one microsecond.
+
+Work for a Version 4 of NTP began around 1994. The first new
+specification was https://tools.ietf.org/rfc/rfc2030.txt[RFC 2030],
+Simple Network Time Protocol (SNTP) version 4 for IPv4, IPv6 and OSI.
+This issued in 1996.
+
+An operating system interface for accurate 1-per-second pulses pulses
+for calibrating and stabilizing the system clock was designed and
+documented in https://tools.ietf.org/rfc/rfc2783.txt[RFC 2783]
+(Pulse-per-second API for Unix-like operating systems, version 1),
+finally published in 1999.  This is now implemented in all modern
+Unixes.
+
+A proposed specification for NTPv4 issued in 2010 as
+https://tools.ietf.org/rfc/rfc5905.txt[RFC 5905].  Despite some
+underspecification and technical difficulties (especially near
+Autokey, its attempt at public-key encryption for authentication)
+NTPv4 implementations were in general use by 2014.
+
+The extension mechanism for the protocol was partly specified in RFC
+5905, but nor fully defined until
+https://tools.ietf.org/html/rfc7822[RFC 7822] in 2016.

@@ -1,0 +1,53 @@
+#!/bin/sh
+
+# The package default /etc/ntpsec/ntp.conf suggests (and the ntpviz package
+# /etc/ntpsec/ntp.d/ntpviz.conf enables) logging of various statistics to
+# the /var/log/ntpsec directory.  The daemon automatically changes to a new
+# datestamped set of files at midnight, so all we need to do is delete old
+# ones, and compress the ones we're keeping so disk usage is controlled.
+
+statsdir=$(grep -v '^#' /etc/ntpsec/ntp.conf | \
+	sed -nr 's/^statsdir[[:space:]]+([^[:space:]]+).*$/\1/p')
+
+# The ntpsec package, unlike ntp, uses /var/log/ntpsec as the default for
+# statsdir.
+if [ -z "$statsdir" ]; then
+	statsdir=/var/log/ntpsec
+fi
+
+if [ -d "$statsdir" ]; then
+	# only keep a week's depth of these. Delete only files exactly
+	# within the directory and do not descend into subdirectories
+	# to avoid security risks on platforms where find is not using
+	# fts-library.
+	find "$statsdir" -maxdepth 1 -type f \
+	    \( -name "*stats*" -o -name "gpsd*" -o -name "temps*" \) \
+	    -mtime +7 -delete
+
+	# compress whatever is left to save space but make sure to really
+	# do it only in the expected directory.
+	cd "$statsdir" || exit 1
+	for pattern in "*stats.????????" "gpsd.????-??-??" "temps.????-??-??"
+	do
+		# shellcheck disable=SC2086
+		ls -d -- $pattern > /dev/null 2>&1
+		if [ $? -eq 0 ]; then
+			# Note that gzip won't compress the file names that
+			# are hard links to the live/current files, so this
+			# compresses yesterday and previous, leaving the live
+			# log alone.  We suppress the warnings gzip issues
+			# about not compressing the linked file.
+			# shellcheck disable=SC2086
+			gzip --best --quiet -- $pattern
+			return=$?
+			case $return in
+			    2)
+				# squash all warnings
+				;;
+			    *)
+				exit $return # but let real errors through
+				;;
+			esac
+		fi
+	done
+fi

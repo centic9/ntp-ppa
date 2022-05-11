@@ -1,0 +1,122 @@
+'\" t
+.\"     Title: ntp.keys
+.\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 06/07/2021
+.\"    Manual: NTPsec
+.\"    Source: NTPsec 1.2.1+
+.\"  Language: English
+.\"
+.TH "NTP\&.KEYS" "5" "06/07/2021" "NTPsec 1\&.2\&.1+" "NTPsec"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+ntp.keys \- NTP symmetric key file format
+.SH "DESCRIPTION"
+.sp
+This document describes the format of an NTP symmetric key file\&. For a description of the use of this type of file, see the "Authentication Support" page of the Web documentation\&.
+.sp
+ntpd(8) reads its keys from a file specified using the \-k command line option or the \fIkeys\fR statement in the configuration file\&. While key number 0 is fixed by the NTP standard (as 56 zero bits) and may not be changed, one or more keys numbered between 1 and 65535 may be arbitrarily set in the keys file\&.
+.sp
+The key file uses the same comment conventions as the configuration file\&. Key entries use a fixed format of the form
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+keyno type key
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+where keyno is a positive integer (between 1 and 65535), type is the message digest or cipher algorithm, and key is the key itself\&.
+.sp
+The file does not need to be sorted by keyno\&.
+.sp
+type can be the name of any digest or cipher supported by your OpenSSL package\&. Digests or CMACs longer than 20 bytes will be truncated\&.
+.sp
+You can get a list from openssl list \-digest\-algorithms or openssl list \-cipher\-algorithms\&. (As of Jan 2018, they lie\&. Be sure to try it\&. ntpd(8) will print an error on startup if a selected type isn\(cqt supported\&.)
+.sp
+The following types are widely supported:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+  md5, sha1, ripemd160, sha224, sha256, sha384, sha512
+  aes\-128, aes\-192, aes\-256
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Only the \-cbc cipher modes are useful\&. The \-cbc is appended to the type internally\&. Do not include it in type\&.
+.sp
+AES is an abbreviation for aes\-128\&.
+.sp
+Note that MD5 was deprecated by RFC 8573 in June of 2019\&. AES\-128 is currently preferred\&. The code still supports MD5 for backwards compatibility\&.
+.sp
+FIPS 140\-2, FIPS 180\-4, and/or FIPS 202 may restrict your choices\&. If it matters to you, check with your lawyer\&. (Let us know if you find a good reference\&.)
+.sp
+The key may be printable ASCII excluding "#" or hex encoded\&. Keys longer than 20 characters are assumed to be hex\&. The max length of a (de\-hexified) key is 32 bytes\&. If you want to use an ASCII key longer than 20 bytes, you must hexify it\&.
+.sp
+Note that the keys used by the ntpq(1) programs are checked against passwords entered by hand, so it is generally appropriate to specify these keys in ASCII format\&. Or you can cut\-paste a hex string from your password manager\&.
+.SH "USAGE"
+.sp
+In order to use symmetric keys, the client side configuration file needs:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+  keys <path\-to\-client\-keys\-file>
+  trustedkey <keyno>
+  server \&.\&.\&. key <keyno>
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+The server side needs:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+  keys <path\-to\-server\-keys\-file>
+  trustedkey <keyno>
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Note that the client and server key files must both contain identical copies of the line specified by keyno\&.
+.SH "FILES"
+.PP
+/etc/ntp\&.keys
+.RS 4
+is a common location for the keys file
+.RE
+.sp
+Reminder: You have to keep it secret\&.
+.SH "SEE ALSO"
+.sp
+ntp\&.conf(5), ntpd(8), ntpq(1), ntpkeygen(8), ntpdig(1)\&.

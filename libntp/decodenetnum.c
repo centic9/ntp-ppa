@@ -1,164 +1,147 @@
 /*
- * decodenetnum - return a net number (this is crude, but careful)
+ * decodenetnum - convert text IP address and port to sockaddr_u
  */
-#include <config.h>
+#include "config.h"
+#include <stddef.h>
+#include <stdbool.h>
+#include <string.h>
 #include <sys/types.h>
-#include <ctype.h>
-#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
+#include <netdb.h>
 #include <netinet/in.h>
-#endif
 
 #include "ntp.h"
 #include "ntp_stdlib.h"
+#include "ntp_assert.h"
 
-
-/* If the given string position points to a decimal digit, parse the
- * number. If this is not possible, or the parsing did not consume the
- * whole string, or if the result exceeds the maximum value, return the
- * default value.
- */
-static unsigned long
-_num_or_dflt(
-	char *		sval,
-	unsigned long	maxval,
-	unsigned long	defval
-	)
-{
-	char *		ep;
-	unsigned long	num;
-	
-	if (!(sval && isdigit(*(unsigned char*)sval)))
-		return defval;
-	
-	num = strtoul(sval, &ep, 10);
-	if (!*ep && num <= maxval)
-		return num;
-	
-	return defval;
-}
-
-/* If the given string position is not NULL and does not point to the
- * terminator, replace the character with NUL and advance the pointer.
- * Return the resulting position.
- */
-static inline char*
-_chop(
-	char * sp)
-{
-	if (sp && *sp)
-		*sp++ = '\0';
-	return sp;
-}
-
-/* If the given string position points to the given char, advance the
- * pointer and return the result. Otherwise, return NULL.
- */
-static inline char*
-_skip(
-	char * sp,
-	int    ch)
-{
-	if (sp && *(unsigned char*)sp == ch)
-		return (sp + 1);
-	return NULL;
-}
+/* This is a glibc thing, not standardized */
+#ifndef NI_MAXSERV
+#define NI_MAXSERV 32
+#endif
 
 /*
  * decodenetnum		convert text IP address and port to sockaddr_u
  *
- * Returns FALSE (->0) for failure, TRUE (->1) for success.
+ * Returns false for failure, true for success.
+ *
+ * We accept:
+ * IPv4
+ * IPv6
+ * [IPv6]
+ * IPv4:port
+ * [IPv6]:port
+ *
+ * The IP must be numeric but the port can be symbolic.
+ *
+ * return: 0 for success
+ *         negative numbers for error codes
  */
 int
 decodenetnum(
 	const char *num,
-	sockaddr_u *net
+	sockaddr_u *netnum
 	)
 {
-	/* Building a parser is more fun in Haskell, but here we go...
-	 *
-	 * This works through 'inet_pton()' taking the brunt of the
-	 * work, after some string manipulations to split off URI
-	 * brackets, ports and scope identifiers. The heuristics are
-	 * simple but must hold for all _VALID_ addresses. inet_pton()
-	 * will croak on bad ones later, but replicating the whole
-	 * parser logic to detect errors is wasteful.
-	 */
-	
-	sockaddr_u	netnum;
-	char		buf[64];	/* working copy of input */
-	char		*haddr=buf;
-	unsigned int	port=NTP_PORT, scope=0;
-	unsigned short	afam=AF_UNSPEC;
-	
-	/* copy input to working buffer with length check */
-	if (strlcpy(buf, num, sizeof(buf)) >= sizeof(buf))
-		return FALSE;
+	struct addrinfo hints, *ai = NULL;
+	const char *ip_start, *ip_end, *port_start, *temp;
+	size_t numlen;
+	bool have_brackets;
+        int retcode = 0;
 
-	/* Identify address family and possibly the port, if given.  If
-	 * this results in AF_UNSPEC, we will fail in the next step.
-	 */
-	if (*haddr == '[') {
-		char * endp = strchr(++haddr, ']');
-		if (endp) {
-			port = _num_or_dflt(_skip(_chop(endp), ':'),
-					      0xFFFFu, port);
-			afam = strchr(haddr, ':') ? AF_INET6 : AF_INET;
+	char ip[INET6_ADDRSTRLEN];
+
+	ZERO(*netnum);               /* don't return random data on fail */
+        /* check num not NULL before using it */
+	if ( NULL == num) {
+                return -4001;
+        }
+	numlen = strlen(num);
+	/* Quickly reject empty or impossibly long inputs. */
+	if(numlen == 0 ||
+	   numlen > ((sizeof(ip) - 1) + (NI_MAXSERV - 1) + (3 /* "[]:" */))) {
+		return -4002;
+	}
+
+	/* Is this a bracketed IPv6 address? */
+	have_brackets = ('[' == num[0]);
+	if(have_brackets) {
+		/* If it's formatted like [IPv6]:port, the port part
+		   comes after the "]:". */
+		if((temp = strstr(num, "]:")) != NULL) {
+			ip_start = num + 1;
+			ip_end = temp;
+			port_start = temp + 2;
+		}
+		else if(num[numlen-1] == ']') {
+			/* It's just [IPv6]. */
+			ip_start = num + 1;
+			ip_end = ip_start + numlen - 1;
+			port_start = NULL;
+		}
+		else {
+			/* Anything else must be invalid. */
+			return -4003;
+		}
+	}
+	/* No brackets. Searching backward, see if there's at least one
+	 * colon... */
+	else if((temp = strrchr(num, ':')) != NULL) {
+		/* ...and then look for a second one, searching forward. */
+		if(strchr(num, ':') == temp) {
+			/* Searching from both directions gave us the same
+			   result, so there's only one colon. What's after
+			   it is the port. */
+			ip_start = num;
+			ip_end = temp;
+			port_start = temp + 1;
+		} else {
+			/* Two colons and no brackets, so it has to be a bare
+			   IPv6 address */
+			ip_start = num;
+			ip_end = ip_start + numlen;
+			port_start = NULL;
 		}
 	} else {
-		char *col = strchr(haddr, ':');
-		char *dot = strchr(haddr, '.');
-		if (col == dot) {
-			/* no dot, no colon: bad! */
-			afam = AF_UNSPEC;
-		} else if (!col) {
-			/* no colon, only dot: IPv4! */
-			afam = AF_INET;
-		} else if (!dot || col < dot) {
-			/* no dot or 1st colon before 1st dot: IPv6! */
-			afam = AF_INET6;
-		} else {
-			/* 1st dot before 1st colon: must be IPv4 with port */
-			afam = AF_INET;
-			port = _num_or_dflt(_chop(col), 0xFFFFu, port);
-		}
+		/* No colon, no brackets. */
+		ip_start = num;
+		ip_end = ip_start + numlen;
+		port_start = NULL;
 	}
 
-	/* Since we don't know about additional members in the address
-	 * structures, we wipe the result buffer thoroughly:
-	 */	 
-	memset(&netnum, 0, sizeof(netnum));
-
-	/* For AF_INET6, evaluate and remove any scope suffix. Have
-	 * inet_pton() do the real work for AF_INET and AF_INET6, bail
-	 * out otherwise:
-	 */
-	switch (afam) {
-	case AF_INET:
-		if (inet_pton(afam, haddr, &netnum.sa4.sin_addr) <= 0)
-			return FALSE;
-		netnum.sa4.sin_port = htons((unsigned short)port);
-		break;
-
-	case AF_INET6:
-		scope = _num_or_dflt(_chop(strchr(haddr, '%')), 0xFFFFFFFFu, scope);
-		if (inet_pton(afam, haddr, &netnum.sa6.sin6_addr) <= 0)
-			return FALSE;
-		netnum.sa6.sin6_port = htons((unsigned short)port);
-		netnum.sa6.sin6_scope_id = scope;
-		break;
-
-	case AF_UNSPEC:
-	default:
-		return FALSE;
+	/* Now we have ip_start pointing to the start of the IP,
+	   ip_end pointing past the end of the IP, and port_start
+	   either NULL or pointing to the start of the port. Check
+	   whether the IP is short enough to possibly be valid and
+	   if so copy it into ip. */
+	if ((ip_end - ip_start + 1) > (int)sizeof(ip)) {
+		return -4004;
+	} else {
+		memcpy(ip, ip_start, (size_t)(ip_end - ip_start));
+		ip[ip_end - ip_start] = '\0';
 	}
 
-	/* Collect the remaining pieces and feed the output, which was
-	 * not touched so far:
-	 */
-	netnum.sa.sa_family = afam;
-	memcpy(net, &netnum, sizeof(netnum));
-	return TRUE;
+	ZERO(hints);
+	hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_flags = AI_NUMERICHOST;
+	hints.ai_protocol = IPPROTO_UDP;
+	/* One final validity check: only IPv6 addresses are allowed to
+	 * have brackets. */
+	hints.ai_family = have_brackets ? AF_INET6 : AF_UNSPEC;
+
+	/* If we've gotten this far, then we still don't know that
+	   either the IP address or the port is well-formed, but at
+	   least they're unambiguously delimited from each other.
+	   Let getaddrinfo() perform all further validation. */
+	retcode = getaddrinfo(ip, port_start == NULL ? NTP_PORTA : port_start,
+		       &hints, &ai);
+	if(retcode) {
+		return retcode;
+	}
+
+	INSIST(ai->ai_addrlen <= sizeof(*netnum));
+	if(netnum) {
+		memcpy(netnum, ai->ai_addr, ai->ai_addrlen);
+	}
+	freeaddrinfo(ai);
+	return 0;
 }

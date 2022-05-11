@@ -1,79 +1,229 @@
 #!/usr/bin/make -f
 
-DEB_BUILD_GNU_TYPE ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
-DEB_HOST_ARCH_OS ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
-DEB_HOST_GNU_TYPE ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
+include /usr/share/dpkg/architecture.mk
+include /usr/share/dpkg/default.mk
+include /usr/share/dpkg/pkg-info.mk
 
-CPPFLAGS = $(shell dpkg-buildflags --get CPPFLAGS) -D_GNU_SOURCE
-CFLAGS   = $(shell dpkg-buildflags --get CFLAGS) -fno-strict-aliasing -fcommon
-LDFLAGS  = $(shell dpkg-buildflags --get LDFLAGS) -Wl,--as-needed
+export DEB_BUILD_MAINT_OPTIONS = hardening=+bindnow,+pie
+export DEB_CFLAGS_MAINT_APPEND = -fno-strict-aliasing
 
 %:
-	# autoreconf is already called by ./bootstrap
-	dh $@ --without autoreconf
+	dh $@ --with apache2,python3
 
 override_dh_auto_configure:
 ifeq (hurd, $(DEB_HOST_ARCH_OS))
 	# hurd does not provided the system calls needed for ntpd to work.
 	exit 1
 endif
-	# This is necessary for the changes in sntp-kod-location.patch to
-	# take effect
-	rm sntp/sntp-opts.c
-	./bootstrap
+	# Only build with refclocks NOT slated for removal.  See also
+	# debian/patches/update-refclock-docs.patch.  However, if the reason
+	# for deprecation is only "two digit years", I *am* keeping it.
+	#
+	# Upstream references:
+	# https://www.ntpsec.org/removal-plan.html
+	# https://www.ntpsec.org/drivers.html
+	#
+	# Also drop modem.  It "requires a Hayes-compatible 1200bps modem,
+	# hardware now 20 years obsolete".
+	#
+	# gpsd is a tough call.  It's not deprecated upstream, and it still can
+	# work.  However, upstream recommends the use of SHM, as does every
+	# example HOWTO I found with a quick search.  Furthermore, it is buggy:
+	#   https://lists.ntpsec.org/pipermail/devel/2016-October/002392.html
+	# Also, it "makes all sorts of non-standard assumptions about how gpsd
+	# is configured.  A configuration that is contorted and non-obvious":
+	#   https://lists.ntpsec.org/pipermail/devel/2016-October/002422.html
+	# Most importantly, it is an attractive nuisance.  If someone is told
+	# that the best practice is to use "gpsd", they might logically think
+	# they should use the gpsd driver.  Skipping the gpsd driver also avoids
+	# using the embedded copy of libjsmn.
+	#
+	# We pass LDFLAGS as LINKFLAGS because LINKFLAGS appears first in the
+	# command line.  Debian wants to build with -fPIE for security reasons.
+	# This is not compatible with building shared libraries like the ntpc
+	# python extension.  If the -fPIE flag comes before -shared (or -fPIC),
+	# the latter will override, and the build succeeds.
+	CFLAGS='$(CFLAGS) $(CPPFLAGS)' \
+	LDFLAGS='' \
+	LINKFLAGS='$(LDFLAGS)' \
+		python3 waf configure \
+		--pyshebang=/usr/bin/python3 \
+		--prefix=/usr --libdir=/usr/lib/$(DEB_HOST_MULTIARCH) \
+		--enable-debug --enable-debug-gdb \
+		--enable-mssntp --enable-warnings \
+		--refclock=local,spectracom,generic,arbiter,nmea,pps,hpgps,shm,trimble,jjy,zyfer \
+		--enable-doc --htmldir=/usr/share/doc/ntpsec/html
 
-	dh_auto_configure -- CFLAGS='$(CFLAGS)' CPPFLAGS='$(CPPFLAGS)' LDFLAGS='$(LDFLAGS)' \
-		--build=$(DEB_BUILD_GNU_TYPE) \
-		--host=$(DEB_HOST_GNU_TYPE) \
-		--prefix=/usr \
-		--enable-all-clocks --enable-parse-clocks --enable-SHM \
-		--enable-debugging --sysconfdir=/var/lib/ntp \
-		--with-lineeditlibs=edit \
-		--without-ntpsnmpd \
-		--disable-local-libopts \
-		--disable-local-libevent \
-		--enable-ntp-signd \
-		--disable-dependency-tracking \
-		--with-locfile=debian \
-		--with-openssl-libdir=/usr/lib/$(DEB_HOST_MULTIARCH)
+override_dh_auto_build:
+	python3 waf build -v
+
+override_dh_auto_clean:
+	python3 waf clean || true
+	rm -rf \
+		build \
+		.lock-waf_*_build \
+		ntpclients/ntp \
+		ntpd/version.h \
+		.waf* \
+		wafhelpers/autorevision.sh
+	find -name "*.pyc" -delete
+
+override_dh_gencontrol:
+	dh_gencontrol -pntp     -- -v1:4.2.8p15+dfsg-2~$(DEB_VERSION_UPSTREAM_REVISION)
+	dh_gencontrol -pntp-doc -- -v1:4.2.8p15+dfsg-2~$(DEB_VERSION_UPSTREAM_REVISION)
+	dh_gencontrol -pntpdate -- -v1:4.2.8p15+dfsg-2~$(DEB_VERSION_UPSTREAM_REVISION)
+	dh_gencontrol -psntp    -- -v1:4.2.8p15+dfsg-2~$(DEB_VERSION_UPSTREAM_REVISION)
+	dh_gencontrol --remaining-packages
 
 override_dh_install:
-	install -D -m 0755 scripts/ntpsweep/ntpsweep debian/ntp/usr/bin/ntpsweep
-	install -D -m 0644 debian/ntp.dhcp debian/ntp/etc/dhcp/dhclient-exit-hooks.d/ntp
-	install -D -m 0755 debian/ntp.networkmanager debian/ntp/etc/NetworkManager/dispatcher.d/ntp
-	install -D -m 0644 debian/ntpdate.dhcp debian/ntpdate/etc/dhcp/dhclient-exit-hooks.d/ntpdate
-	install -D -m 0755 debian/ntpdate-debian debian/ntpdate/usr/sbin/ntpdate-debian
-	install -D -m 0644 debian/ntp-systemd-netif.path debian/ntp/lib/systemd/system/ntp-systemd-netif.path
-	install -D -m 0644 debian/ntp-systemd-netif.service debian/ntp/lib/systemd/system/ntp-systemd-netif.service
+	python3 waf install --destdir=$(CURDIR)/debian/tmp
+	mv \
+		debian/tmp/lib/systemd/system/ntpd.service \
+		debian/tmp/lib/systemd/system/ntpsec.service
+	mv \
+		debian/tmp/lib/systemd/system/ntp-wait.service \
+		debian/tmp/lib/systemd/system/ntpsec-wait.service
+	rm -rf debian/tmp/usr/lib/python3/dist-packages/ntp/__pycache__
+	# ntpfrob probes internal, mostly undocumented settings.  It is
+	# extremely unlikely that anyone needs this.
+	#
+	# ntpsnmpd is experimental.  If support for it is desired, then
+	# it can be installed, but it will require some patching of file
+	# paths to be compliant with Debian best practices.  It also needs
+	# more documentation on how to integrate with snmpd.
+	#
+	# From ntpsweep.1, "ntpsweep relies on ntpq and Mode 6 queries to
+	# probe servers. This depends on the remote host's restrict
+	# configuration allowing queries. Nowadays effectively all public
+	# hosts set noquery, so this script is unlikely to be useful unless
+	# you have multiple specially-configured timeservers on a LAN."  The
+	# default ntp.conf from this package also sets "noquery" (with an
+	# exception for localhost).
+	rm \
+		debian/tmp/usr/bin/ntpfrob \
+		debian/tmp/usr/bin/ntpsnmpd \
+		debian/tmp/usr/bin/ntpsweep \
+		debian/tmp/usr/share/man/man1/ntpsweep.1 \
+		debian/tmp/usr/share/man/man8/ntpfrob.8 \
+	        debian/tmp/usr/share/man/man8/ntpsnmpd.8
+	mv \
+		debian/tmp/usr/bin/ntptime \
+		debian/tmp/usr/bin/ntpkeygen \
+		debian/tmp/usr/bin/ntploggps \
+		debian/tmp/usr/bin/ntplogtemp \
+		debian/tmp/usr/bin/ntpwait \
+		debian/tmp/usr/sbin/
+	install -m 755 \
+		attic/ntpdate \
+		debian/tmp/usr/sbin
+	# Sometimes we get the timestamp from the tarball and sometimes we get
+	# a more recent timestamp (probably build time?).  The latter gets
+	# clamped to the debian/changelog timestamp when the .deb is built,
+	# but the tarball timestamp does not (as it is older).  This forces
+	# all the timestamps to be newer so they all get clamped.
+	find $(CURDIR)/debian/tmp/usr/share/doc/ntpsec/html -type f \
+		-exec touch {} \+
 
-	install -D -m 0644 debian/ntp.conf debian/ntp/etc/ntp.conf
+	install -d debian/ntpsec/etc/letsencrypt/renewal-hooks/deploy
+	install -m 755 \
+		debian/ntpsec.certbot \
+		debian/ntpsec/etc/letsencrypt/renewal-hooks/deploy/ntpsec
+
+	install -d debian/ntpsec/lib/systemd/system
+	install -m 644 \
+		debian/ntpsec.ntpsec-rotate-stats.service \
+		debian/ntpsec/lib/systemd/system/ntpsec-rotate-stats.service
+	install -m 644 \
+		debian/ntpsec.ntpsec-rotate-stats.timer \
+		debian/ntpsec/lib/systemd/system/ntpsec-rotate-stats.timer
+
+	install -d debian/ntpsec-ntpviz/lib/systemd/system
+	install -m 644 \
+		etc/ntploggps.service \
+		etc/ntploggps.timer \
+		debian/ntpsec-ntpviz/lib/systemd/system/
+
+	install -d debian/ntpsec-ntpviz/etc/ntpviz/day
+	install -m 644 www/day/footer \
+		debian/ntpsec-ntpviz/etc/ntpviz/day/footer.html
+	install -m 644 www/day/header \
+		debian/ntpsec-ntpviz/etc/ntpviz/day/header.html
+	install -m 644 www/index.html \
+		debian/ntpsec-ntpviz/etc/ntpviz/index.html
+	install -m 644 debian/ntpviz.options \
+		debian/ntpsec-ntpviz/etc/ntpviz/options
+	install -d debian/ntpsec-ntpviz/etc/ntpviz/week
+	install -m 644 www/week/footer \
+		debian/ntpsec-ntpviz/etc/ntpviz/week/footer.html
+	install -m 644 www/week/header \
+		debian/ntpsec-ntpviz/etc/ntpviz/week/header.html
+
+	install -d debian/ntpsec-ntpviz/usr/share/ntpsec-ntpviz/ntpviz
+	install -m 644 \
+		www/favicon.ico \
+		www/ntpsec-logo.png \
+		debian/ntpsec-ntpviz/usr/share/ntpsec-ntpviz/ntpviz
+
+	install -D -m 0755 debian/ntpdate-debian \
+		debian/ntpsec-ntpdate/usr/sbin/ntpdate-debian
+	install -D -m 0644 debian/ntpsec.dhcp \
+		debian/ntpsec/etc/dhcp/dhclient-exit-hooks.d/ntpsec
+	install -D -m 0755 debian/ntpsec.networkmanager \
+		debian/ntpsec/etc/NetworkManager/dispatcher.d/ntpsec
+	install -D -m 0644 debian/ntpsec-ntpdate.dhcp \
+		debian/ntpsec-ntpdate/etc/dhcp/dhclient-exit-hooks.d/ntpsec-ntpdate
+	install -D -m 0755 debian/ntpsec-ntpdate.networkmanager \
+		debian/ntpsec-ntpdate/etc/NetworkManager/dispatcher.d/ntpsec-ntpdate
+	install -D -m 0644 debian/ntpsec-systemd-netif.path \
+		debian/ntpsec/lib/systemd/system/ntpsec-systemd-netif.path
+	install -D -m 0644 debian/ntpsec-systemd-netif.service \
+		debian/ntpsec/lib/systemd/system/ntpsec-systemd-netif.service
+
+ifeq (yes,$(shell dpkg-vendor --derives-from Ubuntu && echo yes))
+	install -D -m 0644 debian/ntp.conf.ubuntu debian/ntpsec/etc/ntpsec/ntp.conf
+else
+	install -D -m 0644 debian/ntp.conf debian/ntpsec/etc/ntpsec/ntp.conf
+endif
+	install -D -m 0644 debian/ntpviz.conf \
+		debian/ntpsec-ntpviz/etc/ntpsec/ntp.d/ntpviz.conf
 
 	# install apparmor profile
-	install -D -m 0644 debian/apparmor-profile debian/ntp/etc/apparmor.d/usr.sbin.ntpd
-	install -D -m 0644 debian/apparmor-profile.tunable debian/ntp/etc/apparmor.d/tunables/ntpd
-	dh_link -pntp etc/apparmor.d/usr.sbin.ntpd etc/apparmor/init/network-interface-security/usr.sbin.ntpd
+	install -D -m 0644 debian/apparmor-profile \
+		debian/ntpsec/etc/apparmor.d/usr.sbin.ntpd
+	install -D -m 0644 debian/apparmor-profile.tunable \
+		debian/ntpsec/etc/apparmor.d/tunables/ntpd
+	dh_link -pntpsec etc/apparmor.d/usr.sbin.ntpd \
+		etc/apparmor/init/network-interface-security/usr.sbin.ntpd
 
 	# install apport hook
-	install -D -m 644 debian/source_ntp.py debian/ntp/usr/share/apport/package-hooks/source_ntp.py
+	install -D -m 644 debian/source_ntpsec.py \
+		debian/ntpsec/usr/share/apport/package-hooks/source_ntpsec.py
 
-	# Remove empty directory (/usr/libexec/)
-	find debian/tmp -type d -empty -delete
+	dh_link
+	dh_install
 
-	ls -laR debian/tmp/usr/share/man/
-	dh_install --fail-missing
-
-	rm -f debian/ntp-doc/usr/share/doc/ntp-doc/html/hints/solaris*
-
-override_dh_installinit:
-	dh_systemd_start -pntp ntp-systemd-netif.path
-	dh_installinit -pntp --error-handler=installinit_error --no-restart-after-upgrade
-	dh_installinit -pntpdate --no-restart-after-upgrade
-	dh_apparmor --profile-name=usr.sbin.ntpd -pntp
-
-override_dh_auto_test:
-# Make the test suite non-fatal on arches where it does not work yet
-ifeq (,$(filter ia64 m68k ppc64 ppc64el, $(DEB_HOST_ARCH)))
-	dh_auto_test
-else
-	dh_auto_test || echo "Ignoring testsuite error"
+override_dh_installinit-arch:
+	dh_installinit -pntpsec --error-handler=installinit_error
+	dh_installinit -pntpsec-ntpviz --name=ntpviz
+	dh_installinit -pntpsec-ntpdate
+ifeq (yes,$(shell dpkg-vendor --derives-from Ubuntu && echo yes))
+	install -m 644 debian/ntpsec-ntpdate.default.ubuntu \
+		debian/ntpsec-ntpdate/etc/default/ntpsec-ntpdate
 endif
+	dh_apparmor --profile-name=usr.sbin.ntpd -pntpsec
+
+override_dh_installsystemd:
+	dh_installsystemd -pntpsec \
+		ntpsec.service \
+		ntpsec-systemd-netif.path \
+		ntpsec-rotate-stats.timer
+	dh_installsystemd -pntpsec-ntpviz \
+		ntploggps.timer \
+		ntplogtemp.timer \
+		ntpviz-daily.timer \
+		ntpviz-weekly.timer
+
+override_dh_makeshlibs:
+	# This avoids an unnecessary trigger of ldconfig.  libntpc.so is not
+	# installed in a system library path.
+	dh_makeshlibs -n

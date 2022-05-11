@@ -1,0 +1,48 @@
+// Syntax and usage of association commands.  This is included
+// twice, one in generating the Web documentation tree and one when
+// generating the manual page describing the daemon config file.
+
+In these commands, an _address_ can be any of (a) an IPV4 address in
+a.b.c.d format, (b) an IPV6 address in [a:b:c:d:e:f:g:h] format, (c) a
+link-local IPV6 address with an interface specified in
+[a:b:c:d:e:f:g:h]%device format, or (d) a DNS hostname.
+
++pool+ _address_ [+burst+] [+iburst+] [+version+ _version_] [+prefer+] [+minpoll+ _minpoll_] [+maxpoll+ _maxpoll_] [+preempt+]
+
++server+ _address_ [+key+ _key_] [+burst+] [+iburst+] [+version+ _version_] [+prefer+] [+minpoll+ _minpoll_] [+maxpoll+ _maxpoll_]
+
++peer+ _address_ [+key+ _key_] [+version+ _version_] [+prefer+] [+minpoll+ _minpoll_] [+maxpoll+ _maxpoll_]
+
++unpeer+ ['address' | 'associd' | +clock+ 'clocktype' [+unit+ 'unitnum']]::
+  These four commands specify the time server name or address to be
+  used and the mode in which to operate. The _address_ can be either a
+  DNS name or an IP address in dotted-quad notation.  If it is a
+  refclock, it can be +clock+ followed by a type-unit pair as in the
+  +refclock+ directive; a missing unit clause is interpreted as unit
+  0.
+
+[[pool]]+pool+::
+  For server addresses, this command mobilizes a persistent client
+  mode association with a number of remote servers. In this mode the
+  local clock can synchronized to the remote server, but the remote
+  server can never be synchronized to the local clock.
+
+[[server]]+server+::
+  For server addresses, this command mobilizes a persistent client
+  mode association with the specified remote server or local radio
+  clock. In this mode the local clock can synchronized to the remote
+  server, but the remote server can never be synchronized to the local
+  clock.
+
+[[peer]]+peer+::
+  NTP peer mode has been removed for security reasons.  peer is now just
+  an alias for the server keyword.  See above.
+
+[[unpeer]]+unpeer+::
+  This command removes a previously configured association. An address
+  or association ID can be used to identify the association. Either an
+  IP address or DNS name can be used. This command is most useful when
+  supplied via +ntpq+ runtime configuration commands +config+ and
+  +config-from-file+.
+
+// end

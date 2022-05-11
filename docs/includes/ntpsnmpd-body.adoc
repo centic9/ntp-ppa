@@ -1,0 +1,110 @@
+// This is the body of the manual page for ntpsnmpd.
+// It's included in two places: once for the docs/ HTML
+// tree, and once to make an individual man page.
+
+== Synopsis
+
++ntpsnmpd+ [+-nxdDlhV+] [ntp host]
+
+== Description
+
++[experimental]+
+
++ntpsnmpd+ is an AgentX Simple Network Management Protocol sub-agent.
+
+It functions as a bridge between the Mode 6 protocol used for Network
+Time Protocol monitoring, and an SNMP master agent. The user must have
+running NTP and SNMP daemons for ntpsnmpd to work.
+
+== Options
+
++-c+ filename, +--configfile+=filename::
+  Alternate path for the configuration file, /etc/ntpsnmpd.conf by default
++-n+, +--nofork+::
+  Do not fork
++-x+, +--master-addr+::
+  Specify address for connecting to the master agent
++-d+, +--debug+::
+  Increase debugging level by 1.
++-D+ num, +--set-debug-level+=num::
+  The debug level is set to the following integer argument.
++-l+ filename, +--logfile+=filename::
+  Log debugging output to the specified file.
++-h+, +--help+::
+  Print a usage message summarizing options end exit.
++-V+, +--version+::
+  Print the version string and exit.
+
+== Configuration Files
+  Note that filenames in the options should be enclosed in quotes.
+  This is a temporary measure that will not be the case in future
+  versions.
+
+=== /etc/ntpsnmpd.conf
+
+[[master-addr]]+master-addr+ _addr_::
+  The address of the SNMP master agent to connect to. Can be either a named
+  socket or an IP address / hostname and port number.
+
+[[ntp-addr]]+ntp-addr+ _addr_::
+  The address of the NTP daemon to monitor.
+
+[[logfile]]+logfile+ _filename_::
+  Log debugging output to the specified file.
+
+[[loglevel]]+loglevel+ _level_::
+  Threshold for log messages. Equivalent to -D
+
+=== /var/ntpsnmpd/notify.conf
+  This file is used to store the state of options that can be set
+  by writing to certain OIDs. Any comments will be overwritten by
+  ntpsnmpd upon write.
+
+[[notify-mode-change]]+notify-mode-change+ [ True | False ]::
+  Enable notifications on ntpd mode change.
+
+[[notify-stratum-change]]+notify-stratum-change+ [ True | False ]::
+  Enable notifications on NTP stratum change.
+
+[[notify-syspeer-change]]+notify-syspeer-change+ [ True | False ]::
+  Enable notifications when ntpd selects a new system peer.
+
+[[notify-add-association]]+notify-add-association+ [ True | False ]::
+  Enable notifications when ntpd adds a new peer.
+
+[[notify-rm-association]]+notify-rm-association+ [ True | False ]::
+  Enable notifications when ntpd removes a peer.
+
+[[notify-leap-announced]]+notify-leap-announced+ [ True | False ]::
+  Enable notifications on leap second announcement.
+
+[[notify-heartbeat]]+notify-heartbeat+ [ True | False ]::
+  Send heartbeat notification.
+
+[[heartbeat-interval]]+heartbeat-interval+ _interval_::
+  Frequency of heartbeat notification in integer seconds.
+
+== Known Limitations
+
+This program is still experimental in nature. Parts of the AgentX standard
+are not yet fully implemented, logging not fleshed out yet, some options
+missing, etc.
+
+== Known Deviations from RFC 5907
+
+The ntpEntStatusEntityUptime OID specifies a bizarre time format. This
+does not match what the SNMP tools expect to see from a TimeTicks variable.
+Instead the daemon returns a normal TimeTicks value.
+
+The ntpEntNotifConfigChanged trap is left unimplemented. This is because
+there currently is no way to implement what it wants, and it demands alerts
+regarding changes that are not part of NTP's jurisdiction.
+
+The ntpEntTimeResolution OID currently uses data from the sys_fuzz variable
+as the base for it's calculations. It is by no means certain that this is
+the correct choice, and the returned data should be taken with scepticism.
+
+The ntpEntStatPktModeTable is unimplemented due to not currently having a
+data source.
+
+// end

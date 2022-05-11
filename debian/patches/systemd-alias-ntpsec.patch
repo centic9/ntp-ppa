@@ -1,0 +1,15 @@
+Description: systemd: Alias ntpsec
+ Add an alias of ntpd.service, which is the upstream name.
+Forwarded: not-needed
+Author: Richard Laager <rlaager@debian.org>
+Last-Update: 2022-03-05
+
+--- a/etc/ntpd.service
++++ b/etc/ntpd.service
+@@ -17,4 +17,6 @@
+ Restart=no
+ 
+ [Install]
++Alias=ntp.service
++Alias=ntpd.service
+ WantedBy=multi-user.target

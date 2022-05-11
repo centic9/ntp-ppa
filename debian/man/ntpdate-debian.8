@@ -3,26 +3,26 @@
 ntpdate-debian \- set the date and time via NTP
 .SH SYNOPSIS
 .B ntpdate-debian
-.RB [\| \-bBdoqsuv \|] 
-.RB [\| \-a 
-.IR key \|] 
-.RB [\| \-e 
-.IR authdelay \|] 
-.RB [\| \-k 
+.RB [\| \-46bBdqsuv \|]
+.RB [\| \-a
+.IR key \|]
+.RB [\| \-k
 .IR keyfile \|]
 .RB [\| \-o
 .IR version \|]
-.RB [\| \-p
-.IR samples \|]
 .RB [\| \-t
 .IR timeout \|]
+.I server
+.RB [\| ... \|]
 .SH DESCRIPTION
 .B ntpdate-debian
 is identical to
 .BR ntpdate (8)
 except that it uses the configuration in
-.I /etc/default/ntpdate
+.I /etc/default/ntpsec-ntpdate
 by default.
 .B ntpdate
-sets the local date and time by polling Network Time
-Protocol (NTP) servers.
+sets the local date and time by polling the Network Time
+Protocol (NTP) server(s) given as the
+.I server
+argument(s) to determine the correct time.

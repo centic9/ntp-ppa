@@ -1,131 +1,226 @@
-Potentially useful things to know about the Debian NTP packages ...
-
-
 Configuration
 -------------
 
-The default ntp.conf file is set up for an NTP "client" that
-synchronizes to high-stratum NTP servers on the Internet.  This should
-be sufficient for most installations on well-connected hosts that
-simply want to keep their clocks accurate.
+The default ntp.conf file is set up for an NTP "client" that synchronizes to
+high-stratum NTP servers on the Internet.  This should be sufficient for most
+installations on well-connected hosts that simply want to keep their clocks
+accurate.
 
-The default time servers are servers from a pool.ntp.org vendor zone
-assigned to Debian.  Consider replacing this if you have local time
-servers in your organization or network.  A list of public NTP time
-servers is available on the web at
+The default time servers are servers from a pool.ntp.org vendor zone.  Consider
+replacing this if you have local time servers in your organization or network.
+A list of public NTP time servers is available on the web at:
+    https://support.ntp.org/bin/view/Servers/WebHome
 
-    http://ntp.isc.org/bin/view/Servers/WebHome
-
-Extra configuration work will be necessary to offer time service to
-other hosts, to use hardware time receivers, or to synchronize the
-clocks on networks that are not connected to the Internet.  The
-documentation in the package ntp-doc will assist with these tasks.
+Extra configuration work will be necessary to offer time service to other
+hosts, to use hardware time receivers, or to synchronize the clocks on networks
+that are not connected to the Internet.  The documentation in the package
+ntpsec-doc will assist with these tasks.
 
 
 DHCP
 ----
 
-If DHCP is used to configure the host, and the DHCP server sends
-information about NTP servers, then this information will be used
-automatically.  This is done by making a copy of /etc/ntp.conf at
-/run/ntp.conf.dhcp, replacing the server entries with the
-information provided by the DHCP server, and restarting the NTP
-server.
+If DHCP is used to configure the host and the DHCP server sends information
+about NTP servers, this information will be used automatically.  This is done
+by making a copy of ntp.conf at /run/ntpsec/ntp.conf.dhcp, replacing the
+server entries with the information provided by the DHCP server, and
+restarting the NTP server.
 
-In order for this to work, the "ntp-servers" option must be mentioned
-in the "request" statement in /etc/dhcp/dhclient.conf.  This is not
-the case in a default installation.  A complete configuration might
-look like this, for example:
+If you use dhclient, the "ntp-servers" option must be mentioned in the
+"request" statement in /etc/dhcp/dhclient.conf.  This is the default.
 
-    request subnet-mask, broadcast-address, time-offset, routers,
-            domain-name, domain-name-servers, host-name,
-            netbios-name-servers, netbios-scope, interface-mtu,
-            ntp-servers;
+To ignore the NTP servers sent by the DHCP server, set IGNORE_DHCP to "yes" in
+/etc/default/ntpsec.
 
-If you don't like using the NTP servers sent by the DHCP server, this
-is also the right place to turn off this behavior.
-
-To make the DHCP server in the Debian package isc-dhcp-server send NTP
-server information, add a line like the following at an appropriate
-place:
+To make the DHCP server in the Debian package isc-dhcp-server send NTP server
+information, add a line like the following at an appropriate place:
 
     option ntp-servers ntp1.foo.bar, ntp2.foo.bar;
-
-
-SMP Systems
------------
-
-Several people have reported that ntpd fails on SMP boxes unless the
-"Enhanced Real-Time Clock" support is enabled in the kernel.  This is
-known to be essential on SMP Alpha systems, and is believed to also be
-necessary on SMP Intel systems.
-
-
-Logging
--------
-
-By default, ntpd will log via syslog.  The daemon will use the
-LOG_DAEMON facility, leading to ntpd log entries going to
-/var/log/daemon.log.  If you define a logfile location in
-/etc/ntp.conf, the daemon will do direct file system writes to the
-specified file, avoiding syslog.  Previous Debian packages did this,
-with the side effect that they had to ship a weekly cron job that
-stopped the daemon, rotated the log, then restarted the daemon.  This
-is moderately evil for high-stratum NTP servers, where ntpd should be
-allowed to run more or less forever.  This mode of logging is not
-recommended and no longer supported by the Debian packages.
-
-
-NTP and hwclock Issues
-----------------------
-
-hwclock (from the util-linux package) is normally called on startup
-and shutdown.  You should ensure that hwclock --adjust is never called
-(make sure it is disabled in /etc/init.d/hwclock.sh; this is the
-default in new Debian installations).
-
-You should allow hwclock --systohc to be called on shutdown unless you
-are running the NANO kernel patch, because the kernel does not fully
-update the RTC time, and it could be off by a multiple of 30 minutes
-in the next boot if hwclock --systohc is never called by the shutdown
-sequence.  See the hwclock README files in the util-linux
-documentation for more information.
 
 
 Firewalls
 ---------
 
-If your system is behind a firewall, the port you need to open up to
-allow the NTP protocol to work (for either ntpdate or ntpd) is UDP
-port 123.  Server-to-server NTP packets usually use this for both
-source and destination: for extra security, a stateful firewall should
-block "new" packets with source, but not destination, port 123 from
-entering your network.
+If your system is behind a firewall, the port you need to open up to allow the
+NTP protocol to work (for either ntpdate or ntpd) is UDP port 123.
+Server-to-server NTP packets usually use this for both source and destination:
+for extra security, a stateful firewall should block "new" packets with source,
+but not destination, port 123 from entering your network.
+
+If you are using NTS, the NTS-KE uses TCP port 4460.
+
+
+NTS
+---
+
+Network Time Security (NTS) is "a mechanism for using Transport Layer Security
+(TLS) and Authenticated Encryption with Associated Data (AEAD) to provide
+cryptographic security for the client-server mode of the Network Time Protocol
+(NTP)."  It has not yet been published as an RFC, but the Internet-Draft has
+been implemented in NTPsec and other implementations:
+    https://tools.ietf.org/html/draft-ietf-ntp-using-nts-for-ntp-20
+
+To configure an NTPsec client to use NTS for a particular server connection,
+add "nts" to that server line in /etc/ntpsec/ntp.conf:
+    server ntp1.example.com nts iburst
+If the server runs NTS-KE on a different port than TCP port 123, specify
+the port.  For example, CloudFlare uses port 1234:
+    server time.cloudflare.com:1234 nts iburst
+
+Note that the NTP Pool Project (pool.ntp.org) does not support NTS.
+
+To configure an NTPsec server to support NTS, you must obtain a TLS
+certificate.  Store the certificate (with chain) in /etc/ntpsec/cert-chain.pem
+and the key in /etc/ntpsec/key.pem.  These files need to be readable by ntpd
+after it has dropped privileges.  For example, use mode 640 and group ntpsec
+for /etc/ntpsec/key.pem; /etc/ntpsec/cert-chain.pem can be world-readable.
+Also, you need to send ntpd a SIGHUP when the certificate changes.
+
+If you want to use certbot, set the certificate name (e.g. the system's FQDN)
+in the NTPSEC_CERTBOT_CERT_NAME variable in /etc/default/ntpsec, use certbot
+to request the certificate, and the deploy hook installed by this package will
+handle the copying and permissioning.
+
+Then configure /etc/ntpsec/ntp.conf (or add a file in /etc/ntpsec/ntp.d) with:
+    nts enable mintls TLS1.3
+
+The next release of NTPsec will require TLS 1.3 by default.
+
+You need to send ntpd a SIGHUP when the certificate changes.  For example,
+with certbot, you could create /etc/letsencrypt/renewal-hooks/deploy/ntpsec
+(which must be executable) with the following contents:
+    #!/bin/sh
+    killall -HUP ntpd 2>/dev/null || true
 
 
 Keys
 ----
 
-ntp-genkeys now generates an MD5 ntp.keys file in /var/lib/ntp.  Use
-of these keys has not yet been tested; please report success or
-failure in using them to the maintainer.
+When possible, use NTS to provide authenticated time.  To interoperate with
+NTP clients or servers that do not support NTS, you can use the symmetric
+key method for authenticated time.  This requires generating and sharing a
+secret key between the server and client:
+
+  1) Create /etc/ntpsec/ntp.keys:
+     touch /etc/ntpsec/ntp.keys
+     chgrp ntpsec /etc/ntpsec/ntp.keys
+     chmod 640 /etc/ntpsec/ntp.keys
+  2) Add this line to /etc/ntpsec/ntp.conf:
+     keys /etc/ntpsec/ntp.keys
+  3) For each association, generate a random key number between 1 and 65535.
+     Generate a random key.  The key may be printable ASCII excluding "#" up
+     to 20 characters, or a hex-encoded value of 11 bytes (22 hex characters)
+     to 32 bytes (64 hex characters).  (The ntpkeys(8) utility may be useful
+     here, though it's behavior is a bit odd.)  Pick a type (an algorithm)
+     that the hosts both support.  MD5 is very widely supported.  SHA1 is
+     useful if compatibility with FIPS 140-2 is required.  SHA256 is a
+     reasonable modern choice if supported, e.g. with NTPsec.  Put these
+     values together into a single line: keyno type key
+  4) Add that line to /etc/ntpsec/ntp.keys.  Also, add a comment (using the #
+     character) to document which host uses this key.
+  5) In /etc/ntpsec/ntp.conf, add the key number to the trustedkey line,
+     which is space separated.  For example, if you are using keys 1234 and
+     5678 (in either client or server mode), use:
+     trustedkey 1234 5678
+  6) If ntpd is acting as a client, configure the server line as follows,
+     where ntp1.example.com is the hostname and 1234 is the key number:
+     server ntp1.example.com key 1234
+  7) Restart ntpd (the ntpsec service).
+
+For more information, see ntp.keys(5).
+
+The other end must be configured similarly.  For software other than ntpd,
+the process will be different, but the keyno, type, and key must match.
+
+
+Refclock Changes
+----------------
+
+There is a new syntax for configuring refclocks that uses names instead of
+numbers encoded in loopback IP addresses.  The old syntax is accepted for
+backwards compatibility.
+
+Many refclock drivers have been removed upstream.  Several have been disabled
+in this package.
+
+If you were using the Type 45 GPSD client protocol (JSON) driver, you will need
+to switch to the SHM driver.
+
+Two drivers have new device path prefixes:
+    Type  4 - Generic Spectracom Receivers
+      /dev/wwvb0 -> /dev/spectracom0
+    Type 29 - Trimble Palisade/Thunderbolt/Acutime GPSes
+      /dev/palisade0 -> /dev/trimble0
+Both of these drivers, plus this one have been deprecated:
+    Type 11 - Arbiter 1088A/B GPS Receiver
+If you use any of these, please alert the package maintainer or the upstream
+NTPsec project right away.
+
+While not deprecated, if you use the Type 20 Generic NMEA GPS Receiver driver,
+you should strongly consider switching to the gpsd and the SHM driver.
+
+If you use the SHM driver and apparmor, see the note in:
+    /etc/apparmor.d/usr.sbin.ntpd
+
+
+PPS
+---
+
+This build of ntpd has been PPS enabled.  You can use a PPS reference clock.
+To achieve better accuracy, you may need to rebuild your kernel with
+CONFIG_NTP_PPS, which need CONFIG_NO_HZ=n to be set.  You may also add
+CONFIG_RCU_FAST_NO_HZ.
+
+You can find more information at:
+    - https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=691672#41
+    - https://docs.ntpsec.org/latest/pps.html
+    - https://docs.ntpsec.org/latest/kernpps.html
 
 
 Apparmor Profile
 ----------------
 
-If your system uses AppArmor, please note that the shipped enforcing profile
-works with the default installation, and changes in your configuration may
-require changes to the installed apparmor profile. Please see
-https://wiki.ubuntu.com/DebuggingApparmor before filing a bug against this
-software.
+If your system uses AppArmor, please note that changes in your configuration
+may require changes to the installed apparmor profile.  Before filing a bug,
+please see:
+    https://wiki.ubuntu.com/DebuggingApparmor
 
-If your ntpd configuration needs access to a device (for example for a local
-DCF clock) you may need to add this device to
+When configuring ntpd as an NTS server, if your certificate and key files are
+not already covered by /etc/apparmor.d/abstractions/ssl_certs and ssl_keys,
+you will need to add rules to /etc/apparmor.d/local/usr.sbin.ntpd to allow
+reading them.
 
-	/etc/apparmor.d/tunables/ntpd
+If your ntpd configuration needs access to a device (e.g. a local DCF clock),
+you need to add this device to: /etc/apparmor.d/tunables/ntpd
 
-Afterwards you need to reload the AppArmor profile for the changes to take
-effect by executing
+For use with clocks that report via shared memory (e.g. gpsd), you may need
+to give ntpd access to all of shared memory, though this can be considered
+dangerous.  See https://launchpad.net/bugs/722815 for details.  To enable, add
+this to /etc/apparmor.d/local/usr.sbin.ntpd:
+    capability ipc_owner,
 
-	# apparmor_parser -r /etc/apparmor.d/usr.sbin.ntpd
+For either change, reload the AppArmor profile for the changes to take effect:
+    apparmor_parser -r /etc/apparmor.d/usr.sbin.ntpd
+
+
+ntpviz
+------
+
+A visualization utility, ntpviz, is available in the ntpsec-ntpviz package.
+When installed, it will configure (by way of an /etc/ntp.d file) ntpd to log
+stats.  It adds systemd units and cron jobs that generate daily and weekly
+graphs from those stats.  If Apache is installed, these will be served at
+/ntpviz/ by default.
+
+
+Logging
+-------
+
+By default, ntpd will log via syslog.  The daemon will use the LOG_DAEMON
+facility, leading to ntpd log entries going to /var/log/daemon.log.  If you
+define a logfile location in ntp.conf, the daemon will do direct file system
+writes to the specified file, avoiding syslog.  Previous Debian packages of
+ntp (but not ntpsec) did this, with the side effect that they had to ship a
+weekly cron job that stopped the daemon, rotated the log, then restarted the
+daemon.  This is suboptimal for high-stratum NTP servers, where ntpd should be
+allowed to run more or less forever.  This mode of logging is not recommended.

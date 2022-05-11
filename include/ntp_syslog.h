@@ -2,40 +2,18 @@
  * A hack for platforms which require specially built syslog facilities
  */
 
-#ifndef NTP_SYSLOG_H
-#define NTP_SYSLOG_H
+#ifndef GUARD_NTP_SYSLOG_H
+#define GUARD_NTP_SYSLOG_H
 
-#include <ntp_types.h>		/* u_int32 type */
-
-#ifdef VMS
-extern void msyslog();
-extern void mvsyslog();
-#else
-# ifndef SYS_VXWORKS
-#  include <syslog.h>
-# endif
-#endif /* VMS */
 #include <stdio.h>
+#include <syslog.h>
 
-extern int	syslogit;
-extern int	msyslog_term;	/* duplicate to stdout/err */
-extern int	msyslog_term_pid;
-extern int	msyslog_include_timestamp;
-extern FILE *	syslog_file;	/* if syslogit is FALSE, log to 
-				   this file and not syslog */
-extern char *	syslog_fname;
-extern char *	syslog_abs_fname;
+#include "ntp_types.h"		/* uint32_t type */
 
-#if defined(VMS) || defined (SYS_VXWORKS)
-#define	LOG_EMERG	0	/* system is unusable */
-#define	LOG_ALERT	1	/* action must be taken immediately */
-#define	LOG_CRIT	2	/* critical conditions */
-#define	LOG_ERR		3	/* error conditions */
-#define	LOG_WARNING	4	/* warning conditions */
-#define	LOG_NOTICE	5	/* normal but signification condition */
-#define	LOG_INFO	6	/* informational */
-#define	LOG_DEBUG	7	/* debug-level messages */
-#endif /* VMS || VXWORKS */
+extern bool	syslogit;	/* log to syslogit */
+extern bool	termlogit;	/* duplicate to stdout/err */
+extern bool	termlogit_pid;
+extern bool	msyslog_include_timestamp;
 
 /*
  * syslog output control
@@ -73,7 +51,7 @@ extern char *	syslog_abs_fname;
 #define NLOG_SYNCSTATUS		0x00004000 /* sync status (sync/unsync) */
 #define NLOG_SYNCSTATIST	0x00008000 /* sync statistics output */
 
-extern u_int32 ntp_syslogmask;
+extern uint32_t ntp_syslogmask;
 
 #define NLOG(bits)	if (ntp_syslogmask & (bits))
 
@@ -81,9 +59,6 @@ extern u_int32 ntp_syslogmask;
 do {								\
 	NLOG(NLOG_##nlog_suffix)	/* like "if (...) */	\
 		msyslog msl_args;				\
-} while (FALSE)
+} while (false)
 
-extern int change_iobufs(int how);
-/* how: 0->unbuffered, 1->linebuffer, 2->full */
-
-#endif /* NTP_SYSLOG_H */
+#endif /* GUARD_NTP_SYSLOG_H */

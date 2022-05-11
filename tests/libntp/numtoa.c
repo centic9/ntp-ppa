@@ -1,36 +1,27 @@
 #include "config.h"
-
 #include "ntp_stdlib.h"
-#include "ntp_fp.h"
 
 #include "unity.h"
+#include "unity_fixture.h"
 
-void setUp(void);
-void test_Address(void);
-void test_Netmask(void);
+TEST_GROUP(numtoa);
+
+TEST_SETUP(numtoa) {}
+
+TEST_TEAR_DOWN(numtoa) {}
 
 
-void
-setUp(void)
-{
-	init_lib();
+TEST(numtoa, RefidStr) {
+	const char *res;
 
-	return;
+	// Test stratum > 1
+	res = refid_str(htonl(0x44332211), 8);
+	TEST_ASSERT_EQUAL_STRING("68.51.34.17", res);
+	// Test !(stratum > 1)
+	res = refid_str(htonl(0x47505300), 0);
+	TEST_ASSERT_EQUAL_STRING(".GPS.", res);
 }
 
-
-void
-test_Address(void) {
-	const u_int32 input = htonl(3221225472UL + 512UL + 1UL); // 192.0.2.1
-
-	TEST_ASSERT_EQUAL_STRING("192.0.2.1", numtoa(input));
-}
-
-void
-test_Netmask(void) {
-	// 255.255.255.0
-	const u_int32 hostOrder = 255UL*256UL*256UL*256UL + 255UL*256UL*256UL + 255UL*256UL;
-	const u_int32 input = htonl(hostOrder);
-
-	TEST_ASSERT_EQUAL_STRING("255.255.255.0", numtoa(input));
+TEST_GROUP_RUNNER(numtoa) {
+	RUN_TEST_CASE(numtoa, RefidStr);
 }

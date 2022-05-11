@@ -1,0 +1,9 @@
+[Unit]
+Documentation=file:///usr/share/doc/ntpsec/README.Debian.gz#DHCP
+DefaultDependencies=no
+
+[Path]
+PathChanged=/run/systemd/netif/leases
+
+[Install]
+WantedBy=network-pre.target

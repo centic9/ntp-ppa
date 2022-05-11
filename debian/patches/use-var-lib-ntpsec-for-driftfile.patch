@@ -1,0 +1,38 @@
+Description: Use /var/lib/ntpsec for driftfile
+ This is the path used in the ntpsec packaging, to stay out of the namespace
+ of the ntp package.
+Forwarded: not-needed
+Origin: vendor
+Author: Richard Laager <rlaager@debian.org>
+Last-Update: 2020-08-12
+--- a/docs/includes/ntpd-body.adoc
++++ b/docs/includes/ntpd-body.adoc
+@@ -84,7 +84,7 @@
+ +-f+ _string_, +--driftfile+=_string_::
+   frequency drift file name.
+ +
+-The name and path of the frequency file, e.g. +/etc/ntp.drift+.
++The name and path of the frequency file, e.g. +/var/lib/ntpsec/ntp.drift+.
+ This is the same operation as the _driftfile_
+ configuration specification in the +{ntpconfpath}+ file.
+ 
+--- a/docs/quick.adoc
++++ b/docs/quick.adoc
+@@ -73,7 +73,7 @@
+ The simplest, minimal logging configuration consists of a line like this:
+ 
+ ------------------------------------------------------------------
+-driftfile /var/lib/ntp/ntp.drift
++driftfile /var/lib/ntpsec/ntp.drift
+ ------------------------------------------------------------------
+ 
+ This sets up a drift file, which is used to store a measurement of
+@@ -84,7 +84,7 @@
+ You might see something more like this:
+ 
+ ------------------------------------------------------------------
+-driftfile /var/lib/ntp/ntp.drift
++driftfile /var/lib/ntpsec/ntp.drift
+ 
+ statsdir /var/log/ntpstats/
+ 

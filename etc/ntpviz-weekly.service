@@ -1,0 +1,9 @@
+[Unit]
+Documentation=man:ntpviz(1)
+Description=Graph weekly information for NTP
+Requisite=ntpd.service
+
+[Service]
+Type=simple
+IOSchedulingClass=idle
+ExecStart=@BINDIR@/ntpviz -w l -p 7 -o /var/www/localhost/htdocs/week

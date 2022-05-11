@@ -1,0 +1,20 @@
+Description: Disable libssl version check
+ This sort of check should not be necessary, as dpkg-shlibdeps should
+ calculate a proper dependency.
+Forwarded: not-needed
+Origin: vendor
+Author: Richard Laager <rlaager@debian.org>
+Last-Update: 2020-12-21
+--- a/ntpd/nts.c
++++ b/ntpd/nts.c
+@@ -94,10 +94,6 @@
+ 		msyslog(LOG_INFO, "INIT: Running with %s, %lx",
+ 			OpenSSL_version(OPENSSL_VERSION),
+ 			OpenSSL_version_num());
+-		if (buildVersion > OpenSSL_version_num()) {
+-			msyslog(LOG_ERR, "INIT: Old OpenSSL library, bailing");
+-			exit(1);
+-		}
+ 	}
+ 	/*
+ 	 * If the runtime OpenSSL is 1.1.1a, then bail, since we'll run into errors with the

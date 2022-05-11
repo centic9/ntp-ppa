@@ -1,0 +1,64 @@
+Description: Use sbin for ntploggps and ntplogtemp
+ We install ntploggps and ntplogtemp to /usr/sbin, so the man pages should be
+ in section 8, not section 1.
+Forwarded: not-needed
+Origin: vendor
+Author: Richard Laager <rlaager@debian.org>
+Last-Update: 2021-09-25
+--- a/ntpclients/ntploggps-man.adoc
++++ b/ntpclients/ntploggps-man.adoc
+@@ -1,4 +1,4 @@
+-= ntploggps(1)
++= ntploggps(8)
+ :man version: @NTPSEC_VERSION@
+ include::../docs/include-man.ad[]
+ 
+--- a/ntpclients/ntplogtemp-man.adoc
++++ b/ntpclients/ntplogtemp-man.adoc
+@@ -1,4 +1,4 @@
+-= ntplogtemp(1)
++= ntplogtemp(8)
+ :man version: @NTPSEC_VERSION@
+ include::../docs/include-man.ad[]
+ 
+--- a/wscript
++++ b/wscript
+@@ -1081,10 +1081,10 @@
+         afterparty(ctx)
+ 
+     if ctx.env['PYTHON_ARGPARSE']:
+-        ctx.manpage(1, "ntpclients/ntplogtemp-man.adoc")
++        ctx.manpage(8, "ntpclients/ntplogtemp-man.adoc")
+         ctx.manpage(1, "ntpclients/ntpviz-man.adoc")
+     if ctx.env['PYTHON_ARGPARSE'] and ctx.env['PYTHON_GPS']:
+-        ctx.manpage(1, "ntpclients/ntploggps-man.adoc")
++        ctx.manpage(8, "ntpclients/ntploggps-man.adoc")
+     if ctx.env['PYTHON_CURSES']:
+         ctx.manpage(1, "ntpclients/ntpmon-man.adoc")
+     ctx.manpage(1, "ntpclients/ntpdig-man.adoc")
+--- a/etc/ntploggps.service
++++ b/etc/ntploggps.service
+@@ -1,9 +1,9 @@
+ [Unit]
+-Documentation=man:ntploggps(1)
++Documentation=man:ntploggps(8)
+ Description=GPS information logger for ntpviz
+ Requisite=gpsd.service
+ After=gpsd.service
+ 
+ [Service]
+ Type=simple
+-ExecStart=/usr/bin/ntploggps -o -l /var/log/ntpstats/gpsd
++ExecStart=/usr/sbin/ntploggps -o -l /var/log/ntpstats/gpsd
+--- a/etc/ntplogtemp.service
++++ b/etc/ntplogtemp.service
+@@ -1,7 +1,7 @@
+ [Unit]
+-Documentation=man:ntplogtemp(1)
++Documentation=man:ntplogtemp(8)
+ Description=Temperature information logger for ntpviz
+ 
+ [Service]
+ Type=simple
+-ExecStart=@BINDIR@/ntplogtemp -o -l /var/log/ntpstats/temps
++ExecStart=@SBINDIR@/ntplogtemp -o -l /var/log/ntpstats/temps

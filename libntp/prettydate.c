@@ -1,37 +1,25 @@
 /*
  * prettydate - convert a time stamp to something readable
  */
-#include <config.h>
+#include "config.h"
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "ntp_fp.h"
-#include "ntp_unixtime.h"	/* includes <sys/time.h> */
 #include "lib_strbuf.h"
 #include "ntp_stdlib.h"
-#include "ntp_assert.h"
 #include "ntp_calendar.h"
 
-#if SIZEOF_TIME_T < 4
+#if NTP_SIZEOF_TIME_T < 4
 # error sizeof(time_t) < 4 -- this will not work!
 #endif
-
-static char *common_prettydate(l_fp *, int);
-
-const char * const months[12] = {
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-};
-
-const char * const daynames[7] = {
-  "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
-};
 
 /* Helper function to handle possible wraparound of the ntp epoch.
  *
  * Works by periodic extension of the ntp time stamp in the UN*X epoch.
  * If the 'time_t' is 32 bit, use solar cycle warping to get the value
  * in a suitable range. Also uses solar cycle warping to work around
- * really buggy implementations of 'gmtime()' / 'localtime()' that
+ * really buggy implementations of 'gmtime_r()' / 'localtime_r()' that
  * cannot work with a negative time value, that is, times before
  * 1970-01-01. (MSVCRT...)
  *
@@ -43,10 +31,10 @@ const char * const daynames[7] = {
  * called a 'solar cycle'. The gregorian calendar does the same as
  * long as no centennial year (divisible by 100, but not 400) goes in
  * the way. So between 1901 and 2099 (inclusive) we can warp time
- * stamps by 28 years to make them suitable for localtime() and
- * gmtime() if we have trouble. Of course this will play hubbubb with
+ * stamps by 28 years to make them suitable for localtime_r() and
+ * gmtime_r() if we have trouble. Of course this will play hubbubb with
  * the DST zone switches, so we should do it only if necessary; but as
- * we NEED a proper conversion to dates via gmtime() we should try to
+ * we NEED a proper conversion to dates via gmtime_r() we should try to
  * cope with as many idiosyncrasies as possible.
  *
  */
@@ -54,24 +42,22 @@ const char * const daynames[7] = {
 /*
  * solar cycle in unsigned secs and years, and the cycle limits.
  */
-#define SOLAR_CYCLE_SECS   0x34AADC80UL	/* 7*1461*86400*/
+#define SOLAR_CYCLE_SECS   (time_t)0x34AADC80	/* 7*1461*86400*/
 #define SOLAR_CYCLE_YEARS  28
 #define MINFOLD -3
 #define MAXFOLD	 3
 
 static struct tm *
 get_struct_tm(
-	const vint64 *stamp,
-	int	      local)
+	const	time64_t *stamp,
+	struct	tm *tmbuf)
 {
-	struct tm *tm	 = NULL;
-	int32	   folds = 0;
+	struct tm *tm;
+	int32_t	   folds = 0;
 	time_t	   ts;
 
-#ifdef HAVE_INT64
-
-	int64 tl;
-	ts = tl = stamp->q_s;
+	int64_t tl;
+	ts = tl = time64s(*stamp);
 
 	/*
 	 * If there is chance of truncation, try to fix it. Let the
@@ -89,46 +75,24 @@ get_struct_tm(
 		}
 		ts = tl; /* next try... */
 	}
-#else
-
-	/*
-	 * since we do not have 64-bit scalars, it's not likely we have
-	 * 64-bit time_t. Assume 32 bits and properly reduce the value.
-	 */
-	u_int32 hi, lo;
-
-	hi = stamp->D_s.hi;
-	lo = stamp->D_s.lo;
-
-	while ((hi && ~hi) || ((hi ^ lo) & 0x80000000u)) {
-		if (M_ISNEG(hi, lo)) {
-			if (--folds < MINFOLD)
-				return NULL;
-			M_ADD(hi, lo, 0, SOLAR_CYCLE_SECS);
-		} else {
-			if (++folds > MAXFOLD)
-				return NULL;
-			M_SUB(hi, lo, 0, SOLAR_CYCLE_SECS);
-		}
-	}
-	ts = (int32)lo;
-
-#endif
 
 	/*
 	 * 'ts' should be a suitable value by now. Just go ahead, but
 	 * with care:
 	 *
-	 * There are some pathological implementations of 'gmtime()'
-	 * and 'localtime()' out there. No matter if we have 32-bit or
+	 * There are some pathological implementations of 'gmtime_r()'
+	 * and 'localtime_r()' out there. No matter if we have 32-bit or
 	 * 64-bit 'time_t', try to fix this by solar cycle warping
 	 * again...
 	 *
 	 * At least the MSDN says that the (Microsoft) Windoze
-	 * versions of 'gmtime()' and 'localtime()' will bark on time
+	 * versions of 'gmtime_r()' and 'localtime_r()' will bark on time
 	 * stamps < 0.
+	 *
+	 * ESR, 2017: Using localtime(3) for logging at all is bogus -
+	 * in particular, it is bad for reproducibility.
 	 */
-	while ((tm = (*(local ? localtime : gmtime))(&ts)) == NULL)
+	while ((tm = gmtime_r(&ts, tmbuf)) == NULL)
 		if (ts < 0) {
 			if (--folds < MINFOLD)
 				return NULL;
@@ -141,7 +105,6 @@ get_struct_tm(
 			return NULL; /* That's truly pathological! */
 
 	/* 'tm' surely not NULL here! */
-	INSIST(tm != NULL);
 	if (folds != 0) {
 		tm->tm_year += folds * SOLAR_CYCLE_YEARS;
 		if (tm->tm_year <= 0 || tm->tm_year >= 200)
@@ -151,86 +114,102 @@ get_struct_tm(
 	return tm;
 }
 
+static time_t prettypivot;
+
+void
+set_prettydate_pivot(time_t pivot) {
+    prettypivot = pivot;
+}
+
 static char *
 common_prettydate(
-	l_fp *ts,
-	int local
+	const l_fp ts
 	)
 {
-	static const char pfmt0[] =
-	    "%08lx.%08lx  %s, %s %2d %4d %2d:%02d:%02d.%03u";
-	static const char pfmt1[] =
-	    "%08lx.%08lx [%s, %s %2d %4d %2d:%02d:%02d.%03u UTC]";
+	static const char pfmt[] =
+	    "%08lx.%08lx %04d-%02d-%02dT%02d:%02d:%02d.%03u";
 
 	char	    *bp;
-	struct tm   *tm;
-	u_int	     msec;
-	u_int32	     ntps;
-	vint64	     sec;
+	struct tm   *tm, tmbuf;
+	unsigned int	     msec;
+	uint32_t	     ntps;
+	time64_t	     sec;
 
-	LIB_GETBUF(bp);
-
-	if (ts->l_ui == 0 && ts->l_uf == 0) {
-		strlcpy (bp, "(no time)", LIB_BUFLENGTH);
-		return (bp);
-	}
+	bp = lib_getbuf();
 
 	/* get & fix milliseconds */
-	ntps = ts->l_ui;
-	msec = ts->l_uf / 4294967;	/* fract / (2 ** 32 / 1000) */
-	if (msec >= 1000u) {
-		msec -= 1000u;
+	ntps = lfpuint(ts);
+	msec = lfpfrac(ts) / 4294967;	/* fract / (2 ** 32 / 1000) */
+	if (msec >= 1000U) {
+		msec -= 1000U;
 		ntps++;
 	}
-	sec = ntpcal_ntp_to_time(ntps, NULL);
-	tm  = get_struct_tm(&sec, local);
+	sec = ntpcal_ntp_to_time(ntps, prettypivot);
+	tm  = get_struct_tm(&sec, &tmbuf);
 	if (!tm) {
 		/*
 		 * get a replacement, but always in UTC, using
 		 * ntpcal_time_to_date()
 		 */
 		struct calendar jd;
-		ntpcal_time_to_date(&jd, &sec);
-		snprintf(bp, LIB_BUFLENGTH, local ? pfmt1 : pfmt0,
-			 (u_long)ts->l_ui, (u_long)ts->l_uf,
-			 daynames[jd.weekday], months[jd.month-1],
-			 jd.monthday, jd.year, jd.hour,
-			 jd.minute, jd.second, msec);
-	} else		
-		snprintf(bp, LIB_BUFLENGTH, pfmt0,
-			 (u_long)ts->l_ui, (u_long)ts->l_uf,
-			 daynames[tm->tm_wday], months[tm->tm_mon],
-			 tm->tm_mday, 1900 + tm->tm_year, tm->tm_hour,
-			 tm->tm_min, tm->tm_sec, msec);
+		ntpcal_time_to_date(&jd, sec);
+		snprintf(bp, LIB_BUFLENGTH, pfmt,
+			 (unsigned long)lfpuint(ts), (unsigned long)lfpfrac(ts),
+			 jd.year, jd.month, jd.monthday,
+			 jd.hour, jd.minute, jd.second, msec);
+		strlcat(bp, "Z",  LIB_BUFLENGTH);
+	} else {
+		snprintf(bp, LIB_BUFLENGTH, pfmt,
+			 (unsigned long)lfpuint(ts), (unsigned long)lfpfrac(ts),
+			 1900 + tm->tm_year, tm->tm_mon+1, tm->tm_mday,
+			 tm->tm_hour, tm->tm_min, tm->tm_sec, msec);
+		strlcat(bp, "Z", LIB_BUFLENGTH);
+	}
 	return bp;
 }
 
 
 char *
 prettydate(
-	l_fp *ts
+	const l_fp ts
 	)
 {
-	return common_prettydate(ts, 1);
+	return common_prettydate(ts);
 }
 
 
 char *
-gmprettydate(
-	l_fp *ts
+rfc3339date(
+	const l_fp ts
 	)
 {
-	return common_prettydate(ts, 0);
+	return common_prettydate(ts) + 18; /* skip past hex time */
 }
 
 
-struct tm *
-ntp2unix_tm(
-	u_int32 ntp, int local
+/*
+ * rfc3339time - prettyprint time stamp - POSIX epoch
+ */
+char * rfc3339time(
+	time_t	posix_stamp
 	)
 {
-	vint64 vl;
-	vl = ntpcal_ntp_to_time(ntp, NULL);
-	return get_struct_tm(&vl, local);
+	char *		buf;
+	struct tm tm, *tm2;
+
+	buf = lib_getbuf();
+	tm2 = gmtime_r(&posix_stamp, &tm);
+	if (tm2 == NULL || tm.tm_year > 9999)
+		snprintf(buf, LIB_BUFLENGTH, "rfc3339time: %ld: range error",
+			 (long)posix_stamp);
+	// if (ntpcal_ntp_to_date(&tm, (uint32_t)ntp_stamp, NULL) < 0)
+	//	snprintf(buf, LIB_BUFLENGTH, "ntpcal_ntp_to_date: %ld: range error",
+	//		 (long)ntp_stamp);
+	else
+		snprintf(buf, LIB_BUFLENGTH, "%04d-%02d-%02dT%02d:%02dZ",
+			tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday,
+			tm.tm_hour, tm.tm_min);
+	return buf;
 }
-	
+
+/* end */

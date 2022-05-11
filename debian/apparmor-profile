@@ -16,9 +16,11 @@
 /usr/sbin/ntpd flags=(attach_disconnected) {
   #include <abstractions/base>
   #include <abstractions/nameservice>
+  #include <abstractions/openssl>
   #include <abstractions/user-tmp>
 
   capability ipc_lock,
+  capability net_admin,
   capability net_bind_service,
   capability setgid,
   capability setuid,
@@ -42,35 +44,34 @@
   /usr/local/{,s}bin/  r,
   /usr/sbin/ntpd rmix,
 
-  /etc/ntp.conf r,
-  /etc/ntp.conf.dhcp r,
-  /etc/ntpd.conf r,
-  /etc/ntpd.conf.tmp r,
-  /run/ntp.conf.dhcp r,
+  /etc/ntpsec/ntp.conf r,
+  /etc/ntpsec/ntp.d/ r,
+  /etc/ntpsec/ntp.d/*.conf r,
+  /run/ntpsec/ntp.conf.dhcp r,
 
-  /etc/ntp.keys r,
-  /etc/ntp/** r,
+  /etc/ntpsec/cert-chain.pem r,
+  /etc/ntpsec/key.pem r,
+  /etc/ntpsec/ntp.keys r,
 
-  /etc/ntp.drift rwl,
-  /etc/ntp.drift.TEMP rwl,
-  /etc/ntp/drift* rwl,
-  /var/lib/ntp/*drift rw,
-  /var/lib/ntp/*drift.TEMP rw,
+  /var/lib/ntpsec/ntp.drift rw,
+  /var/lib/ntpsec/ntp.drift-tmp rw,
+  /var/lib/ntpsec/nts-keys rw,
+  /usr/share/zoneinfo/leap-seconds.list rw,
 
   /var/log/ntp w,
   /var/log/ntp.log w,
   /var/log/ntpd w,
-  /var/log/ntpstats/clockstats* rwl,
-  /var/log/ntpstats/loopstats*  rwl,
-  /var/log/ntpstats/peerstats*  rwl,
-  /var/log/ntpstats/protostats* rwl,
-  /var/log/ntpstats/rawstats*   rwl,
-  /var/log/ntpstats/sysstats*   rwl,
+  /var/log/ntpsec/clockstats* rwl,
+  /var/log/ntpsec/loopstats*  rwl,
+  /var/log/ntpsec/peerstats*  rwl,
+  /var/log/ntpsec/protostats* rwl,
+  /var/log/ntpsec/rawstats*   rwl,
+  /var/log/ntpsec/sysstats*   rwl,
 
   /{,var/}run/ntpd.pid w,
 
   # to be able to check for running ntpdate
-  /run/lock/ntpdate wk,
+  /run/lock/ntpsec-ntpdate wk,
 
   # To sign replies to MS-SNTP clients by the smbd daemon /var/lib/samba
   /var/lib/samba/ntp_signd/socket rw,

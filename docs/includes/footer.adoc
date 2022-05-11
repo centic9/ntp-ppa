@@ -1,0 +1,6 @@
+[cols="3",grid="none",frame="none",options="autowidth"]
+|=========================================================
+|image:icons/home.gif[height=32]link:index.html[Home Page]|
+image:icons/sitemap.png[height=32]link:sitemap.html[Site Map]|
+image:icons/mail2.gif[height=32]link:{project-contact}[Contacts]
+|=========================================================

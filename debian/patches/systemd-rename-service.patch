@@ -1,0 +1,65 @@
+Description: systemd: Rename service
+ We name the service ntpsec.service to match the package name.
+Forwarded: not-needed
+Author: Richard Laager <rlaager@debian.org>
+Last-Update: 2022-03-05
+
+--- a/etc/ntp-wait.service
++++ b/etc/ntp-wait.service
+@@ -1,8 +1,8 @@
+ [Unit]
+ Description=Wait for ntpd to synchronize system clock
+ Documentation=man:ntpwait(8)
+-Requisite=ntpd.service
+-After=ntpd.service
++Requisite=ntpsec.service
++After=ntpsec.service
+ Conflicts=systemd-timesyncd.service
+ ConditionCapability=CAP_SYS_TIME
+ 
+--- a/etc/ntplogtemp.timer
++++ b/etc/ntplogtemp.timer
+@@ -7,4 +7,4 @@
+ Persistent=true
+ 
+ [Install]
+-WantedBy=ntpd.service
++WantedBy=ntpsec.service
+--- a/etc/ntpviz-daily.service
++++ b/etc/ntpviz-daily.service
+@@ -1,7 +1,7 @@
+ [Unit]
+ Documentation=man:ntpviz(1)
+ Description=Graph daily information for NTP
+-Requisite=ntpd.service
++Requisite=ntpsec.service
+ 
+ [Service]
+ Type=simple
+--- a/etc/ntpviz-daily.timer
++++ b/etc/ntpviz-daily.timer
+@@ -6,4 +6,4 @@
+ Persistent=true
+ 
+ [Install]
+-WantedBy=ntpd.service
++WantedBy=ntpsec.service
+--- a/etc/ntpviz-weekly.service
++++ b/etc/ntpviz-weekly.service
+@@ -1,7 +1,7 @@
+ [Unit]
+ Documentation=man:ntpviz(1)
+ Description=Graph weekly information for NTP
+-Requisite=ntpd.service
++Requisite=ntpsec.service
+ 
+ [Service]
+ Type=simple
+--- a/etc/ntpviz-weekly.timer
++++ b/etc/ntpviz-weekly.timer
+@@ -6,4 +6,4 @@
+ Persistent=true
+ 
+ [Install]
+-WantedBy=ntpd.service
++WantedBy=ntpsec.service

@@ -1,39 +1,10 @@
 /*
- * /src/NTP/ntp4-dev/include/trimble.h,v 4.6 2005/04/16 17:32:10 kardel RELEASE_20050508_A
- *
- * trimble.h,v 4.6 2005/04/16 17:32:10 kardel RELEASE_20050508_A
- *
- * $Created: Sun Aug  2 16:16:49 1998 $
- *
- * Copyright (c) 1998-2005 by Frank Kardel <kardel <AT> ntp.org>
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the author nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
+ * Copyright Frank Kardel <kardel <AT> ntp.org>
+ * Copyright the NTPsec project contributors
+ * SPDX-License-Identifier: BSD-3-Clause
  */
-#ifndef TRIMBLE_H
-#define TRIMBLE_H
+#ifndef GUARD_TRIMBLE_H
+#define GUARD_TRIMBLE_H
 
 /*
  * Trimble packet command codes - commands being sent/received
@@ -79,7 +50,7 @@
 #define CMD_CHEIGHTFILT	0x73	/* height filter control */
 #define CMD_CHIGH8CNT	0x75	/* high-8 (best 4) / high-6 (overdetermined) control */
 #define CMD_CMAXDGPSCOR	0x77	/* maximum rate of DGPS corrections */
-#define CMD_CSUPER	0x8E	/* super paket */
+#define CMD_CSUPER	0x8E	/* super packet */
 
 #define CMD_RDATAA	0x3D	/* data channel A configuration:trimble_channelA:RO */
 #define CMD_RALMANAC	0x40	/* almanac data for sat:gps_almanac:RO */
@@ -118,21 +89,20 @@
 #define CMD_RDOUBLEXYZ	0x83	/* double precision XYZ:gps_position_ext(XYZ):RO|DEF */
 #define CMD_RDOUBLELLA	0x84	/* double precision LLA:gps_position_ext(LLA):RO|DEF */
 #define CMD_RDGPSSTAT	0x85	/* differential correction status:trimble_dgpsstatus:RO */
-#define CMD_RSUPER	0x8F	/* super paket::0 */
+#define CMD_RSUPER	0x8F	/* super packet::0 */
 
-typedef struct cmd_info
-{
-  unsigned char cmd;		/* command code */
-  const char   *cmdname;	/* command name */
-  const char   *cmddesc;	/* command description */
-  const char   *varname;	/* name of variable */
-  int           varmode;	/* mode of variable */
+typedef struct cmd_info {
+	unsigned char cmd;		/* command code */
+	const char   *cmdname;	/* command name */
+	const char   *cmddesc;	/* command description */
+	const char   *varname;	/* name of variable */
+	int           varmode;	/* mode of variable */
 } cmd_info_t;
 
 extern cmd_info_t trimble_rcmds[];
-extern cmd_info_t trimble_scmds[];
 
-extern cmd_info_t *trimble_convert (unsigned int cmd, cmd_info_t *tbl);
+extern cmd_info_t *trimble_convert (unsigned int cmd, cmd_info_t *tbl)
+			__attribute__((pure));
 
 #endif
 /*

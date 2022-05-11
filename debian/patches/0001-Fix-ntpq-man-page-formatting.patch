@@ -1,0 +1,27 @@
+From ad1d8cca7e0aa576a810050cdf4bf2d55a7bc7a4 Mon Sep 17 00:00:00 2001
+From: Richard Laager <rlaager@wiktel.com>
+Date: Fri, 29 Oct 2021 17:57:22 -0500
+Subject: [PATCH 1/2] Fix ntpq man page formatting
+
+Signed-off-by: Richard Laager <rlaager@wiktel.com>
+---
+ docs/includes/ntpq-body.adoc | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/docs/includes/ntpq-body.adoc b/docs/includes/ntpq-body.adoc
+index a48c3f268..90e2f19b3 100644
+--- a/docs/includes/ntpq-body.adoc
++++ b/docs/includes/ntpq-body.adoc
+@@ -307,8 +307,7 @@ ind assid status conf reach auth condition last_event cnt
+   server so loaded that none of its MRU entries age out before they
+   are shipped. With this option, each segment is reported as it arrives.
+ 
+-[[mrulist]]+mrulist+ [+limited+ | +kod+ | +mincount=+'count' | +mindrop=+'drop' | +minscore=+'score' | +maxlstint=+'seconds' | +minlstint=+'seconds' | +laddr=+'localaddr' | +sort=+'sortorder' | +resany=+'hexmask' | +resall=+'hexmask' | +limit=+'limit' |
+-+addr.'num'=+'address']::
++[[mrulist]]+mrulist+ [+limited+ | +kod+ | +mincount=+'count' | +mindrop=+'drop' | +minscore=+'score' | +maxlstint=+'seconds' | +minlstint=+'seconds' | +laddr=+'localaddr' | +sort=+'sortorder' | +resany=+'hexmask' | +resall=+'hexmask' | +limit=+'limit' | +addr.'num'=+'address']::
+   Obtain and print traffic counts collected and maintained by the
+   monitor facility. This is useful for tracking who _uses_ or
+   _abuses_ your server.
+-- 
+2.25.1
+

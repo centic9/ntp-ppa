@@ -1,0 +1,2 @@
+/usr/bin/ntpdig /usr/bin/sntp
+/usr/share/man/man1/ntpdig.1.gz /usr/share/man/man1/sntp.1.gz

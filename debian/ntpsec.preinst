@@ -1,0 +1,49 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "install" ] && [ -z "$2" ]; then
+	# If the user is converting from ntp to ntpsec, copy their
+	# /etc/default/ntp if and only if it was modified.  This will result
+	# in the usual prompt asking the user to resolve their changes.
+	if ! [ -e /etc/default/ntpsec ] && [ -e /etc/default/ntp ]; then
+		md5sum="$(md5sum /etc/default/ntp | sed -e 's/ .*//')"
+		# shellcheck disable=SC2016
+		old_md5sum="$(dpkg-query -W -f='${Conffiles}' ntp | \
+	                sed -n -e "\' /etc/default/ntp ' { s/ obsolete$//; s/.* //; p }")"
+		if [ "$md5sum" != "$old_md5sum" ]; then
+			cp /etc/default/ntp /etc/default/ntpsec
+		fi
+	fi
+
+	# Likewise, copy ntp.conf (if it was modified), changing the drift and log
+	# paths in the process.
+	if ! [ -e /etc/ntpsec/ntp.conf ] && [ -e /etc/ntp.conf ]; then
+		md5sum="$(md5sum /etc/ntp.conf | sed -e 's/ .*//')"
+		# shellcheck disable=SC2016
+		old_md5sum="$(dpkg-query -W -f='${Conffiles}' ntp | \
+	                sed -n -e "\' /etc/ntp.conf ' { s/ obsolete$//; s/.* //; p }")"
+		if [ "$md5sum" != "$old_md5sum" ]; then
+			mkdir -p /etc/ntpsec
+			sed -e "s|/var/lib/ntp/ntp.drift|/var/lib/ntpsec/ntp.drift|" \
+			    -e "s|/var/log/ntpstats|/var/log/ntpsec|" \
+			    /etc/ntp.conf > /etc/ntpsec/ntp.conf
+		fi
+	fi
+fi
+
+if [ "$1" = "upgrade" ] && [ -n "$2" ]; then
+	if dpkg --compare-versions "$2" le-nl "1.1.0+dfsg1-2~"; then
+		invoke-rc.d ntp stop || true
+	fi
+	if dpkg --compare-versions "$2" le-nl "1.1.8+dfsg1-5~" ; then
+		rm -f /etc/systemd/system/time-sync.target.wants/ntp-wait.service
+	fi
+fi
+
+# These are included manually, as the postinst needs custom ordering.
+dpkg-maintscript-helper mv_conffile /etc/default/ntp /etc/default/ntpsec 1.1.0\+dfsg1-2\~ ntpsec -- "$@"
+dpkg-maintscript-helper mv_conffile /etc/init.d/ntp /etc/init.d/ntpsec 1.1.0\+dfsg1-2\~ ntpsec -- "$@"
+dpkg-maintscript-helper mv_conffile /etc/ntp.conf /etc/ntpsec/ntp.conf 1.1.0\+dfsg1-2\~ ntpsec -- "$@"
+
+#DEBHELPER#

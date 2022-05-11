@@ -1,0 +1,155 @@
+= TO DO =
+
+=== Testing ===
+
+* We need to live-test various refclocks.  It would be nice
+  to test the full matrix of refclock x platform, but that's too
+  much work.  We should probably test as many refclocks as we can
+  on at least one platform and test the NMEA, PPS, and SHM drivers
+  on most platforms.
+
+=== Slow convergence ===
+
+[quote, Gary Miller]
+__________
+ntpd takes way, way, way longer to converge than chronyd.  Which is
+why on the fly reconfiguration in ntpd is SO important.  Last thing you
+ever want to do is restart ntpd.
+
+Right now, after 10 mins, ntpd has 2,000 times the jitter as chronyd had
+when I turned it off.
+__________
+
+Also see https://gitlab.com/NTPsec/ntpsec/issues/68 where the dubiousness
+of the current startup logic gets discussed.
+
+=== SHM ===
+
+* Split out the low level code so it can be used by other drivers
+  and a monitor program.
+
+* Fix the code so that the read side is read-only.  This allows
+  multiple readers and cleans up the file access mess.
+
+
+=== Future plans ===
+
+* Implement Google's proposed standard smear?
+  See https://developers.google.com/time/smear
+
+* Add .tar.xz tarball.
+
+* Fix ntpq retransmissions.
+  Too many cases don't work well enough (may be inherited from ntp classic).
+
+* Test that the pool code properly replaces a server if it goes dark. (Not
+  clear how to arrange this.)
+
+* We could open only IPv6 sockets and allow them to handle mapped IPv4 addresses,
+  as described at http://man7.org/linux/man-pages/man7/ipv6.7.html
+
+* A clock driver or auxiliary daemon for PTP.
+
+* Hal says "We need a way to inspect/debug bits on the wire. `ntpdate
+  -du' is the traditional approach."  Hal's straw man is a new program
+  rather than trying to make ntpdig do this.  Eric's proposed answer:
+  ntpshark, a command interpreter written around the ntp Python module
+  (or scapy) and loosely modeled on wireshark.
+
+* Measure time from the clock reading to transmission for outbound
+  packets.  Use the measurement to correct for computation time
+  before transmission.  This is more interesting for authenticated packets.
+
+* We might be able to eliminate a lot of the Linux runtime
+  droproot code by using file capabilities.
+
+* Use the snprintb in ntptime/ntptime.c for flag words like flash
+  codes and use it systematically to make reports more readable.
+
+* Timer events need, as much as possible, to be eliminated - they eat
+  power on laptops and mobile devices, usually unnecessarily. To fix this,
+  go to an event-queue architecture that wakes the daemon up just in time
+  for the next scheduled event (rather than a once-per-second timer tick).
+
+Plug restrict holes:
+  The current code pokes a hole in any restrictions to let servers
+  through if they come from DNS lookups.  We should add something like
+  a nohole flag to prevent this so you can really block pool servers if
+  you know there are some you don't want to use.
+
+Solaris maintenance mode
+  There is code in ntp_proto.c that drops into Solaris maintenance mode
+  if the clock offset exceeds the panic threshold.  We should either
+  drop that code or move it to where it can be used on all fatal errors.
+  (Search for HAVE_LIBSCF_H)
+
+Remove clock fuzzing:
+  ntpd has code to fuzz the clocks.  It's scattered all over the place.
+  That made sense when clocks were updated in big steps on a scheduler
+  interrupt.  But most modern OSes use something like Intel's TSC to
+  implement fine grained clocks.  We should review this area to verify
+  that fuzzing is still useful.
+
+SIGHUP should do more:
+  reload keys file (easy, it already reloads the leap file)
+  reload ntp.conf (hard, but needed to add new keys,
+    we could kludge a partial reload to add/delete servers)
+
+Waf detect need configure:
+  There are problems with people forgetting to run configure or clean
+  after a git pull.  (From email on 23 May 2017)
+
+Version string cleanup:
+  The version string should change if I make an edit and rebuild
+    currently it only changes when something in git changes
+  We need to be sure not to break the stable checksum feature.
+
+Pivot cleanup:
+  Currently, ntpd does a pivot deep in step_systime in libntp/systime.c
+  That handles the problem of 32 bits of seconds wrapping in 2038.
+  Posix is shifting to a 64 bit time_t, but we only have 32 bits
+  of seconds in l_fp.  We can clean up a lot of code if l_fp is
+  only used for offsets except when used in packets.  That requires
+  pushing the pivot logic down close to the packet processing.
+
+  There may be interactions with ntpq.
+
+Recvbuff cleanup:
+  ntpd currently has a pool of recv buffers.  That made sense
+  when it was using SIGIO to get time stamps.  Now it is useless
+  and just adds useless cycles moving things to/from the free list.
+
+[quote, Hal]
+__________
+I think there is some interaction between when the ACTS driver calls and the
+state of other stuff, like the connection to the net.  This is probably a
+good candidate to get cleaned up.
+
+There is another possible tangle in this area.  If you set "noselect" on the
+server line in the config file, ntpd goes through all the action of
+collecting the data and writing log files, but then drops the clock.  I don't
+know things well enough to be sure that this sort of logic won't pick one
+back up.
+__________
+
+
+== Old, sometime ancient stuff ==
+
+970318: in hourly_stats(?), squawk if the magnitude of the drift is,
+	say, >400.
+
+== Simple tasks for an intern/trainee ==
+
+* A conformant SNMP subagent in Python - see RFC 5907.
+
+* In the docs subdirectory, include/command.adoc is an HTML passthrough
+  in a not entirely successful attempt to emulate the look of the
+  Mills HTML documentation this directory was made from. It should be
+  cleaned up or replaced.  Requires HTML and CSS skills; intern must
+  be willing to learn asciidoc.
+
+* Similarly, includes/footer.adoc is a tabular hack made to resemble
+  the old HTML and should be cleaned up.  Requires HTML and CSS
+  skills; intern must be willing to learn asciidoc
+
+// end

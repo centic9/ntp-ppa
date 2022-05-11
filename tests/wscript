@@ -1,0 +1,149 @@
+import os
+from waflib import Utils  # pylint: disable=import-error
+
+
+def build(ctx):
+    testsrc = ctx.srcnode.make_node('tests')
+    pylib = ctx.srcnode.make_node('pylib')
+    testpylib = testsrc.make_node('pylib')
+    testpysrc = testpylib.ant_glob('*.py')
+
+    # Unity source
+    unity_source = [
+        "unity/unity.c",
+        "unity/unity_fixture.c",
+        "unity/unity_memory.c",
+    ]
+
+    unity_config = ["UNITY_INCLUDE_DOUBLE", "UNITY_SUPPORT_64"]
+
+    ctx(
+        defines=unity_config,
+        features="c",
+        target="unity",
+        source=unity_source
+    )
+
+    # Test main.
+    common_source = [
+        "common/tests_main.c",
+        "common/caltime.c",
+        "common/sockaddrtest.c",
+    ]
+
+    # libntp/
+    libntp_source = [
+        "libntp/authkeys.c",
+        "libntp/ntp_calendar.c",
+        "libntp/ntp_endian.c",
+        "libntp/ntp_random.c",
+        "libntp/clocktime.c",
+        "libntp/decodenetnum.c",
+        "libntp/dolfptoa.c",
+        "libntp/hextolfp.c",
+        "libntp/lfpfunc.c",
+        "libntp/lfptostr.c",
+        "libntp/macencrypt.c",
+        "libntp/numtoa.c",
+        "libntp/prettydate.c",
+        "libntp/refidsmear.c",
+        "libntp/socktoa.c",
+        "libntp/statestr.c",
+        "libntp/strtolfp.c",
+        "libntp/timespecops.c",
+        "libntp/vi64ops.c",
+        "libntp/ymd2yd.c"
+    ] + common_source
+
+    ctx.ntp_test(
+        features="c cprogram test",
+        target="test_libntp",
+        install_path=None,
+        defines=unity_config + ["TEST_LIBNTP=1"],
+        includes=[ctx.bldnode.parent.abspath(), "../include", "unity", "common"],
+        use="unity ntp parse M PTHREAD CRYPTO RT SOCKET NSL",
+        source=libntp_source,
+    )
+
+    if ctx.env.REFCLOCK_GENERIC or ctx.env.REFCLOCK_TRIMBLE:
+        # libparse available/required with generic and Trimble refclocks
+
+        # libparse/
+        libparse_source = [
+            "libparse/binio.c",
+            "libparse/gpstolfp.c",
+            "libparse/ieee754io.c",
+        ] + common_source
+
+        ctx.ntp_test(
+            defines=unity_config + ["TEST_LIBPARSE=1"],
+            features="c cprogram test",
+            includes=[ctx.bldnode.parent.abspath(), "../include", "unity"],
+            install_path=None,
+            lib=["parse"],
+            libpath=["libparse"],
+            source=libparse_source,
+            target="test_libparse",
+            use="unity ntp parse M PTHREAD RT SOCKET NSL",
+        )
+
+    ntpd_source = [
+        # "ntpd/filegen.c",
+        "ntpd/leapsec.c",
+        "ntpd/restrict.c",
+        "ntpd/recvbuff.c",
+    ] + common_source
+
+    if not ctx.env.DISABLE_NTS:
+      ntpd_source += [
+        "ntpd/nts.c",
+        "ntpd/nts_client.c",
+        "ntpd/nts_server.c",
+        "ntpd/nts_cookie.c",
+        "ntpd/nts_extens.c",
+    ]
+
+    ctx.ntp_test(
+        defines=unity_config + ["TEST_NTPD=1"],
+        features="c cprogram test",
+        includes=[ctx.bldnode.parent.abspath(), "../include", "unity", "../ntpd", "common", "../libaes_siv"],
+        install_path=None,
+        source=ntpd_source,
+        target="test_ntpd",
+        use="ntpd_lib libntpd_obj unity ntp aes_siv "
+            "M PTHREAD CRYPTO RT SOCKET NSL",
+    )
+
+    testpylib.get_bld().mkdir()
+
+    pypath = pylib.get_bld()
+    targdir = "tests/pylib"
+    linkpath = ctx.bldnode.make_node(targdir + "/ntp").abspath()
+    relpath = ("../" * (targdir.count("/")+1)) + pypath.path_from(ctx.bldnode)
+    if (not os.path.exists(linkpath)) or os.readlink(linkpath) != relpath:
+        try:
+            os.remove(linkpath)
+        except OSError:
+            pass
+        os.symlink(relpath, linkpath)
+
+    pytests = ["pylib/test_util.py",
+               "pylib/test_agentx.py",
+               "pylib/test_agentx_packet.py",
+               "pylib/test_ntpc.py",
+               "pylib/test_packet.py",
+               "pylib/test_statfiles.py"]
+
+    ctx(
+        features="subst",
+        source=testpysrc,
+        target=[x.get_bld() for x in testpysrc],
+        chmod=Utils.O755,
+    )
+
+    for path in pytests:
+        ctx(
+            features="py test_scripts",
+            test_scripts_source=path,
+            test_scripts_template="${PYTHON} ${SRC}",
+        )

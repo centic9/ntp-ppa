@@ -1,0 +1,115 @@
+#!/bin/sh -x
+# shellcheck disable=SC2103
+# Repack an upstream tarball, unpacking waf files inside it.
+#
+# This is meant to be run by uscan(1) as the "command param", after repacking
+# (if any) by mk-origtargz.  Do not use "repacksuffix" in debian/watch; use:
+#   version=4
+#   opts="dversionmangle=s/\+dfsg\d*$//,oversionmangle=s/$/+dfsg1/" \
+#     https://example.com/releases/@PACKAGE@@ANY_VERSION@@ARCHIVE_EXT@ \
+#     debian debian/repack-waf
+#
+# Note that the input and output formats must match or things (like gbp
+# import-orig) that rely on uscan's output, will not work correctly.  So this
+# script cannot re-compress using a different algorithm.  If you wish to
+# recompress, do that with e.g. `compression=xz,repack` which will result in
+# the tarball being recompressed once before this script and once here.  That
+# is a waste, but is not a serious problem in practice.
+#
+# On 11/27/2016 08:28 PM, Ximin Luo wrote:
+# > Richard Laager:
+# >> > I believe you wrote the repack-waf script linked from here:
+# >> > https://wiki.debian.org/UnpackWaf
+# >> > 
+# >> > What is the license on that?
+# >> > 
+# > Hi Richard, I don't think that is even copyrightable, but in case it is,
+# > I say it's CC0-Licensed. Enjoy!
+# > 
+# > X
+#
+# This version of repack-waf has been modified to call waf using python3.
+# If we use python here (explicitly or implicitly) when python is python2.7,
+# we end up with a version of waf that raises SyntaxError on python3.  If we
+# use python3 here, the result runs in both Python 3 and Python 2.7.  Plus,
+# Python 2 is being eliminated.
+#
+# Also, this version detects whether the upstream tarball extracts 1) into
+# a PACKAGE-VERSION directory, 2) a PACKAGE directory, or 3) the current
+# directory.  It normalizes that to PACKAGE-VERSION when repacking.
+
+unwaf_paths=.
+
+USAGE="Usage: $0 --upstream-version version"
+
+test "$1" = "--upstream-version" || { echo >&2 "$USAGE"; exit 2; }
+newups=$2
+upstream="$(echo "${newups}" | sed "s/\+dfsg[0-9]*$//")"
+
+source="$(dpkg-parsechangelog -SSource)"
+
+basedir=..
+
+archive=
+for ext in xz bz2 gz lzma
+do
+	if [ -f "${basedir}/${source}_${newups}.orig.tar.${ext}" ]; then
+		archive="${basedir}/${source}_${newups}.orig.tar.${ext}"
+		if [ "${ext}" = "bz2" ]; then
+			tar_z=--bzip
+		elif [ "${ext}" = "gz" ]; then
+			tar_z=-z
+		else
+			tar_z=--${ext}
+		fi
+		break
+	fi
+done
+if [ -z "$archive" ]; then
+	echo "Failed to find tarball." >&2
+	exit 1
+fi
+
+unpack_waf() {
+	olddir="$PWD"
+	cd "$1"
+	test -x ./waf || return 1
+	python3 waf --help > /dev/null
+	mv .waf3-*/* .
+	sed -i '/^#==>$/,$d' waf
+	rmdir .waf3-*
+	find waf* -name "*.pyc" -delete
+	find waf* -type d -name __pycache__ -delete
+	cd "$olddir"
+}
+
+set -e
+
+rm -rf "${source}-${upstream}"
+mkdir "${source}-${upstream}"
+tar "${tar_z}" -xf "${archive}" -C "${source}-${upstream}"
+cd "${source}-${upstream}"
+subdir=
+if [ -d "${source}-${upstream}" ]; then
+	subdir="${source}-${upstream}"
+elif [ -d "${source}" ]; then
+	subdir="${source}"
+fi
+if [ -n "${subdir}" ]; then
+	cd ..
+	mv "${source}-${upstream}" "${source}-${upstream}-tmp"
+	mv "${source}-${upstream}-tmp/${subdir}" "${source}-${upstream}"
+	rmdir "${source}-${upstream}-tmp"
+	cd "${source}-${upstream}"
+fi
+
+for i in $unwaf_paths; do
+	unpack_waf "$i"
+done
+cd ..
+mv "${source}-${upstream}" "${source}-${newups}"
+# Break the symlink so we do not overwrite the real upstream tarball.  Also,
+# delete the signature (symlink) as it will not match the repacked tarball.
+rm -f "${archive}" "${archive}.asc"
+GZIP=-9fn XZ_OPT=-6e tar "${tar_z}" -cf "${archive}" "${source}-${newups}"
+rm -rf "${source}-${newups}"

@@ -1,0 +1,9 @@
+[Unit]
+Description=Rotate ntpd stats daily
+
+[Timer]
+OnCalendar=*-*-* 06:25:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

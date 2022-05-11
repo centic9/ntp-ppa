@@ -1,0 +1,4 @@
+debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libntpc.so usr/lib/${DEB_HOST_MULTIARCH}/ntp
+debian/tmp/usr/lib/${DEB_HOST_MULTIARCH}/libntpc.so.* usr/lib/${DEB_HOST_MULTIARCH}/ntp
+debian/tmp/usr/lib/python3/dist-packages/ntp
+debian/tmp/usr/lib/python3/dist-packages/ntp*.egg-info

@@ -1,0 +1,180 @@
+= How To Test NTPsec
+
+This assumes you have downloaded the source and built a system
+and now you want to test your new ntpd.
+
+For help on getting that far, see the file INSTALL in the top-level
+directory.
+
+== Path problems with the test tools
+
+The build tree has been set up so that if you first waf builid then cd to
+build/main/ntpclients/ and run (say) ntpq, you should be able to test
+new bersions of the Python code without installing to rootspace.
+
+The very first thing to do, even before you start up ntpd, is to try that.
+If you get a message that says
+
+---------------------------------------------------------------------
+ntpq: can't find Python NTP library -- check PYTHONPATH.
+---------------------------------------------------------------------
+
+you *may* have a problem.  A lot of what was C code in legacy versions
+(pretty much everything except ntpd itself, in fact) has been moved to
+Python to improve maintainability and decrease attack
+surface.  Most of these tools share a Python library of critical
+functions.  If you can't load that library, you can't test effectively.
+
+The waf build is supposed to create a symbolic link from
+build/main/ntpclients/ntp to pylib in the build directory; this should enable
+ntpq to "import ntp" before you install to rootspace. If that link is not
+created or doesn't point to pylib/ under your build directory, report
+this as a bug. If it is, but ./ntpq startup fails anyway, you may
+have a mis-configured Python and need to investigate that.
+
+Load paths may be more likely to be an issue after rootspace installation.
+The script should install the Python library in the directory specified by
+Python itself (unless overridden by command line options or environment
+variables), which is reported as PYTHONARCHDIR near the end of the configure
+phase.  This directory should be on your Python's sys.path, in which case all
+will proceed normally.  If it's not, you will get the same ntpq failure to
+launch ./ntpq from anywhere *outside* the source tree.  If this is the case,
+report it as a bug.
+
+Be aware that if this sort of problem occurs in an NTPsec instance
+installed from a binary package, it is almost certainly not an NTPsec
+bug but a packaging error that the NTPsec maintainers themselves can't
+fix. In that case, you need to report it to your distribution
+maintainers.
+
+== Preliminary one-off test
+
+For a one-off test:
+
+1. Do "ps ax | grep ntpd" or equivalent to find out what the command line is.
+
+2. Use whatever you do on your system to stop the normal ntpd.  This
+ is likely to be either something resembling "/etc/init.d/ntp stop" or
+ "systemctl stop timeservice".
+
+3. Run ./build/ntpd/ntpd plus the command line parameters from above.
+
+4. It will daemonize itself and give you back your terminal prompt.
+
+Your current /etc/ntp.conf should work correctly.
+
+Check your log files to see if there is anything strange.
+Run "ntpq -p" to see if things look normal.
+
+== Full qualification test
+
+For a longer test, including over reboots.
+
+Install your new code using "./waf install" (as root).
+That will install your new ntpd into /usr/local/sbin/ntpd
+
+Now you have to patch your (re)start scripts to look there
+and restart ntpd.  The details vary by OS/distro.
+
+=== Distributions using systemd
+
+1. Edit /usr/lib/systemd/system/ntpd.service
+
+2. Change ExecStart=/usr/sbin/ntpd -u ntp:ntp $OPTIONS
+   to   ExecStart=/usr/local/sbin/ntpd -u ntp:ntp $OPTIONS
+   then do "service ntpd restart"
+
+3. systemctl may barf about an out of date file and tell you
+   how to fix it.  If so, follow its directions and try again.
+
+Note that under Fedora and CentOS, "dnf update" may undo that edit
+and revert to running the system version.
+
+Older versions used /etc/rc.d/init.d/ntpd. The file /etc/sysconfig/ntpd
+gets sourced into the init script so you can put the real code in there
+(systemd doesn't do that)  You can insert this:
+
+--------------------------------------------------
+    PATH="/usr/local/sbin:$PATH"
+--------------------------------------------------
+
+=== Debian, Ubuntu, Raspbian
+
+Many newer versions use systemd; follow those directions. The
+rest of this section describes the older set of conventions used
+with a traditional System V init sequence.
+
+Edit /etc/init.d/ntp. Change
+
+--------------------------------------------------
+DAEMON=/usr/sbin/ntpd
+--------------------------------------------------
+
+to
+
+--------------------------------------------------
+DAEMON=/usr/local/sbin/ntpd
+--------------------------------------------------
+
+A good safety measure in case you want to revert later is to duplicate
+the line, comment out the first one and edit the second one. That
+looks like this:
+
+--------------------------------------------------
+# DAEMON=/usr/sbin/ntpd
+DAEMON=/usr/local/sbin/ntpd
+--------------------------------------------------
+
+If you are using DHCP and your DHCP servers provide NTP servers,
+Debian makes a dummy ntp.conf using those servers and not the
+ones you put into the normal /etc/ntp.conf.  To use your ntp.conf
+rather than the one it wants you to:
+
+1. Edit /etc/init.d/ntp
+
+2. Comment out the clump of 3 lines that references dhcp:
+
+--------------------------------------------------
+# if [ -e /var/lib/ntp/ntp.conf.dhcp ]; then
+#       NTPD_OPTS="$NTPD_OPTS -c /var/lib/ntp/ntp.conf.dhcp"
+# fi
+--------------------------------------------------
+
+apt-get upgrade may undo those edits and revert to running the system version.
+
+=== FreeBSD
+
+Edit /etc/rc.conf It needs to contain this:
+
+--------------------------------------------------
+ntpd_enable="YES"
+ntpd_program="/usr/local/sbin/ntpd"
+--------------------------------------------------
+
+If you are running ntpd, the first line will be there
+already.  The default is NO.
+
+=== NetBSD
+
+Edit /etc/rc.d/ntpd. Change
+
+--------------------------------------------------
+command="/usr/sbin/${name}"
+--------------------------------------------------
+
+to
+
+--------------------------------------------------
+command="/usr/local/sbin/${name}"
+--------------------------------------------------
+
+A good safety measure in case you want to revert later is to duplicate
+the line, comment out the first one and edit the second one. That
+looks like this:
+
+--------------------------------------------------
+# command="/usr/sbin/${name}"
+command="/usr/local/sbin/${name}"
+--------------------------------------------------
+
+// end

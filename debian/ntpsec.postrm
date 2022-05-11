@@ -1,0 +1,24 @@
+#!/bin/sh
+
+set -e
+
+# These are included manually, as the postinst needs custom ordering.
+dpkg-maintscript-helper mv_conffile /etc/default/ntp /etc/default/ntpsec 1.1.0\+dfsg1-2\~ ntpsec -- "$@"
+dpkg-maintscript-helper mv_conffile /etc/init.d/ntp /etc/init.d/ntpsec 1.1.0\+dfsg1-2\~ ntpsec -- "$@"
+dpkg-maintscript-helper mv_conffile /etc/ntp.conf /etc/ntpsec/ntp.conf 1.1.0\+dfsg1-2\~ ntpsec -- "$@"
+
+installinit_error() {
+	exit $?
+}
+
+#DEBHELPER#
+
+if [ "$1" = "purge" ]; then
+	rm -f /etc/systemd/system/ntpsec.timer
+	rm -rf /var/lib/ntpsec/ntp.drift /var/log/ntpsec
+	rmdir /var/lib/ntpsec 2> /dev/null || true
+	if ! LANG=C dpkg -s ntpsec-ntpviz 2> /dev/null | \
+	     grep -qE "^Status: (hold|install)"; then
+		deluser --system --quiet ntpsec || true
+	fi
+fi

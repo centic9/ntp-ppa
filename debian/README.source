@@ -1,0 +1,91 @@
+This package is maintained using `git` and `git-buildpackage`.  The repository
+is kept on Debian Salsa: https://salsa.debian.org/debian/ntpsec
+
+Branches
+--------
+
+The branches are named per [DEP-14] with the default packaging branch being
+`debian/unstable` (rather than `debian/master`).
+
+The `master` branch is upstream's `master` branch.
+
+The `pristine-tar` branch is used by the `pristine-tar` utility.  It contains
+the data (besides that in the `upstream/latest` branch) necessary to exactly
+reconstruct the binary (repacked) orig tarball.
+
+The `upstream/latest` branch contains the unpacked contents of the (repacked)
+orig tarball.  It is branched off the `master` branch, so the delta from
+`master` (at the branch point) to `upstream/latest` contains generated files
+that exist in the tarball but not in the upstream repository.  This includes
+the unpacked version of `waf`, which is the difference between the upstream
+release tarball and the repacked orig tarball.
+
+[DEP-14]: https://dep-team.pages.debian.net/deps/dep14/
+
+Patches
+-------
+
+Patches are stored "unapplied".  Specifically, they are in `quilt` format in
+the `debian/patches` directory.
+
+Git Hooks
+---------
+
+A .git/hooks/pre-commit script like this will ensure that `wrap-and-sort` is
+run before each commit, to keep things sorted and minimize diffs:
+    #!/bin/sh
+    wrap-and-sort --wrap-always --trailing-comma
+
+New Upstream Release
+--------------------
+
+Upstream uses `waf`, so the orig tarball has to be repacked.  For a generic
+discussion of why, see: https://wiki.debian.org/UnpackWaf
+
+Here is how to handle a new upstream version (e.g. 1.1.8):
+
+If you do not already have an `upstream` remote, add it:
+
+    git remote add upstream https://gitlab.com/NTPsec/ntpsec.git
+
+Fetch the new upstream tag, merge to `master`, and push:
+
+    git fetch upstream
+    git checkout master
+    git merge NTPsec_1_1_8
+    git push origin master NTPsec_1_1_8
+
+Switch back to the packaging branch:
+
+    git checkout debian/unstable
+
+Import the orig tarball, which `uscan` will repack using `debian/repack-waf`:
+
+    # uscan must be run separately, instead of using gbp import-orig --uscan,
+    # because gbp needs to use the repacked +dfsg1 tarball instead of the
+    # unmodified tarball downloaded by uscan.
+    uscan --download-version 1.1.8
+    gbp import-orig --upstream-vcs-tag=NTPsec_1_1_8 \
+        ../ntpsec_1.1.8+dfsg1.orig.tar.xz
+
+Update version in `debian/changelog` to e.g. `1.1.8+dfsg1-1+git`.  Add an
+entry for "New upstream version".  If someone has filed a bug asking for the
+new upstream version, close that with that changelog entry.  As items under
+that entry, list the relevant changes from upstream's `NEWS.adoc` and the git
+history (e.g. `git log NTPsec_1_1_7..NTPsec_1_1_8`).
+
+Remove patches which were applied upstream: delete the file(s) and remove them
+from `debian/patches/series`.  Refresh Debian patches as needed: Step through
+them with `quilt push`.  If the patch applies cleanly, move to the next one.
+If the patch applies with fuzz, refresh it with `quilt refresh`.  If the patch
+fails to apply, force it with `quilt push -f`, manually merge the changes from
+the `.rej` file(s), and then refresh it.  For any patches that were refreshed,
+edit the patch file in `debian/patches` and set the `Last-Update` field to the
+current date.
+
+Once the package builds, push it:
+
+    gbp push
+    # Since the changelog will use UNRELEASED, `gbp push` will not push the
+    # debian/unstable branch, so push it directly using git:
+    git push

@@ -1,126 +1,90 @@
-ntp (1:4.2.8p4+dfsg-2) unstable; urgency=medium
+ntpsec (1.2.1+dfsg1-6) unstable; urgency=low
 
-  You now need to use "rlimit memlock -1" to disable locking memory.  The
-  behaviour for ""rlimit memlock 0" changed between 4.2.8p3 and 4.2.8p4 and
-  it now tries to lock all the memory.  But for various people this still
-  breaks things.
+  ntpsec is replacing ntp in Debian.
 
- -- Kurt Roeckx <kurt@roeckx.be>  Thu, 22 Oct 2015 18:58:56 +0200
+  If you were already using ntpsec, you can stop reading now.  For
+  those coming from ntp, NTPsec is a drop-in replacement for common
+  configurations, but some things have been removed or changed in the
+  name of security and/or maintainability:
+    https://docs.ntpsec.org/latest/ntpsec.html
 
-ntp (1:4.2.4p0+dfsg-1) unstable; urgency=low
+  If you use a hardware clock, note that the Debian ntpsec package builds
+  only the following drivers:
+    arbiter,generic,hpgps,jjy,local,nmea,pps,shm,spectracom,trimble,zyfer
 
-  This version of ntp will periodically rescan the network interfaces to
-  pick up new and deleted interfaces.  This should supplant most or all
-  of the various workarounds in use such as restarting the daemon in
-  /etc/network/if-up.d/ or /etc/ppp/ip-up.d/.
+  NTPsec upstream dropped or deprecated several drivers:
+    https://www.ntpsec.org/removal-plan.html
+    https://www.ntpsec.org/drivers.html
 
- -- Peter Eisentraut <petere@debian.org>  Thu,  3 May 2007 11:32:29 +0200
+  I am not building deprecated drivers.  However, if the reason for
+  a driver's deprecation is only "two digit years", I am building it.
 
-ntp (1:4.2.2+dfsg.2-2) unstable; urgency=low
+  The gpsd driver is not built.  While using the gpsd daemon is
+  recommended, using the ntpd gpsd driver is not.  The two projects have
+  upstream developers in common, who report that the ntpd gpsd driver is
+  buggy and "makes all sorts of non-standard assumptions about how gpsd
+  is configured.  A configuration that is contorted and non-obvious".
+  Use the SHM driver instead:
+    # GPS PPS reference (NTP1)
+    refclock shm unit 1 refid PPS
+    # GPS Serial data reference (NTP0)
+    refclock shm unit 0 refid GPS
 
-  ntpdate is no longer started from an init script but instead by ifup.
-  The specifics can be configured in /etc/network/if-up.d/ntpdate.
+  For more gpsd <-> ntpd configuration details, see:
+    https://www.ntpsec.org/white-papers/stratum-1-microserver-howto/
+    https://gpsd.gitlab.io/gpsd/gpsd-time-service-howto.html
 
-  Installing ntp and ntpdate together is obsolete.  ntp is now configured
-  by default in such a manner that it handles the initial clock adjustment
-  by itself.
+  The modem driver, despite working the last time I tested it, is NOT
+  built because:
+    1. Modems are not very common any more.
+    2. Modem time services are disappearing (e.g. USNO's Washington D.C.
+       number no longer answers).
+    3. The telephone network is increasingly packet-switched rather
+       than circuit-switched.  So you might as well use the Internet.
+    4. Internet connections are always on.
+    5. GPS receivers are cheap.
 
- -- Peter Eisentraut <petere@debian.org>  Mon, 11 Sep 2006 21:23:08 +0200
+ -- Richard Laager <rlaager@debian.org>  Sun, 03 Apr 2022 15:23:36 -0500
 
-ntp (1:4.2.2+dfsg-1) unstable; urgency=low
+ntpsec (1.2.0+dfsg1-1) unstable; urgency=medium
 
-  The packages ntp, ntp-server, ntp-simple, and ntp-refclock have been
-  merged into a single package ntp.
+  IANA has assigned port 4460 to NTS-KE.  ntpd now uses port 4460 in both
+  client and server modes.
 
-  Support for the following clocks have been removed because they didn't
-  have a license on it: wharton and neoclock4x.
+ -- Richard Laager <rlaager@debian.org>  Mon, 16 Nov 2020 23:32:31 -0600
 
- -- Peter Eisentraut <petere@debian.org>  Fri, 14 Jul 2006 22:55:36 +0200
+ntpsec (1.1.9+dfsg1-1) unstable; urgency=medium
 
-ntp (1:4.2.0a+stable-8) unstable; urgency=medium
+  IANA has assigned port 4460 to NTS-KE.  ntpd in server mode now listens
+  on both ports 123 and 4460 to facilitate transitioning.  ntpd in client
+  mode now defaults to port 4460.  In the next upstream release, ntpd will
+  listen only on port 4460.
 
-  The NTP server now runs as the user "ntp". (Obviously it retains its
-  ability to change your clock. ;-)
+ -- Richard Laager <rlaager@debian.org>  Wed, 12 Aug 2020 23:57:16 -0500
 
- -- Matthias Urlichs <smurf@debian.org>  Fri, 18 Mar 2005 21:44:34 +0100
+ntpsec (1.1.8+dfsg1-4) unstable; urgency=medium
 
-ntp (1:4.2.0a+bk20040620-3) unstable; urgency=low
+  The NTS label has been changed.  This is a backwards incompatible change!
+  This affects NTS in both client and server modes.  Public servers (e.g.
+  CloudFlare) have already changed.
 
-  If your system changes ethernet addresses (e.g. a roving laptop),
-  you need to restart ntpd. A small script to do that is in
-  /etc/interfaces/if-up.d/ntp-server. To enable it, remove the "exit 0"
-  line.
+  The AppArmor policy no longer imports abstractions/ssl_certs and ssl_keys.
+  ntpd needs to be able to read the certificate and key after dropping
+  privileges; otherwise, it cannot handle certificate renewals (without a full
+  restart).  Use a deploy script to copy the certificate and keys to
+  /etc/ntpsec/cert-chain.pem and key.pem and permission them appropriately
+  (e.g. mode 640 and group ntpsec).  For certbot users, a deploy script is
+  provided; set the appropriate certificate name (e.g. the system's hostname)
+  in the NTPSEC_CERTBOT_CERT_NAME variable in /etc/default/ntpsec.
 
- -- Matthias Urlichs <smurf@debian.org>  Sat, 16 Oct 2004 17:49:41 +0200
+ -- Richard Laager <rlaager@wiktel.com>  Sat, 25 Apr 2020 13:35:14 -0500
 
-ntp (1:4.2.0a-6) unstable; urgency=low
+ntpsec (1.1.1+dfsg1-1) unstable; urgency=medium
 
-  The "noserve" configuration option was buggy in versions before 1:4.2.
-  It did not restrict everything it was documented to restrict.
+  To address various bugs, a number of things have been renamed to avoid
+  conflicting with the ntp packages.  Most critically, /etc/ntp.conf is now
+  at /etc/ntpsec/ntp.conf.  Also, the ntp service has been renamed to ntpsec.
+  For systemd, ntp.service is now ntpsec.service.  For sysvinit,
+  /etc/init.d/ntp is now /etc/init.d/ntpsec.  This is not an exhaustive list.
 
-  The impact on existing configuration files is that if you have "noserve" in
-  your /etc/ntp.conf, and you can no longer sync to your peers, you might
-  need to replace the "noserve" option with "noquery" or "nomodify".
-
- -- Matthias Urlichs <smurf@debian.org>  Mon, 29 Mar 2004 20:21:30 +0200
-
-ntp (1:4.2.0a-3) unstable; urgency=medium
-
-  Downgrading the NTP package will not work automatically because the init
-  scripts have changed significantly.
-
-  The old init scripts and cron.daily/weekly files for ntp-simple and
-  ntp-refclock have been saved+disabled by renaming them to
-  "NAME.dpkg-old". If you have made any changes to them, you need to port
-  these changes to the new /etc/{init.d,cron.daily,cron.weekly}/ntp-server
-  scripts.
-
-  Likewise, if you changed the startup script's run order by renaming
-  the links in /etc/rc*.d, you need to re-do this change.
-
- -- Matthias Urlichs <smurf@debian.org>  Sat, 20 Mar 2004 09:13:51 +0100
-
-ntp (1:4.2.0a-0.1) experimental; urgency=low
-
-  Upstream has implemented their own patch for chroot-jail and change-uid.
-  Predictably, they use different flags (-i and -u, not -R and -U).
-
-  The Debian patch introduced in version 1:4.2.0-0.4 is therefore removed;
-  -R and -U are no longer recognized.
-
- -- Matthias Urlichs <smurf@debian.org>  Tue,  2 Mar 2004 11:44:40 +0100
-
-ntp (1:4.2.0-0.6) experimental; urgency=low
-
-  The common parts of the "simple" and "refclock" NTP server packages have
-  been split off into their own package "ntp-server".
-
-  "ntp-server" now contains the code which needs to run on the same system
-  as the NTP server (example: startup scripts).
-
-  "ntp" consists of those programs which access an NTP server either locally
-  or across the Internet.
-
- -- Matthias Urlichs <smurf@debian.org>  Tue,  3 Feb 2004 17:18:40 +0100
-
-ntp (1:4.2.0-0.3) unstable; urgency=low
-
-  /etc/ntp.conf and /etc/default/ntp are no longer generated by the
-  postinst scripts. Instead, they're now regular conffiles. You will
-  therefore see a standard "Update?" message from dpkg.
-  You should answer "Y" if you did not modify your NTP configuration
-  manually.
-
-  The default NTP time server is "pool.ntp.org", which resolves to a
-  list of public stratum-1 and stratum-2 servers. One of them will be
-  picked semi-randomly each time your NTP server starts.
-
-  Note that the default configuration does NOT send broadcasts and does NOT
-  allow any remote queries.
-
-  "Remote" is defined as non-RFC1918 network addresses, i.e. anything
-  not in 10.0.0.0/8, 172.16.0.0/12, or 192.168.0.0/16. The ntp server
-  does not try to discover any interface addresses. This is a feature.
-
- -- Matthias Urlichs <smurf@debian.org>  Tue, 23 Dec 2003 19:55:23 +0100
-
+ -- Richard Laager <rlaager@wiktel.com>  Tue, 31 Jul 2018 03:18:23 -0500

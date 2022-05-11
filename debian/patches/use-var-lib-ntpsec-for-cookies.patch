@@ -1,0 +1,55 @@
+Description: Use /var/lib/ntpsec for cookies
+ This is the path used in the ntpsec packaging, to stay out of the namespace
+ of the ntp package.
+Forwarded: not-needed
+Origin: vendor
+Author: Richard Laager <rlaager@debian.org>
+Last-Update: 2020-11-16
+-
+--- a/docs/NTS-QuickStart.adoc
++++ b/docs/NTS-QuickStart.adoc
+@@ -125,11 +125,10 @@
+ their owner and mode so `ntpd` running as user `ntpsec` can read them.
+ 
+ You may need to tell your system where to store the keys used
+-to encrypt cookies.  The default is `/var/lib/ntp/nts-keys`.
+-Some distros use `/var/db/` rather than `/var/lib/`.
++to encrypt cookies.  The default is `/var/lib/ntpsec/nts-keys`.
+ 
+ ------------------------------------------------------------
+-nts cookie /var/lib/ntp/nts-keys
++nts cookie /var/lib/ntpsec/nts-keys
+ ------------------------------------------------------------
+ 
+ Again, make sure the bad guys can't read that file.
+--- a/docs/includes/nts-commands.adoc
++++ b/docs/includes/nts-commands.adoc
+@@ -24,7 +24,7 @@
+ +cookie+ _location_::
+   Use the file (or directory) specified by _location_ to
+   store the keys used to make and decode cookies.  The default
+-  is _/var/lib/ntp/nts-keys_.
++  is _/var/lib/ntpsec/nts-keys_.
+ 
+ +enable+::
+   Enable NTS-KE server.
+@@ -91,7 +91,7 @@
+   The same +aead+ algorithms are also used to encrypt cookies.
+   The default is AES_SIV_CMAC_256.  There is no config file option to
+   change it, but you can change it by editing the saved cookie key
+-  file, probably _/var/lib/ntp/nts-keys_.  Adjust the _L:_ slot to be
++  file, probably _/var/lib/ntpsec/nts-keys_.  Adjust the _L:_ slot to be
+   48 or 64 and adjust the _I:_ slots to have the right number of bytes.
+   Then restart the server.  (All old cookies held by clients will be
+   rejected so their next 8 NTP requests will be ignored.  They should
+--- a/include/nts.h
++++ b/include/nts.h
+@@ -13,7 +13,7 @@
+ /* default file names */
+ #define NTS_CERT_FILE "/etc/ntpsec/cert-chain.pem"
+ #define NTS_KEY_FILE "/etc/ntpsec/key.pem"
+-#define NTS_COOKIE_KEY_FILE "/var/lib/ntp/nts-keys"
++#define NTS_COOKIE_KEY_FILE "/var/lib/ntpsec/nts-keys"
+ 
+ #define NTS_KE_PORT		4460
+ #define NTS_KE_PORTA		"4460"

@@ -1,0 +1,6 @@
+[Unit]
+Documentation=file:///usr/share/doc/ntpsec/README.Debian.gz#DHCP
+
+[Service]
+Environment=reason=BOUND
+ExecStart=/bin/sh -c '. /etc/dhcp/dhclient-exit-hooks.d/ntpsec'

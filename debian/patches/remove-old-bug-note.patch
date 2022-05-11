@@ -1,0 +1,19 @@
+Description: Remove old bug note
+ The ntpwait documentation has a BUGS section with a note about Python < 3.3.
+ This is not applicable on Debian, as we have newer versions of Python.
+Forwarded: not-needed
+Origin: vendor
+Author: Richard Laager <rlaager@debian.org>
+Last-Update: 2019-11-17
+--- a/docs/includes/ntpwait-body.adoc
++++ b/docs/includes/ntpwait-body.adoc
+@@ -40,9 +40,4 @@
+ +-V+, +--version+::
+   Print the version string and exit.
+ 
+-== BUGS
+-
+-If you are running Python at a version older than 3.3, the report on time
+-to synchronization may be thrown off by NTP clock stepping.
+-
+ //end

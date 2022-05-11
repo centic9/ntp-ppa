@@ -1,0 +1,264 @@
+Description: Use /etc/ntpsec
+ This is the path used in the ntpsec packaging, to stay out of the namespace
+ of the ntp package.
+Forwarded: not-needed
+Origin: vendor
+Author: Richard Laager <rlaager@debian.org>
+Last-Update: 2021-09-25
+--- a/docs/includes/ntp-conf-body.adoc
++++ b/docs/includes/ntp-conf-body.adoc
+@@ -3,7 +3,7 @@
+ // tree, and once to make an individual man page.
+ 
+ == SYNOPSIS
+-/etc/ntp.conf
++/etc/ntpsec/ntp.conf
+ 
+ == DESCRIPTION
+ 
+@@ -223,9 +223,9 @@
+ 
+ == FILES
+ 
+-`/etc/ntp.conf`::
++`/etc/ntpsec/ntp.conf`::
+   the default name of the configuration file
+-`ntp.keys`::
++`/etc/ntpsec/ntp.keys`::
+   private keys
+ 
+ One of the following exit values will be returned:
+--- a/docs/includes/ntp.keys-body.adoc
++++ b/docs/includes/ntp.keys-body.adoc
+@@ -80,7 +80,7 @@
+ 
+ == FILES
+ 
+-`/etc/ntp.keys`::
++`/etc/ntpsec/ntp.keys`::
+   is a common location for the keys file
+ 
+ Reminder: You have to keep it secret.
+--- a/docs/ntpsec.adoc
++++ b/docs/ntpsec.adoc
+@@ -213,8 +213,8 @@
+ * The ntpq utility resizes its display to take advantage of wide
+   terminal windows, allowing more space for long peer addresses.
+ 
+-* When running as root, the ntpq utility looks in /etc/ntp.conf and
+-  /usr/local/etc/ntp.keys to find credentials for control requests
++* When running as root, the ntpq utility looks in /etc/ntpsec/ntp.conf and
++  /etc/ntpsec/ntp.keys to find credentials for control requests
+   that require authentication. Thus it will often not be necessary to enter
+   them by hand. Note that your installation's locations for config and
+   key files may differ from these; in that case this convenience
+@@ -280,10 +280,10 @@
+   respect to the current working directory but with respect to the
+   directory name of the last pushed file in the stack.  This means
+   that you can run ntpd from any directory with "includefile foo"
+-  in /etc/ntp.conf finding /etc/foo rather than looking for foo in
++  in /etc/ntpsec/ntp.conf finding /etc/foo rather than looking for foo in
+   your current directory.
+ 
+-* If there is an /etc/ntp.d directory, its subfiles are scanned for
++* If there is an /etc/ntpsec/ntp.d directory, its subfiles are scanned for
+   more configuration declarations. Only files with the extension
+   ".conf" are interpreted; others are ignored.  This feature is
+   intended to make assembling configuration easier for administration
+--- a/docs/quick.adoc
++++ b/docs/quick.adoc
+@@ -53,7 +53,7 @@
+ address-allocation time to use the NTP servers provided by DHCP.
+ 
+ NTPsec, unlike legacy versions, can also be configured using an
+-Apache-style directory +/etc/ntp.d/+ of configuration-file segments.
++Apache-style directory +/etc/ntpsec/ntp.d/+ of configuration-file segments.
+ This is intended to make life easier for software configurators, which
+ can write independent segments rather than having to do the kind of
+ edit-in-place on a flat +{ntpconf}+ that comes naturally to a human.
+@@ -66,7 +66,7 @@
+ most configurations, the first two sections will be a boilerplate set
+ of defaults.
+ 
+-Under +/etc/ntp.d/+, the text in these segments can be split up into file
++Under +/etc/ntpsec/ntp.d/+, the text in these segments can be split up into file
+ parts (with names ending in .conf) in any way that is convenient.
+ Parts are evaluated in the text sort order of their names.
+ 
+--- a/include/ntp_config.h
++++ b/include/ntp_config.h
+@@ -18,7 +18,7 @@
+  * Configuration file name
+  */
+ #ifndef CONFIG_FILE
+-#  define	CONFIG_FILE "/etc/ntp.conf"
++#  define	CONFIG_FILE "/etc/ntpsec/ntp.conf"
+ #endif /* not CONFIG_FILE */
+ #define CONFIG_DIR	"ntp.d"
+ 
+--- a/ntpclients/ntpleapfetch
++++ b/ntpclients/ntpleapfetch
+@@ -28,7 +28,7 @@
+ INTERVAL=10
+ 
+ # Where to find ntp config file
+-NTPCONF=/etc/ntp.conf
++NTPCONF=/etc/ntpsec/ntp.conf
+ 
+ # How long before expiration to get updated file
+ PREFETCH="60 days"
+--- a/ntpd/ntp_config.c
++++ b/ntpd/ntp_config.c
+@@ -3037,7 +3037,7 @@
+ 
+ 
+ /*
+- * getconfig() - return name of configuration file e.g /etc/ntp.conf
++ * getconfig() - return name of configuration file e.g /etc/ntpsec/ntp.conf
+  */
+ const char *
+ getconfig(const char *explicit_config)
+--- a/ntpd/ntp_sandbox.c
++++ b/ntpd/ntp_sandbox.c
+@@ -323,7 +323,7 @@
+ 	SCMP_SYS(fstat),
+ 	SCMP_SYS(fsync),
+ 	SCMP_SYS(futex),	/* sem_xxx, used by threads */
+-	SCMP_SYS(getdents),	/* Scanning /etc/ntp.d/ */
++	SCMP_SYS(getdents),	/* Scanning /etc/ntpsec/ntp.d/ */
+ 	SCMP_SYS(getegid),	/* Needed on Alpine */
+ 	SCMP_SYS(getgid),	/* Needed on Alpine */
+ 	SCMP_SYS(getdents64),
+--- a/pylib/packet.py
++++ b/pylib/packet.py
+@@ -1728,7 +1728,7 @@
+                 return (keyid,) + self.passwords[keyid]
+             else:
+                 return (keyid, None, None)
+-        for line in open("/etc/ntp.conf"):
++        for line in open("/etc/ntpsec/ntp.conf"):
+             if line.startswith("control"):
+                 keyid = int(line.split()[1])
+                 (keytype, passwd) = self.passwords[keyid]
+--- a/docs/includes/ntpd-body.adoc
++++ b/docs/includes/ntpd-body.adoc
+@@ -136,8 +136,8 @@
+ +-k+ _string_, +--keyfile+=_string_::
+   the path to symmetric keys.
+ +
+-Specify the name and path of the symmetric key file. +/etc/ntp.keys+
+-is a common location. This is the same operation as the _keys_
++Specify the name and path of the symmetric key file. +/etc/ntpsec/ntp.keys+
++is the default location. This is the same operation as the _keys_
+ configuration file directive.
+ 
+ +-l+ _string_, +--logfile+=_string_::
+@@ -499,7 +499,7 @@
+ |===================================================================
+ |File                    |Default           |Option      |Option
+ |configuration file      |+{ntpconfpath}+      |+-c+        |+conffile+
+-|configuration directory |+/etc/ntp.d+      |+-c+        |+conffile+
++|configuration directory |+/etc/ntpsec/ntp.d+ |+-c+        |+conffile+
+ |frequency file          |none              |+-f+        |+driftfile+
+ |leapseconds file        |none              |            |+leapfile+
+ |process ID file         |none              |+-p+        |+pidfile+
+@@ -515,8 +515,8 @@
+   overridden by the -c option) is read first if it exists.
+ 
+ . Then the configuration directory, if it exists, is scanned. Normally
+-  this directory is /etc/ntp.d, but if the -c option is specified the
+-  /etc will be specified by the directory name of the -c argument.
++  this directory is /etc/ntpsec/ntp.d, but if the -c option is specified the
++  /etc/ntpsec will be specified by the directory name of the -c argument.
+ 
+ . Each file beneath the configuration directory with the extension
+   ".conf" is interpreted.  Files are interpreted in ASCII sort order
+--- a/docs/NTS-QuickStart.adoc
++++ b/docs/NTS-QuickStart.adoc
+@@ -121,7 +121,7 @@
+ 
+ Note that `ntpd` must be able to read both files and you want to
+ make sure that the bad guys can't read your private key.  It may
+-be simpler to copy those files over to `/etc/ntp/` and adjust
++be simpler to copy those files over to `/etc/ntpsec/` and adjust
+ their owner and mode so `ntpd` running as user `ntpsec` can read them.
+ 
+ You may need to tell your system where to store the keys used
+--- a/docs/includes/ntpkeygen-body.adoc
++++ b/docs/includes/ntpkeygen-body.adoc
+@@ -31,7 +31,7 @@
+ 
+ The simplest way to run the +ntpkeygen+ program is logged in directly as
+ root. The recommended procedure is to change to the keys directory,
+-usually +/etc/ntp/+, then run the program.  Then chown the output
++usually +/etc/ntpsec/+, then run the program.  Then chown the output
+ file to ntpsec:ntpsec.  It should be mode 400.
+ 
+ WARNING: +ntpkeygen+ uses the system randomness source.  On a POSIX
+--- a/include/nts.h
++++ b/include/nts.h
+@@ -11,8 +11,8 @@
+ #include <stdint.h>
+ 
+ /* default file names */
+-#define NTS_CERT_FILE "/etc/ntp/cert-chain.pem"
+-#define NTS_KEY_FILE "/etc/ntp/key.pem"
++#define NTS_CERT_FILE "/etc/ntpsec/cert-chain.pem"
++#define NTS_KEY_FILE "/etc/ntpsec/key.pem"
+ #define NTS_COOKIE_KEY_FILE "/var/lib/ntp/nts-keys"
+ 
+ #define NTS_KE_PORT		4460
+--- a/ntpclients/ntpq.py
++++ b/ntpclients/ntpq.py
+@@ -609,7 +609,7 @@
+         except ntp.packet.ControlException as e:
+             self.warn(e.message)
+         except IOError:
+-            self.warn("***Can't read control key from /etc/ntp.conf")
++            self.warn("***Can't read control key from /etc/ntpsec/ntp.conf")
+ 
+     def help_passwd(self):
+         self.say("""\
+@@ -1242,7 +1242,7 @@
+             self.warn(e.message)
+             return
+         except IOError:
+-            self.warn("***Can't read control key from /etc/ntp.conf")
++            self.warn("***Can't read control key from /etc/ntpsec/ntp.conf")
+             return
+         if self.debug > 2:
+             self.warn("In Config\nKeyword = :config\nCommand = %s" % line)
+@@ -1428,7 +1428,7 @@
+             self.warn(e.message)
+             return
+         except IOError:
+-            self.warn("***Can't read control key from /etc/ntp.conf")
++            self.warn("***Can't read control key from /etc/ntpsec/ntp.conf")
+ 
+     def help_ifstats(self):
+         self.say("""\
+@@ -1453,7 +1453,7 @@
+             self.warn(e.message)
+             return
+         except IOError:
+-            self.warn("***Can't read control key from /etc/ntp.conf")
++            self.warn("***Can't read control key from /etc/ntpsec/ntp.conf")
+ 
+     def help_reslist(self):
+         self.say("""\
+--- a/tests/pylib/test_packet.py
++++ b/tests/pylib/test_packet.py
+@@ -2048,11 +2048,11 @@
+         # Keyid not in passwords
+         self.assertEqual(cls.control(1), (1, None, None))
+         try:
+-            # Read keyid from /etc/ntp.conf
++            # Read keyid from /etc/ntpsec/ntp.conf
+             ntpp.open = self.openjig
+             self.open_data = ["blah blah", "control 2"]
+             self.assertEqual(cls.control(), (2, "b", "y"))
+-            # Fail to read keyid from /etc/ntp.conf
++            # Fail to read keyid from /etc/ntpsec/ntp.conf
+             self.open_data = ["blah blah"]
+             try:
+                 cls.control()

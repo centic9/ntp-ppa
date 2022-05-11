@@ -1,0 +1,99 @@
+'\" t
+.\"     Title: ntptrace
+.\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 06/07/2021
+.\"    Manual: NTPsec
+.\"    Source: NTPsec 1.2.1+
+.\"  Language: English
+.\"
+.TH "NTPTRACE" "1" "06/07/2021" "NTPsec 1\&.2\&.1+" "NTPsec"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+ntptrace \- trace peers of an NTP server
+.SH "SYNOPSIS"
+.sp
+.nf
+ntptrace [\-V | \-\-version] [\-n |\-\-numeric]
+    [\-m \fInumber\fR | \-\-max\-hosts=\fInumber\fR]
+    [\-r \fIhost\fR | \-\-host=\fIremote\fR]
+    \fIhostname\fR
+.fi
+.SH "DESCRIPTION"
+.sp
+ntptrace is a python script that uses the ntpq utility program to follow the chain of NTP servers from a given host back to the primary time source\&.
+.sp
+For ntptrace to work properly, each of these servers must implement the NTP Control and Monitoring Protocol specified in RFC 1305 and enable NTP Mode 6 control packets\&. Nowadays it is usual for public timeservers to disable Mode 6 queries, so this script is unlikely to be very useful unless you have a collection of specially\-configured timeservers on your LAN\&.
+.sp
+If given no arguments, ntptrace starts with localhost\&. Here is an example of the output from ntptrace:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+% ntptrace
+localhost: stratum 4, offset 0\&.0019529, synch distance 0\&.144135
+server2ozo\&.com: stratum 2, offset 0\&.0124263, synch distance 0\&.115784
+usndh\&.edu: stratum 1, offset 0\&.0019298, synch distance 0\&.011993, refid \*(AqGPS\*(Aq
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+On each line, the fields are (left to right): the host name, the host stratum, the time offset between that host and the local host (as measured by ntptrace; this is why it is not always zero for "localhost"), the host synchronization distance, and (only for stratum\-1 servers) the reference clock ID\&. All times are given in seconds\&. Note that the stratum is the server hop count to the primary source, while the synchronization distance is the estimated error relative to the primary source\&. These terms are precisely defined in RFC 1305\&.
+.SH "OPTIONS"
+.PP
+\-n, \-\-numeric
+.RS 4
+Print IP addresses instead of hostnames\&.
+.sp
+Output hosts as dotted\-quad numeric format rather than converting to the canonical host names\&.
+.RE
+.PP
+\-m number, \-\-max\-hosts=\fInumber\fR
+.RS 4
+Maximum number of peers to trace\&. This option takes an integer number as its argument\&. The default
+\fInumber\fR
+for this option is 99\&.
+.RE
+.PP
+\-r string, \-\-host=\fIstring\fR
+.RS 4
+Trace a single remote host\&.
+.RE
+.PP
+\-V, \-\-version
+.RS 4
+Print the version string and exit\&.
+.RE
+.SH "EXIT STATUS"
+.sp
+One of the following exit values will be returned:
+.PP
+0 (EXIT_SUCCESS)
+.RS 4
+Successful program execution\&.
+.RE
+.PP
+1 (EXIT_FAILURE)
+.RS 4
+The operation failed or the invocation was not valid\&.
+.RE

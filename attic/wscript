@@ -1,0 +1,15 @@
+def build(ctx):
+    util = [	'sht',
+		'digest-find', 'clocks', "random",
+		'digest-timing', 'cmac-timing',
+		'backwards']
+
+    for name in util:
+        ctx(
+            target=name,
+            features="c cprogram",
+            includes=[ctx.bldnode.parent.abspath(), "../include"],
+            source=[name + ".c"],
+            use="ntp M CRYPTO RT PTHREAD",
+            install_path=None,
+        )

@@ -1,0 +1,20 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "install" ] && [ -z "$2" ]; then
+	if [ -e /run/ntpdate.dhcp ]; then
+		mkdir -p /run/ntpsec
+		cp /run/ntpdate.dhcp /run/ntpsec/
+	fi
+elif [ "$1" = "install" -o "$1" = "upgrade" ] && [ -n "$2" ] &&
+   dpkg --compare-versions "$2" le-nl "1.1.0+dfsg1-2~"; then
+
+	if [ -e /run/ntpdate.dhcp ]; then
+		mkdir -p /run/ntpsec
+		mv -n /run/ntpdate.dhcp /run/ntpsec/
+		rm -f /run/ntpdate.dhcp
+	fi
+fi
+
+#DEBHELPER#

@@ -1,0 +1,30 @@
+BUGS:
+  timeout on client connect too long (system default)
+  Is 3 seconds timeout OK? (both client and server)
+
+nts_log_ssl_error()  No SSL param ??
+  ERR_error_string_n
+
+Hourly logging?
+  ntpq get totals vs recent
+
+documentation:
+  HOWTO on certificates
+  glossary: https://letsencrypt.org/docs/glossary/
+
+Startup with bad time
+
+? thread per instance on NTS-KE server
+
+Password for certificate's private key and cookie keys file.
+  Need to get it before daemon mode.
+
+-------
+
+security level
+
+client certificates
+
+Pool/cluster mode
+  ??  Ratchet for new cookie key
+

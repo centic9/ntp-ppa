@@ -1,37 +1,19 @@
 //////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2009,2012 -
-//        Schweitzer Engineering Laboratories, Inc. <opensource@selinc.com>
+// Copyright Schweitzer Engineering Laboratories, Inc. <opensource@selinc.com>
 //////////////////////////////////////////////////////////////////////////////
 
-// Need to have _XOPEN_SOURCE defined for time.h to give the
-// correct strptime signature.  As per feature_test_macros(7),
-// define this before including any header files.
-
-// #ifndef _XOPEN_SOURCE
-// #define _XOPEN_SOURCE
-// #endif
-
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
-#if defined(REFCLOCK) && defined(CLOCK_PARSE) && defined(CLOCK_SEL240X)
-
+#include "config.h"
+#include "ntp.h"	/* only for the u_* typedefs from GCC; remove someday */
 #include "ntp_syslog.h"
 #include "ntp_types.h"
 #include "ntp_fp.h"
-#include "ntp_unixtime.h"
 #include "ntp_calendar.h"
 #include "ntp_machine.h"
 #include "ntp_stdlib.h"
 
 #include "parse.h"
 
-#ifndef PARSESTREAM
-# include <stdio.h>
-#else
-# include "sys/parsestreams.h"
-#endif
+#include <stdio.h>
 
 #include <time.h>
 
@@ -43,11 +25,11 @@
 //              '#' <100 us
 //              '?' >100 us
 //
-// Based on this we need to recored the stime when we receive the <SOH>
+// Based on this we need to record the stime when we receive the <SOH>
 // character and end it when we see the \n.
 //
 // The q or quality character indicates satellite lock and sync.   For the
-// purposes of NTP we are going to call it valid when we receive anything but
+// purposes of NTP, we are going to call it valid when we receive anything but
 // a '?'.  But we are only going to call it synced when we receive a ' '
 //////////////////////////////////////////////////////////////////////////////
 
@@ -94,8 +76,8 @@ inp_sel240x( parse_t      *parseio,
 {
 	unsigned long rc;
 
-	parseprintf( DD_PARSE,
-	             ("inp_sel240x(0x%lx, 0x%x, ...)\n",(long)parseio, ch));
+	parseprintf(DD_PARSE, ("inp_sel240x(0x%lx, 0x%x, ...)\n",
+                    (unsigned long)parseio, (unsigned)ch));
 
 	switch( ch )
 	{
@@ -129,11 +111,14 @@ cvt_sel240x( unsigned char *buffer,
 {
 	unsigned long rc = CVT_NONE;
 
+	UNUSED_ARG(size);
+	UNUSED_ARG(local);
+
 	if( Strok(buffer, format->fixed_string) )
 	{
 		struct tm ptime;
 		buffer++;
-		buffer = (unsigned char *) strptime(
+		buffer = (unsigned char *)strptime(
 			(const char *)buffer, "%Y:%j:%H:%M:%S", &ptime );
 		if( *(buffer+1) != '\x0d' )
 		{
@@ -167,6 +152,3 @@ cvt_sel240x( unsigned char *buffer,
 	return rc;
 }
 
-#else  /* not (REFCLOCK && CLOCK_PARSE && CLOCK_SEL240X) */
-int clk_sel240x_bs;
-#endif /* not (REFCLOCK && CLOCK_PARSE && CLOCK_SEL240X) */

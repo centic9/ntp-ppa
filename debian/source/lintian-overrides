@@ -1,0 +1,4 @@
+# Lintian flags ntpdate-debian.8 and/or ntpdate.8.  The former utility is
+# Debian-specific.  The latter is not installed by default upstream and thus
+# has no upstream man page.
+ntpsec source: maintainer-manual-page

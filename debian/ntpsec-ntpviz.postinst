@@ -1,0 +1,43 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "configure" ]; then
+	# If the log directory does not exist, create it and restart ntpd to
+	# enable logging.
+	if ! [ -d /var/log/ntpsec ]; then
+		# This has to be duplicated from the ntpsec postinst so the
+		# user and group exist for the install command below. This
+		# package intentionally does not depend on ntpsec.  Even if it
+		# did, a Pre-Depends would be required, which Policy frowns
+		# upon.
+		addgroup --system --quiet ntpsec
+		adduser --system --quiet --ingroup ntpsec \
+			--no-create-home --home /nonexistent ntpsec
+
+		install -o ntpsec -g ntpsec -d /var/log/ntpsec
+		invoke-rc.d ntpsec restart
+	fi
+
+	if [ "$1" = "configure" ] && [ -n "$2" ] &&
+	   dpkg --compare-versions "$2" le-nl "1.1.0+dfsg1-2~"; then
+		mv -n /var/lib/ntp/ntpviz/day/* /var/lib/ntpsec/ntpviz/day/ \
+			2> /dev/null || true
+		mv -n /var/lib/ntp/ntpviz/week/* /var/lib/ntpsec/ntpviz/week/ \
+			2> /dev/null || true
+		rmdir /var/lib/ntp/ntpviz/day \
+		      /var/lib/ntp/ntpviz/week \
+		      /var/lib/ntp/ntpviz \
+		      /var/lib/ntp \
+			2> /dev/null || true
+	fi
+fi
+
+#DEBHELPER#
+
+if [ "$1" = "configure" ] && [ -n "$2" ] &&
+   dpkg --compare-versions "$2" le-nl "1.1.0+dfsg1-2~"; then
+	# We have completed the transition of /etc/ntp.d.
+	rm -f /etc/ntp.d/ntpviz.conf
+	rmdir /etc/ntp.d 2> /dev/null || true
+fi

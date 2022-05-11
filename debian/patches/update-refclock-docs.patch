@@ -1,0 +1,57 @@
+Description: Document disabled refclocks
+ The Debian package disables refclocks which were already deprecated when the
+ package was initially created.
+ 
+ Also, the modem refclock is disabled. It "requires a Hayes-compatible 1200bps
+ modem, hardware now 20 years obsolete".
+ 
+ gpsd is a tough call.  It's not deprecated upstream, and it still can work.
+ However, upstream recommends the use of SHM, as does every example HOWTO I
+ found with a quick search.  Furthermore, it is buggy:
+   https://lists.ntpsec.org/pipermail/devel/2016-October/002392.html
+ Also, it "makes all sorts of non-standard assumptions about how gpsd is
+ configured.  A configuration that is contorted and non-obvious":
+   https://lists.ntpsec.org/pipermail/devel/2016-October/002392.html
+ Most importantly, it is an attractive nuisance.  If someone is told that the
+ best practice is to use "gpsd", they might logically think they should use the
+ gpsd driver.
+
+ See the configure step in debian/rules, which specifies the list of refclocks.
+Forwarded: not-needed
+Origin: vendor
+Author: Richard Laager <rlaager@debian.org>
+Last-Update: 2019-09-23
+--- a/docs/refclock.adoc
++++ b/docs/refclock.adoc
+@@ -164,19 +164,19 @@
+ | Name                                  | Flags | Driver
+ |link:driver_local.html[local]          | -  | Undisciplined Local Clock
+ |link:driver_spectracom.html[spectracom]| D2 | Generic Spectracom Receivers
+-|link:driver_truetime.html[truetime]    | D2 | TrueTime GPS/GOES Receivers
++|link:driver_truetime.html[truetime]    | d2 | TrueTime GPS/GOES Receivers
+ |link:driver_generic.html[generic]      | T  | Generic Reference Driver (Parse)
+-|link:driver_arbiter.html[arbiter]      | D2 | Arbiter 1088A/B GPS Receiver
++|link:driver_arbiter.html[arbiter]      | d2 | Arbiter 1088A/B GPS Receiver
+ |link:driver_modem.html[modem]          | -  | NIST/USNO/PTB Modem Time Services
+ |link:driver_nmea.html[nmea]            | T  | Generic NMEA GPS Receiver
+ |link:driver_pps.html[pps]              | T  | PPS Clock Discipline
+ |link:driver_hpgps.html[hpgps]          | T  | Hewlett Packard GPS Receivers
+ |link:driver_shm.html[shm]              | T  | Shared Memory Driver
+ |link:driver_trimble.html[trimble]      | D  | Trimble Palisade/Thunderbolt/Acutime GPSes
+-|link:driver_oncore.html[oncore]        | D2 | Motorola Oncore GPS
++|link:driver_oncore.html[oncore]        | d2 | Motorola Oncore GPS
+ |link:driver_jjy.html[jjy]              | T  | JJY Receivers
+ |link:driver_zyfer.html[zyfer]          | -  | Zyfer GPStarplus Receiver
+-|link:driver_gpsd.html[gpsd]            | T  | GPSD client protocol
++|link:driver_gpsd.html[gpsd]            | d  | GPSD client protocol
+ |====================================================================
+ 
+ The name in the left column is the driver type to be used in the
+@@ -188,6 +188,7 @@
+ |====================================================================
+ |Flag| Meaning
+ | D | Deprecated.  May be removed in a future release
++| d | Disabled in the Debian package.
+ | T | Regularly tested by an active maintainer (some devices/modes)
+ | 2 | Returns only 2-digit years. Relies on system clock for century.
+ |====================================================================

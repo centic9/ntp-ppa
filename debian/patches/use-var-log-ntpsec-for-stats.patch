@@ -1,0 +1,34 @@
+Description: Use /var/log/ntpsec for stats
+ This is the path used in the ntpsec packaging, to avoid conflicting with the
+ ntp package, which uses /var/log/ntpstats.
+Forwarded: not-needed
+Origin: vendor
+Author: Richard Laager <rlaager@debian.org>
+Last-Update: 2020-08-12
+--- a/etc/ntploggps.service
++++ b/etc/ntploggps.service
+@@ -6,4 +6,4 @@
+ 
+ [Service]
+ Type=simple
+-ExecStart=/usr/sbin/ntploggps -o -l /var/log/ntpstats/gpsd
++ExecStart=/usr/sbin/ntploggps -o -l /var/log/ntpsec/gpsd
+--- a/etc/ntplogtemp.service
++++ b/etc/ntplogtemp.service
+@@ -4,4 +4,4 @@
+ 
+ [Service]
+ Type=simple
+-ExecStart=@SBINDIR@/ntplogtemp -o -l /var/log/ntpstats/temps
++ExecStart=@SBINDIR@/ntplogtemp -o -l /var/log/ntpsec/temps
+--- a/docs/quick.adoc
++++ b/docs/quick.adoc
+@@ -86,7 +86,7 @@
+ ------------------------------------------------------------------
+ driftfile /var/lib/ntpsec/ntp.drift
+ 
+-statsdir /var/log/ntpstats/
++statsdir /var/log/ntpsec/
+ 
+ statistics loopstats peerstats clockstats
+ filegen loopstats file loopstats type day enable

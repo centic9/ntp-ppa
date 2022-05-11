@@ -1,0 +1,1 @@
+NTPVIZ_NTPD_OPTS="-s /var/log/ntpsec"

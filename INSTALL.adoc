@@ -1,0 +1,306 @@
+= Installation instructions =
+
+== Prerequisites ==
+
+This software should build on any operating system conformant to
+POSIX.1-2001 and ISO/IEC 9899:1999 (C99).  In addition, the operating
+system must have an ntp_adjtime(2) call. Also, it must support the
+IPv6 API defined in RFC 2493 and RFC 2553. Finally, it must support
+iterating over active UDP interfaces via getifaddrs(3) or some
+equivalent facility.
+
+You can browse a summary of differences from legacy NTP here:
+
+https://docs.ntpsec.org/latest/ntpsec.html
+
+There are some prerequisites.  Libraries need the binary installed
+to run and in addition, the development headers installed to build.
+
+We need pthreads (It's optional in POSIX)
+We need OpenSSL != 1.1.1a (1.1.1a has a fatal bug)
+NTS needs TLS1.3 or newer.
+
+=== The short version ===
+
+If you are on a Debian or Ubuntu distribution that uses apt-get, or on
+a Fedora or RedHat distribution that uses yum or dnf, or a Suse
+distribution that uses yast or zypper, or Gentoo, you can use the
+./buildprep script.
+
+In that case, run ./buildprep -n to see what needs to be installed as
+prerequisites on your system.  In order that we have a single point of
+truth about package requirements, much information about
+installable-package names that used to live in this file has moved to
+that script.
+
+If you are using other distributions or OSes, such as macOS, Solaris,
+or *BSD, you will have to install the build prerequisites by hand on
+your system.  Read the buildprep script to get an idea what packages
+are required.
+
+buildprep does not attempt to install dependencies for optional
+components like ntpviz or building documentation unless asked. See
+buildprep --help for details on available options.  psutil may require
+different packages depending on whether your base Python version is
+2 or 3.
+
+=== Details ===
+
+Python 2.x, x >= 6, or Python 3.x, x >= 3::
+   Required to build, and for various scripts such as ntpviz (but see
+   the guidance for packagers in devel/packaging.adoc).  Our Python code
+   has been written polyglot to run with either Python 2 or Python 3.
+   Note that you will need both the ordinary Python installation and
+   Python dev tools, if your OS makes such a distinction.
+
+   If you are running on a distro with no `python` executable, you will
+   need to run waf as `python3 waf` rather than `./waf`.  You will also
+   need `python3 waf configure --pyshebang=/usr/bin/env python3` or similar.
+
+   Some OS distros won't find our installed python libraries.
+   More info in README-PYTHON.
+
+argparse::
+   Required for ntpviz when using Python version 2.6
+   Install with pip: pip install argparse
+
+psutil::
+   Optional for ntpviz.  Allows running with ionice()
+   Debian: python-psutil or python3-psutil
+   Ubuntu: python-psutil or python3-psutil
+   Fedora/CentOS: python-psutil or python3-psutil
+   Gentoo: dev-python/psutil
+   SLES: python-psutil or python3-psutil
+
+sys/timepps.h::
+   If you are building to supply Stratum 1 time service (that is, with
+   refclocks linked in) you may find that you need the sys/timepps.h
+   file to be installed, depending on which refclocks you enable.
+   This won't be necessary for pure client (Stratum 2 or higher)
+   installations.
+
+AsciiDoc:
+   You will need an AsciiDoc processor to make HTML and/or manual pages from
+   the documentation masters.  The supported processors, in order of
+   preference, are asciidoctor, asciidoc(-py3)/a2x, and asciidoc3/a2x3.
+
+asciidoctor::
+   Note: you need asciidoctor 1.5.8 or newer.  Otherwise, use asciidoc or
+   asciidoc3.
+   Debian/Ubuntu: asciidoctor (Debian 10+, Ubuntu 19.04+)
+   Fedora: rubygem-asciidoctor (Fedora 32+)
+   Gentoo: app-text/asciidoctor
+   SLES: asciidoctor
+
+asciidoc, a2x::
+   Note: you need asciidoc 8.6.8 or newer.  Alternatively, use asciidoctor
+   or asciidoc3.
+   Debian/Ubuntu: asciidoc
+   Fedora/CentOS: asciidoc
+   Gentoo: app-text/asciidoc
+   SLES: asciidoc
+
+asciidoc3, a2x3::
+   Note: you need asciidoc 3.0.2 or newer.  Alternatively, use asciidoctor
+   or asciidoc.  There are currently no distro packages of asciidoc3.
+   However, upstream provides deb, pip and rpm packages.
+
+Local copy of DocBook stylesheets:
+   Optional: Prevents documentation build failures when your Internet is down
+   Debian/Ubuntu: docbook-xsl
+   Fedora/CentOS: docbook-xsl-stylesheets
+   Gentoo: app-text/docbook-xsl-stylesheets
+   SLES: docbook-xsl-stylesheets - pulled in by `asciidoc`
+
+wget:
+   Optional, used by ntpleapfetch
+
+== Basic Installation ==
+
+These are generic Unix installation instructions.  Some notes on
+specific platforms follow this section.
+
+Under Unix, the simplest way to compile this package is:
+
+  1. `cd` to the directory containing the package's source code.
+
+  2. Run `./buildprep` as root to get your prerequisites installed.
+
+  3. Run `./waf configure` to configure the package for your system.
+  You may want to add configuration options after the verb 'configure';
+  see below. NOTE: if you will be using any local reference clocks (GPS,
+  PTP, SHM, etc.) then you need to configure for them by running the
+  command: `./waf configure --refclock=all`.
+
+  4. Run `./waf build` to compile the package.
+
+  5. Run `./waf install` to install the programs and any data files and
+     documentation.
+
+  6. You can uninstall cleanly by running `./waf uninstall` as root.
+
+  7. Look under "Boot script setup" in wscript for how to set up
+     boot time startup of ntpd; this will vary according to your
+     init system.
+
+  8. You can remove the program binaries and object files from the
+     source code directory by running `./waf clean`.
+
+  9. To also remove the files that `./waf configure` created (so you can
+     configure and compile the package for a different kind of
+     computer), run `./waf distclean`.
+
+=== ldconfig ===
+
+It may be necessary after installing on some systems (incl. Linux) to
+rebuild the ld.so cache or equivalent if using the FFI library (default).
+
+=== Solaris ===
+
+When building the NTPsec suite using gcc under Solaris, you may see
+prototype-mismatch warnings involving adjtime(2).  These warnings are
+functionally harmless and can be ignored.  They reflect an unfortunate
+choice by Solaris not to const the function's first argument as do
+other implementations.
+
+== Build Bugs ==
+
+The configuration system occasionally acts up during builds on new
+platforms.  If you see the message "Compilation check failed but
+include exists!" this means that an attempt to compile a small test
+program using the include header mentioned on the previous line
+failed, but waf configure then found that despite this the header file
+exists on your system.
+
+When this happens, it is likely that the header has prerequisites
+on your system that waf configure doesn't know about - that is,
+other headers always need to be included before it in C programs.
+Please report this as a bug, along with your platform details.
+
+== Source build limitations ==
+
+When you do an install from source, no attempt is made to generate an
+/etc/ntp.conf for you.  The reason is that we, the maintainers, can't
+know what pool host you are authorized to use.  If you have an existing
+ntp.conf from a legacy version, you can expect it to work.
+
+Due to a limitation of the Python distutils library, if you install
+from the source distribution with prefix set to a value other than
+/usr (in particular, if it's the default value /usr/local), that
+prefix will be honored *only if the corresponding Python library
+directory already exists*. Otherwise, under Linux, the install will
+drop the ntp Python library in /usr/lib. This layout may violate the
+Linux File Hierarchy Standard.
+
+You should have neither issue if you install from an OS distribution's
+binary package.
+
+== Installation Names ==
+
+By default, `waf install` will install the package's files in
+`/usr/local/bin`, `/usr/local/man`, etc.  You can specify an
+installation prefix other than `/usr/local` by giving waf the
+option `--prefix=PATH`.
+
+You should read the section "Path problems with the test tools" in
+devel/testing.adoc before setting a non-default prefix.
+
+There is a separate `--destdir` option that changes the root of the
+entire installation hierarchy, prepending all paths.  It defaults to `/`.
+You might, say, use --destdir=/tmp/ntp for a test install to see what
+the installation paths look like without running as root or touching
+system directories.
+
+NB: --destdir is specified at install time, --prefix is specified
+at configure time and saved until install time.
+
+
+== Qualification testing ==
+
+Details on how to qualify NTPsec if you've never used it before
+are at devel/testing.adoc.
+
+== Strict compatibility mode ==
+
+There have been a handful of forward-incompatible changes from NTP Classic.
+These are unlikely to affect normal operation.  However, there is a configure
+operation, --enable-classic-mode, that restores certain legacy behaviors. This
+is not recommended, as it makes the code a little bulkier and slower.
+
+Here's what it currently does:
+
+* Reverts logging to the old format that designates clocks with magic
+  addresses rather than the driver shortname and unit number.
+
+* Enables declaring generic-driver refclocks with the old magic-address
+  syntax (but the new syntax won't work for these, though it will for
+  other driver types).
+
+* Reverts the default baudrate of the NMEA driver to 4800 (from 9600).
+
+* Restores the old (non-RFC 3339) format of logfile timestamps.
+
+Other behaviors may be added in future releases.
+
+== Optional Features ==
+
+The waf builder accepts `--enable-FEATURE` options to where FEATURE
+indicates an optional part of the package.  Do `waf --help` for a list
+of options.
+
+refclocks are enabled with `--refclock=<n1,n2,n3..>` or `--refclock=all`
+`waf configure --list` will print a list of available refclocks.
+
+=== --enable-early-droproot ===
+
+Drop root privileges as early as possible.  This requires the refclock
+devices to be owned by the same owner or group that ntpd will be
+running under (most likely that group will be named "ntp") so that it
+can still open the devices.  This can be accomplished by adding
+`GROUP="ntp"` or `OWNER="ntp"` to the udev rules that create the
+device symlinks for the refclocks.
+
+== Developer options ==
+
+--enable-debug-gdb::
+     Enable GDB debugging symbols.
+
+== Operation Controls ==
+
+The waf builder recognizes the following options to control how it
+operates.
+
+--help::
+     Print a summary of the options to `waf configure`, and exit.
+
+--version::
+     Print the version of waf used to generate the `configure`
+     script, and exit.
+
+== Cross-compiling ==
+
+Set up a cross-compile environment for the target architecture.  At minimum
+it will need OpenSSL headers/libraries and Python headers/libraries.
+
+Configure NTPSec with:
+
+  PYTHON_VERSION=2.7 PYTAG=cpython27 pyext_PATTERN="%s.so" PYTHON_LDFLAGS='-lpthread -ldl' \
+  ./waf configure --cross-compiler=/path/to/your/cross/cc \
+  --pythondir=/usr/local/lib/python2.7/dist-packages --pythonarchdir=/usr/local/lib/python2.7/dist-packages
+
+There are also --cross-cflags and --cross-ldflags to supply the cross compiler
+with appropriate values.
+
+== Statistics ==
+
+If you want to generate the ntpviz graphs regularly, add these lines to
+your root crontab:
+
+[source,cron]
+----
+53 * * * * cd /usr/local/src/NTP/ntpsec/ntpstats; ./ntpviz -p 1 -o day
+45 11,23 * * * cd /usr/local/src/NTP/ntpsec/ntpstats; ./ntpviz -p 7 -o week
+----
+
+// end
+

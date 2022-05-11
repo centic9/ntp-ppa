@@ -1,0 +1,12 @@
+Metadata-Version: 1.0
+Name: ntpsec
+Version: @NTPSEC_VERSION_EXTENDED@
+Platform: POSIX
+Summary: The NTP reference implementation, refactored
+Home-page: https://ntpsec.org/
+License:  Beerware, BSD-2-Clause, BSD-3-Clause, BSD-4-Clause, CC-BY-4.0, ISC, MIT, NTP
+Description: 
+         The Network Time Protocol suite, refactored
+Author: the NTPsec project
+Author-email: devel@ntpsec.org
+Keywords: 

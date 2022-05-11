@@ -1,0 +1,68 @@
+NTPDATE_CONF=/etc/default/ntpsec-ntpdate
+NTPDATE_DHCP_CONF_DIR=/run/ntpsec
+NTPDATE_DHCP_CONF=$NTPDATE_DHCP_CONF_DIR/ntpdate.dhcp
+
+
+ntp_servers_setup_remove() {
+	rm -f $NTPDATE_DHCP_CONF
+}
+
+
+ntp_servers_setup_add() {
+	# dhclient provides the old servers in $old_ntp_servers, but NetworkManager
+	# and networkd do not.  Get the old list from the configuration file, if
+	# it is present.
+	old_ntp_servers=""
+	if [ -e "$NTPDATE_DHCP_CONF" ]; then
+		. "$NTPDATE_DHCP_CONF"
+		old_ntp_servers="$NTPSERVERS"
+	fi
+
+	# $new_ntp_servers comes from dhclient.
+	# $DHCP4_NTP_SERVERS and $DHCP6_NTP_SERVERS come from NetworkManager.
+	# NOTE: $old_ntp_servers is space-separated, and in this loop, the
+	# NOTE: the newlines are changed to spaces for $new_ntp_servers.
+	new_ntp_servers=$(
+		for i in \
+			$new_ntp_servers \
+			$DHCP4_NTP_SERVERS $DHCP6_NTP_SERVERS
+		do
+			echo $i
+		done | tr "\n" " " | sed "s| $||")
+
+	if [ "$new_ntp_servers" = "$old_ntp_servers" ]; then
+		return
+	fi
+
+	if [ -z "$new_ntp_servers" ]; then
+		ntp_servers_setup_remove
+		return
+	fi
+
+	mkdir -p "$NTPDATE_DHCP_CONF_DIR"
+	tmp=$(mktemp "$NTPDATE_DHCP_CONF.XXXXXX") || return
+	chmod --reference="$NTPDATE_CONF" "$tmp"
+	chown --reference="$NTPDATE_CONF" "$tmp"
+
+	(
+	  echo "# NTP server entries received from DHCP server"
+	  echo "NTPSERVERS='$new_ntp_servers'"
+	) >> "$tmp"
+
+	mv "$tmp" "$NTPDATE_DHCP_CONF"
+}
+
+
+ntp_servers_setup() {
+	case $reason in
+		BOUND|RENEW|REBIND|REBOOT)
+			ntp_servers_setup_add
+			;;
+		EXPIRE|FAIL|RELEASE|STOP)
+			ntp_servers_setup_remove
+			;;
+	esac
+}
+
+
+ntp_servers_setup

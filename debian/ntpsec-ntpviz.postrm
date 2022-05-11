@@ -1,0 +1,20 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" != "upgrade" ]; then
+	rm -rf /var/lib/ntpsec/ntpviz
+	rmdir /var/log/ntpsec 2> /dev/null || true
+fi
+
+if [ "$1" = "purge" ]; then
+	# This intentionally allows for deinstalled (i.e. removed, but not
+	# purged) ntpsec, as it does not remove /var/log/ntpsec until it is
+	# purged.  Those files would be owned by the ntpsec user and group.
+	if ! LANG=C dpkg -s ntpsec 2> /dev/null | \
+	     grep -qE "^Status: (deinstall|hold|install)"; then
+		deluser --system --quiet ntpsec || true
+	fi
+fi
+
+#DEBHELPER#

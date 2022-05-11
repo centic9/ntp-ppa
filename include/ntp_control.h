@@ -1,40 +1,38 @@
-#ifndef NTP_CONTROL_H
-#define NTP_CONTROL_H
 /*
  * ntp_control.h - definitions related to NTP mode 6 control messages
+ *
+ * mode 6 messages are defined in:
+ * https://datatracker.ietf.org/doc/draft-ietf-ntp-mode-6-cmds/
+ *
  */
+#ifndef GUARD_NTP_CONTROL_H
+#define GUARD_NTP_CONTROL_H
 
 #include "ntp_types.h"
 
-typedef union ctl_pkt_u_tag {
-	u_char data[480 + MAX_MAC_LEN]; /* data + auth */
-	u_int32 u32[(480 + MAX_MAC_LEN) / sizeof(u_int32)];
-} ctl_pkt_u;
-
+/* The attribute after this structure is a gcc/clang extension that forces
+ * the beginning of a structure instance to be 32-bit aligned.  Without this
+ * attempting to compile on a 32-bit host may throw warnings or errors when
+ * a pointer to this structure is passed to authdecrypt/authencrypt, both of
+ * which expect to be able to treat the structure as an array of uint32_t
+ * elements.  Ideally, we'd get rid of that nasty type punning. */
 struct ntp_control {
-	u_char li_vn_mode;		/* leap, version, mode */
-	u_char r_m_e_op;		/* response, more, error, opcode */
-	u_short sequence;		/* sequence number of request */
-	u_short status;			/* status word for association */
-	associd_t associd;		/* association ID */
-	u_short offset;			/* offset of this batch of data */
-	u_short count;			/* count of data in this packet */
-	ctl_pkt_u u;
-};
+	uint8_t li_vn_mode;		/* leap, version, mode */
+	uint8_t r_m_e_op;		/* response, more, error, opcode */
+	uint16_t sequence;		/* sequence number of request */
+	uint16_t status;		/* status word for association */
+	uint16_t associd;		/* association ID (associd_t) */
+	uint16_t offset;		/* offset of this batch of data */
+        /* the draft RFC says 0 <= count <= 468 */
+	uint16_t count;			/* byte count of data in this packet */
+	uint8_t data[480 + MAX_MAC_LEN]; /* data + padding + auth */
+} __attribute__((aligned(32)));
 
 /*
  * Length of the control header, in octets
  */
-#define	CTL_HEADER_LEN		(offsetof(struct ntp_control, u))
+#define	CTL_HEADER_LEN		(offsetof(struct ntp_control, data))
 #define	CTL_MAX_DATA_LEN	468
-
-
-/*
- * Limits and things
- */
-#define	CTL_MAXTRAPS	3		/* maximum number of traps we allow */
-#define	CTL_TRAPTIME	(60*60)		/* time out traps in 1 hour */
-#define	CTL_MAXAUTHSIZE	64		/* maximum size of an authen'ed req */
 
 /*
  * Decoding for the r_m_e_op field
@@ -58,14 +56,14 @@ struct ntp_control {
 #define	CTL_OP_WRITEVAR		3	/* write variables */
 #define	CTL_OP_READCLOCK	4	/* read clock variables */
 #define	CTL_OP_WRITECLOCK	5	/* write clock variables */
-#define	CTL_OP_SETTRAP		6	/* set trap address */
-#define	CTL_OP_ASYNCMSG		7	/* asynchronous message */
+/* #def	CTL_OP_SETTRAP		6	** set trap address (unused) */
+/* #def	CTL_OP_ASYNCMSG		7	** trap message (unused) */
 #define CTL_OP_CONFIGURE	8	/* runtime configuration */
-#define CTL_OP_SAVECONFIG	9	/* save config to file */
+/* #def	CTL_OP_EXCONFIG		9	**  export config to file (unused) */
 #define CTL_OP_READ_MRU		10	/* retrieve MRU (mrulist) */
 #define CTL_OP_READ_ORDLIST_A	11	/* ordered list req. auth. */
 #define CTL_OP_REQ_NONCE	12	/* request a client nonce */
-#define	CTL_OP_UNSETTRAP	31	/* unset trap */
+/* #def	CTL_OP_UNSETTRAP	31	** unset trap (unused) */
 
 /*
  * {En,De}coding of the system status word
@@ -84,7 +82,7 @@ struct ntp_control {
 #define	CTL_SYS_MAXEVENTS	15
 
 #define	CTL_SYS_STATUS(li, source, nevnt, evnt) \
-		(((((unsigned short)(li))<< 14)&0xc000) | \
+		(((((li) & 0xffff) << 14)&0xc000) |			\
 		(((source)<<8)&0x3f00) | \
 		(((nevnt)<<4)&0x00f0) | \
 		((evnt)&0x000f))
@@ -154,30 +152,6 @@ struct ntp_control {
 
 
 /*
- * Definition of the structure used internally to hold trap information.
- * ntp_request.c wants to see this.
- */
-struct ctl_trap {
-	sockaddr_u tr_addr;		/* address of trap recipient */
-	struct interface *tr_localaddr;	/* interface to send this through */
-	u_long tr_settime;		/* time trap was set */
-	u_long tr_count;		/* async messages sent to this guy */
-	u_long tr_origtime;		/* time trap was originally set */
-	u_long tr_resets;		/* count of resets for this trap */
-	u_short tr_sequence;		/* trap sequence id */
-	u_char tr_flags;		/* trap flags */
-	u_char tr_version;		/* version number of trapper */
-};
-extern struct ctl_trap ctl_traps[CTL_MAXTRAPS];
-
-/*
- * Flag bits
- */
-#define	TRAP_INUSE	0x1		/* this trap is active */
-#define	TRAP_NONPRIO	0x2		/* this trap is non-priority */
-#define	TRAP_CONFIGURED	0x4		/* this trap was configured */
-
-/*
  * Types of things we may deal with
  * shared between ntpq and library
  */
@@ -192,5 +166,13 @@ extern struct ctl_trap ctl_traps[CTL_MAXTRAPS];
 #define	IFSTATS_FIELDS	12
 #define	RESLIST_FIELDS	4
 
-#endif /* NTP_CONTROL_H */
+/*
+ * To prevent replay attacks, MRU list nonces age out. Time is in seconds.
+ *
+ * Don't change this value casually.  Lengthening it might extend an
+ * attack window for DDoS amplification.  Shortening it might make your
+ * server (or client) incompatible with older versions.
+ */
+#define NONCE_TIMEOUT	16
 
+#endif /* GUARD_NTP_CONTROL_H */

@@ -1,0 +1,136 @@
+#!/bin/sh
+
+set -e
+
+if [ "$1" = "configure" ]; then
+
+	# Mask ntpsec.timer.  This unit does not exist, but masking it will
+	# cause systemd-cron to skip converting /etc/cron.d/ntpsec.  This
+	# package provides equivalent systemd units directly.
+	ln -sf /dev/null /etc/systemd/system/ntpsec.timer
+
+	# This code is duplicated in the ntpsec-ntpviz postinst:
+	addgroup --system --quiet ntpsec
+	adduser --system --quiet --ingroup ntpsec \
+		--no-create-home --home /nonexistent ntpsec
+
+	install -o ntpsec -g ntpsec -d /var/lib/ntpsec
+
+	if [ -z "$2" ]; then
+		# This is a new install.  Copy bits from ntp, if present, to
+		# make it easy for users to transition.
+
+		if [ -e /etc/ntp.keys ] && ! [ -e /etc/ntpsec/ntp.keys ]; then
+			cp -p /etc/ntp.keys /etc/ntpsec/ntp.keys
+			chgrp ntpsec /etc/ntpsec/ntp.keys
+			chmod 640 /etc/ntpsec/ntp.keys
+			sed -i "s|/etc/ntp\\.keys|/etc/ntpsec/ntp.keys|g" \
+				/etc/ntpsec/ntp.conf /etc/ntpsec/ntp.d/*.conf \
+				2> /dev/null || true
+		fi
+
+		if [ -e /run/ntp.conf.dhcp ]; then
+			mkdir -p /run/ntpsec
+			cp /run/ntp.conf.dhcp /run/ntpsec/
+		fi
+
+		if [ -e /var/lib/ntp/ntp.drift ]
+		then
+			cp /var/lib/ntp/ntp.drift /var/lib/ntpsec/ntp.drift
+			chown ntpsec:ntpsec /var/lib/ntpsec/ntp.drift
+			chmod 644 /var/lib/ntpsec/ntp.drift
+		fi
+
+		if [ -n "$(ls -A /var/log/ntpstats 2> /dev/null)" ]; then
+			# /var/log/ntpstats exists and is not empty.
+			# NOTE: /var/log/ntpsec may or may not exist.
+			install -o ntpsec -g ntpsec -d /var/log/ntpsec
+			cp -a /var/log/ntpstats/* /var/log/ntpsec
+			chown ntpsec:ntpsec /var/log/ntpsec/*
+		fi
+	else
+		if dpkg --compare-versions "$2" le-nl "1.1.0+dfsg1-2~"; then
+			# We are transitioning from an old version of ntpsec.
+
+			rm -f \
+				/etc/systemd/system/multi-user.target.wants/ntp.service \
+				/etc/systemd/system/ntp.service.wants/ntplogtemp.timer \
+				/etc/systemd/system/ntp.service.wants/ntpviz-daily.timer \
+				/etc/systemd/system/ntp.service.wants/ntpviz-weekly.timer \
+				/etc/systemd/system/timers.target.wants/ntp-rotate-stats.timer \
+				/etc/systemd/system/time-sync.target.wants/ntp-wait.service
+			rmdir /etc/systemd/system/ntp.service.wants 2>/dev/null || true
+
+			if [ -e /run/ntp.conf.dhcp ]; then
+				mkdir -p /run/ntpsec
+				mv -n /run/ntp.conf.dhcp /run/ntpsec/
+				rm -f /run/ntp.conf.dhcp
+			fi
+
+			if [ -e /var/lib/ntp/ntp.drift ]; then
+				mv -n /var/lib/ntp/ntp.drift /var/lib/ntpsec/ntp.drift
+				chown ntpsec:ntpsec /var/lib/ntpsec/ntp.drift
+				chmod 644 /var/lib/ntpsec/ntp.drift
+				rm -f /var/lib/ntp/ntp.drift
+				rmdir /var/lib/ntp 2> /dev/null || true
+			fi
+
+			if [ -e /var/log/ntpstats ]; then
+				# This is specifically written this way, rather than
+				# just a mv and chown, to be safe in various
+				# scenarios.  These include:
+				#   A) if ntpsec-ntpviz is configured first and thus
+				#      created /var/log/ntpsec
+				#   B) if this fails partway through and has to be
+				#      restarted
+				install -o ntpsec -g ntpsec -d /var/log/ntpsec
+				mv -n /var/log/ntpstats/* /var/log/ntpsec
+				chown ntpsec:ntpsec /var/log/ntpsec/*
+				rmdir /var/log/ntpstats 2> /dev/null || true
+			fi
+
+			if [ -e /etc/ntp.d ]; then
+				mkdir -p /etc/ntpsec/ntp.d
+				mv -n /etc/ntp.d/*.conf /etc/ntpsec/ntp.d \
+					2> /dev/null || true
+				rmdir /etc/ntp.d 2> /dev/null || true
+			fi
+		fi
+		if dpkg --compare-versions "$2" le-nl "1.1.8+dfsg1-2~"; then
+			if [ -e /etc/ntp.keys ] && ! [ -e /etc/ntpsec/ntp.keys ]; then
+				mv /etc/ntp.keys /etc/ntpsec/ntp.keys
+				chgrp ntpsec /etc/ntpsec/ntp.keys
+				chmod 640 /etc/ntpsec/ntp.keys
+				sed -i "s|/etc/ntp\\.keys|/etc/ntpsec/ntp.keys|g" \
+					/etc/ntpsec/ntp.conf /etc/ntpsec/ntp.d/*.conf \
+					2> /dev/null || true
+			fi
+		fi
+	fi
+fi
+
+# These are included manually, as they need to run before the DEBHELPER
+# block, as that is where the service is restarted.
+dpkg-maintscript-helper mv_conffile /etc/default/ntp /etc/default/ntpsec 1.1.0\+dfsg1-2\~ ntpsec -- "$@"
+dpkg-maintscript-helper mv_conffile /etc/init.d/ntp /etc/init.d/ntpsec 1.1.0\+dfsg1-2\~ ntpsec -- "$@"
+dpkg-maintscript-helper mv_conffile /etc/ntp.conf /etc/ntpsec/ntp.conf 1.1.0\+dfsg1-2\~ ntpsec -- "$@"
+
+if [ "$1" = "triggered" ]; then
+	# The default configuration uses a leapfile from tzdata, so
+	# we need to restart on changes.
+	invoke-rc.d ntpsec try-restart || true
+fi
+
+installinit_error() {
+	exit $?
+}
+
+#DEBHELPER#
+
+if [ "$1" = "configure" ] && [ -n "$2" ] &&
+   dpkg --compare-versions "$2" le-nl "1.1.0+dfsg1-2~"; then
+	# We have completed the transition of ntpsec to its own user.
+	if ! dpkg -s ntp > /dev/null 2>&1; then
+		deluser --system --quiet ntp || true
+	fi
+fi

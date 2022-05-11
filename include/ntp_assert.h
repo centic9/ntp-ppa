@@ -1,104 +1,86 @@
 /*
  * ntp_assert.h - design by contract stuff
  *
+ * Copyright Internet Systems Consortium, Inc. ("ISC")
+ * Copyright Internet Software Consortium.
+ * Copyright the NTPsec project contributors
+ * SPDX-License-Identifier: ISC
+ *
  * example:
  *
  * int foo(char *a) {
- *	int result;
- *	int value;
+ *      int result;
+ *      int value;
  *
- *	REQUIRE(a != NULL);
- *	...
- *	bar(&value);
- *	INSIST(value > 2);
- *	...
+ *      REQUIRE(a != NULL);
+ *      ...
+ *      bar(&value);
+ *      INSIST(value > 2);
+ *      ...
  *
- *	ENSURE(result != 12);
- *	return result;
+ *      ENSURE(result != 12);
+ *      return result;
  * }
  *
  * open question: when would we use INVARIANT()?
  *
- * For cases where the overhead for non-debug builds is deemed too high,
- * use DEBUG_REQUIRE(), DEBUG_INSIST(), DEBUG_ENSURE(), and/or
- * DEBUG_INVARIANT().
  */
 
-#ifndef NTP_ASSERT_H
-#define NTP_ASSERT_H
+#ifndef GUARD_NTP_ASSERT_H
+#define GUARD_NTP_ASSERT_H
 
-# ifdef CALYSTO 
-/* see: http://www.domagoj-babic.com/index.php/ResearchProjects/Calysto */
+#include <stdbool.h>
 
-extern void calysto_assume(unsigned char cnd); /* assume this always holds */ 
-extern void calysto_assert(unsigned char cnd); /* check whether this holds */ 
-#define ALWAYS_REQUIRE(x)	calysto_assert(x)
-#define ALWAYS_INSIST(x)	calysto_assume(x) /* DLH calysto_assert()? */
-#define ALWAYS_INVARIANT(x)	calysto_assume(x)
-#define ALWAYS_ENSURE(x)	calysto_assert(x)
-
-/* # elif defined(__COVERITY__) */
-/*
- * DH: try letting coverity scan our actual assertion macros, now that
- * isc_assertioncallback_t is marked __attribute__ __noreturn__.
- */
-
-/*
- * Coverity has special knowledge that assert(x) terminates the process
- * if x is not true.  Rather than teach it about our assertion macros,
- * just use the one it knows about for Coverity Prevent scans.  This
- * means our assertion code (and ISC's) escapes Coverity analysis, but
- * that seems to be a reasonable trade-off.
- */
-
-/*
-#define ALWAYS_REQUIRE(x)	assert(x)
-#define ALWAYS_INSIST(x)	assert(x)
-#define ALWAYS_INVARIANT(x)	assert(x)
-#define ALWAYS_ENSURE(x)	assert(x)
-*/
-
-
-#elif defined(__FLEXELINT__)
+#if defined(__FLEXELINT__)
 
 #include <assert.h>
 
-#define ALWAYS_REQUIRE(x)	assert(x)
-#define ALWAYS_INSIST(x)	assert(x)
-#define ALWAYS_INVARIANT(x)	assert(x)
-#define ALWAYS_ENSURE(x)	assert(x)
+#define REQUIRE(x)      assert(x)
+#define INSIST(x)       assert(x)
+#define INVARIANT(x)    assert(x)
+#define ENSURE(x)       assert(x)
 
-# else	/* neither Calysto, Coverity or FlexeLint */
+# else  /* not FlexeLint */
 
-#include "isc/assertions.h"
+/*% isc assertion type */
+typedef enum {
+        assertiontype_require,
+        assertiontype_ensure,
+        assertiontype_insist,
+        assertiontype_invariant
+} assertiontype_t;
 
-#define ALWAYS_REQUIRE(x)	ISC_REQUIRE(x)
-#define ALWAYS_INSIST(x)	ISC_INSIST(x)
-#define ALWAYS_INVARIANT(x)	ISC_INVARIANT(x)
-#define ALWAYS_ENSURE(x)	ISC_ENSURE(x)
 
-# endif /* neither Coverity nor Calysto */
+/* our assertion catcher */
+extern void assertion_failed(const char *, int, assertiontype_t, const char *)
+                        __attribute__   ((__noreturn__));
 
-#define	REQUIRE(x)		ALWAYS_REQUIRE(x)
-#define	INSIST(x)		ALWAYS_INSIST(x)
-#define	INVARIANT(x)		ALWAYS_INVARIANT(x)
-#define	ENSURE(x)		ALWAYS_ENSURE(x)
+#define REQUIRE(cond) \
+        ((void) ((cond) || (assertion_failed(__FILE__, __LINE__, \
+                                         assertiontype_require, #cond), 0)))
 
-/*
- * We initially used NTP_REQUIRE() instead of REQUIRE() etc, but that
- * is unneccesarily verbose, as libisc use of REQUIRE() etc shows.
- */
+#define ENSURE(cond) \
+        ((void) ((cond) || (assertion_failed(__FILE__, __LINE__, \
+                                         assertiontype_ensure, #cond), 0)))
 
-# ifdef DEBUG
-#define	DEBUG_REQUIRE(x)	REQUIRE(x)
-#define	DEBUG_INSIST(x)		INSIST(x)
-#define	DEBUG_INVARIANT(x)	INVARIANT(x)
-#define	DEBUG_ENSURE(x)		ENSURE(x)
-# else
-#define	DEBUG_REQUIRE(x)	do {} while (FALSE)
-#define	DEBUG_INSIST(x)		do {} while (FALSE)
-#define	DEBUG_INVARIANT(x)	do {} while (FALSE)
-#define	DEBUG_ENSURE(x)		do {} while (FALSE)
-# endif
+#define INSIST(cond) \
+        ((void) ((cond) || (assertion_failed(__FILE__, __LINE__, \
+                                         assertiontype_insist, #cond), 0)))
 
-#endif	/* NTP_ASSERT_H */
+#define INVARIANT(cond) \
+        ((void) ((cond) || (assertion_failed(__FILE__, __LINE__, \
+                                         assertiontype_invariant, #cond), 0)))
+# endif /* not FlexeLint */
+
+#if defined(USEBACKTRACE) && \
+	(defined(HAVE_BACKTRACE_SYMBOLS_FD) || defined (HAVE__UNWIND_BACKTRACE))
+    /* doing backtrace */
+
+extern void backtrace_log(void);
+
+#else
+    /* not doing backtrace */
+# define BACKTRACE_DISABLED 1
+#endif   /* ! USEBACKTRACE */
+
+#endif  /* GUARD_NTP_ASSERT_H */

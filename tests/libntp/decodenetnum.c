@@ -1,238 +1,157 @@
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include "config.h"
 #include "ntp_stdlib.h"
-#include "sockaddrtest.h"
 
 #include "unity.h"
+#include "unity_fixture.h"
 
-void setUp(void);
-extern void test_IPv4AddressOnly(void);
-extern void test_IPv4AddressWithPort(void);
-extern void test_IPv6AddressOnly(void);
-extern void test_IPv6AddressWithPort(void);
-extern void test_IPv6AddressWithScope(void);
-extern void test_IPv6AddressWithPortAndScope(void);
-extern void test_IllegalAddress(void);
-extern void test_IllegalCharInPort(void);
-extern void test_NameBufOverflow(void);
+TEST_GROUP(decodenetnum);
 
-/*
- * NOTE: The IPv6 specific tests are reduced to stubs when IPv6 is
- * disabled.
- *
- * ISC_PLATFORM_HAVEIPV6 checks if system has IPV6 capabilies. WANTIPV6
- * ISC_PLATFORM_WANTIPV6 can be changed with build --disable-ipv6.
- *
- * If we want IPv6 but don't have it, the tests should fail, I think.
- */
-void
-setUp(void)
-{
-	init_lib();
+TEST_SETUP(decodenetnum) {}
+
+TEST_TEAR_DOWN(decodenetnum) {}
+
+#include "sockaddrtest.h"
+
+
+TEST(decodenetnum, Services) {
+	struct addrinfo *res;
+	int ret;
+
+	ret = getaddrinfo(NULL, "ntp", NULL, &res);
+	TEST_ASSERT_EQUAL_MESSAGE(0, ret, gai_strerror(ret));
+	if (0 == ret) {
+		freeaddrinfo(res);
+	}
 }
 
-
-void
-test_IPv4AddressOnly(void)
-{
+TEST(decodenetnum, IPv4AddressOnly) {
 	const char *str = "192.0.2.1";
+        int ret;
 	sockaddr_u actual;
 
 	sockaddr_u expected;
-	memset(&expected, 0, sizeof(expected));
-	expected.sa4.sin_family = AF_INET;
-	expected.sa4.sin_addr.s_addr = inet_addr("192.0.2.1");
+	SET_AF(&expected, AF_INET);
+	PSOCK_ADDR4(&expected)->s_addr = inet_addr("192.0.2.1");
 	SET_PORT(&expected, NTP_PORT);
 
-	TEST_ASSERT_TRUE(decodenetnum(str, &actual));
-	TEST_ASSERT_TRUE(IsEqual(expected, actual));
+	ret = decodenetnum(str, &actual);
+	TEST_ASSERT_EQUAL_INT(0, ret);
+	TEST_ASSERT_TRUE(IsEqualS(&expected, &actual));
 }
 
-void
-test_IPv4AddressWithPort(void)
-{
+/* test with numeric port */
+TEST(decodenetnum, IPv4AddressWithPort) {
 	const char *str = "192.0.2.2:2000";
 	sockaddr_u actual;
+        int ret;
 
 	sockaddr_u expected;
-	memset(&expected, 0, sizeof(expected));
-	expected.sa4.sin_family = AF_INET;
-	expected.sa4.sin_addr.s_addr = inet_addr("192.0.2.2");
+	SET_AF(&expected, AF_INET);
+	PSOCK_ADDR4(&expected)->s_addr = inet_addr("192.0.2.2");
 	SET_PORT(&expected, 2000);
 
-	TEST_ASSERT_TRUE(decodenetnum(str, &actual));
-	TEST_ASSERT_TRUE(IsEqual(expected, actual));
+	ret = decodenetnum(str, &actual);
+	TEST_ASSERT_EQUAL_INT(0, ret);
+	TEST_ASSERT_TRUE(IsEqualS(&expected, &actual));
 }
 
+/* test for named port */
+TEST(decodenetnum, IPv4AddressWithPort2) {
+	const char *str = "192.168.2.2:ntp";
+	sockaddr_u actual;
+        int ret;
 
-void
-test_IPv6AddressOnly(void)
-{
-#if defined(ISC_PLATFORM_HAVEIPV6) && defined(WANT_IPV6)
+	sockaddr_u expected;
+	SET_AF(&expected, AF_INET);
+	PSOCK_ADDR4(&expected)->s_addr = inet_addr("192.168.2.2");
+	SET_PORT(&expected, 123);
 
-	const struct in6_addr address = {
+	ret = decodenetnum(str, &actual);
+	TEST_ASSERT_EQUAL_INT(0, ret);
+	TEST_ASSERT_TRUE(IsEqualS(&expected, &actual));
+}
+
+TEST(decodenetnum, IPv6AddressOnly) {
+        int ret;
+	const struct in6_addr address = {{{
 		0x20, 0x01, 0x0d, 0xb8,
-		0x85, 0xa3, 0x08, 0xd3,
-		0x13, 0x19, 0x8a, 0x2e,
-		0x03, 0x70, 0x73, 0x34
-	};
+        0x85, 0xa3, 0x08, 0xd3,
+        0x13, 0x19, 0x8a, 0x2e,
+        0x03, 0x70, 0x73, 0x34
+	}}};
 
-	const char *str1 = "2001:0db8:85a3:08d3:1319:8a2e:0370:7334";
-	const char *str2 = "[2001:0db8:85a3:08d3:1319:8a2e:0370:7334]";
+	const char *str = "2001:0db8:85a3:08d3:1319:8a2e:0370:7334";
 	sockaddr_u actual;
 
 	sockaddr_u expected;
-	memset(&expected, 0, sizeof(expected));
-	expected.sa6.sin6_family = AF_INET6;
-	expected.sa6.sin6_addr = address;
+	SET_AF(&expected, AF_INET6);
+	SET_SOCK_ADDR6(&expected, address);
 	SET_PORT(&expected, NTP_PORT);
 
-	TEST_ASSERT_TRUE(decodenetnum(str1, &actual));
-	TEST_ASSERT_TRUE(IsEqual(expected, actual));
-
-	TEST_ASSERT_TRUE(decodenetnum(str2, &actual));
-	TEST_ASSERT_TRUE(IsEqual(expected, actual));
-
-#else
-
-	TEST_IGNORE_MESSAGE("IPV6 disabled in build");
-
-#endif
+	ret = decodenetnum(str, &actual);
+	TEST_ASSERT_EQUAL_INT(0, ret);
+	TEST_ASSERT_TRUE(IsEqualS(&expected, &actual));
 }
 
-
-void
-test_IPv6AddressWithPort(void)
-{
-#if defined(ISC_PLATFORM_HAVEIPV6) && defined(WANT_IPV6)
-
-	const struct in6_addr address = {
+TEST(decodenetnum, IPv6AddressWithPort) {
+	const struct in6_addr address = {{{
 		0x20, 0x01, 0x0d, 0xb8,
-		0x85, 0xa3, 0x08, 0xd3,
-		0x13, 0x19, 0x8a, 0x2e,
-		0x03, 0x70, 0x73, 0x34
-	};
+        0x85, 0xa3, 0x08, 0xd3,
+        0x13, 0x19, 0x8a, 0x2e,
+        0x03, 0x70, 0x73, 0x34
+	}}};
+        int ret;
 
 	const char *str = "[2001:0db8:85a3:08d3:1319:8a2e:0370:7334]:3000";
 	sockaddr_u actual;
 
 	sockaddr_u expected;
-	memset(&expected, 0, sizeof(expected));
-	expected.sa6.sin6_family = AF_INET6;
-	expected.sa6.sin6_addr = address;
+	SET_AF(&expected, AF_INET6);
+	SET_SOCK_ADDR6(&expected, address);
 	SET_PORT(&expected, 3000);
 
-	TEST_ASSERT_TRUE(decodenetnum(str, &actual));
-	TEST_ASSERT_TRUE(IsEqual(expected, actual));
-
-#else
-
-	TEST_IGNORE_MESSAGE("IPV6 disabled in build");
-
-#endif
+	ret = decodenetnum(str, &actual);
+	TEST_ASSERT_EQUAL_INT(0, ret);
+	TEST_ASSERT_TRUE(IsEqualS(&expected, &actual));
 }
 
-void test_IPv6AddressWithScope(void)
-{
-#if defined(ISC_PLATFORM_HAVEIPV6) && defined(WANT_IPV6)
-
-	const struct in6_addr address = {
-		0x20, 0x01, 0x0d, 0xb8,
-		0x85, 0xa3, 0x08, 0xd3,
-		0x13, 0x19, 0x8a, 0x2e,
-		0x03, 0x70, 0x73, 0x34
-	};
-
-	const char *str1 = "2001:0db8:85a3:08d3:1319:8a2e:0370:7334%42";
-	const char *str2 = "[2001:0db8:85a3:08d3:1319:8a2e:0370:7334%42]";
-	sockaddr_u actual;
-
-	sockaddr_u expected;
-	memset(&expected, 0, sizeof(expected));
-	expected.sa6.sin6_family = AF_INET6;
-	expected.sa6.sin6_addr = address;
-	expected.sa6.sin6_scope_id = 42;
-	SET_PORT(&expected, NTP_PORT);
-
-	TEST_ASSERT_TRUE(decodenetnum(str1, &actual));
-	TEST_ASSERT_TRUE(IsEqual(expected, actual));
-
-	TEST_ASSERT_TRUE(decodenetnum(str2, &actual));
-	TEST_ASSERT_TRUE(IsEqual(expected, actual));
-
-#else
-
-	TEST_IGNORE_MESSAGE("IPV6 disabled in build");
-
-#endif
-}
-
-void test_IPv6AddressWithPortAndScope(void)
-{
-#if defined(ISC_PLATFORM_HAVEIPV6) && defined(WANT_IPV6)
-
-	const struct in6_addr address = {
-		0x20, 0x01, 0x0d, 0xb8,
-		0x85, 0xa3, 0x08, 0xd3,
-		0x13, 0x19, 0x8a, 0x2e,
-		0x03, 0x70, 0x73, 0x34
-	};
-
-	const char *str = "[2001:0db8:85a3:08d3:1319:8a2e:0370:7334%42]:3000";
-	sockaddr_u actual;
-
-	sockaddr_u expected;
-	memset(&expected, 0, sizeof(expected));
-	expected.sa6.sin6_family = AF_INET6;
-	expected.sa6.sin6_addr = address;
-	expected.sa6.sin6_scope_id = 42;
-	SET_PORT(&expected, 3000);
-
-	TEST_ASSERT_TRUE(decodenetnum(str, &actual));
-	TEST_ASSERT_TRUE(IsEqual(expected, actual));
-
-#else
-
-	TEST_IGNORE_MESSAGE("IPV6 disabled in build");
-
-#endif
-}
-
-void
-test_IllegalAddress(void)
-{
+TEST(decodenetnum, IllegalAddress) {
 	const char *str = "192.0.2.270:2000";
 	sockaddr_u actual;
+        int ret;
 
-	TEST_ASSERT_FALSE(decodenetnum(str, &actual));
+	ret = decodenetnum(str, &actual);
+	TEST_ASSERT_NOT_EQUAL(0, ret);
 }
 
-
-void
-test_IllegalCharInPort(void)
-{
+TEST(decodenetnum, IllegalCharInPort) {
 	/* An illegal port does not make the decodenetnum fail, but instead
 	 * makes it use the standard port.
 	 */
 	const char *str = "192.0.2.1:a700";
 	sockaddr_u actual;
+        int ret;
 
 	sockaddr_u expected;
-	memset(&expected, 0, sizeof(expected));
-	expected.sa4.sin_family = AF_INET;
-	expected.sa4.sin_addr.s_addr = inet_addr("192.0.2.1");
+	SET_AF(&expected, AF_INET);
+	PSOCK_ADDR4(&expected)->s_addr = inet_addr("192.0.2.1");
 	SET_PORT(&expected, NTP_PORT);
 
-	TEST_ASSERT_TRUE(decodenetnum(str, &actual));
-	TEST_ASSERT_TRUE(IsEqual(expected, actual));
+	ret = decodenetnum(str, &actual);
+	TEST_ASSERT_NOT_EQUAL(0, ret);
+	TEST_ASSERT_TRUE(IsDiffS(&expected, &actual));
 }
 
-void
-test_NameBufOverflow(void)
-{
-	const char *str =
-	    "loremipsumloremipsumloremipsumloremipsumloremipsum"
-	    "loremipsumloremipsumloremipsumloremipsum";
-
-	sockaddr_u actual;
-	TEST_ASSERT_FALSE(decodenetnum(str, &actual));
+TEST_GROUP_RUNNER(decodenetnum) {
+	RUN_TEST_CASE(decodenetnum, Services);
+	RUN_TEST_CASE(decodenetnum, IPv4AddressOnly);
+	RUN_TEST_CASE(decodenetnum, IPv4AddressWithPort);
+	RUN_TEST_CASE(decodenetnum, IPv4AddressWithPort2);
+	RUN_TEST_CASE(decodenetnum, IPv6AddressOnly);
+	RUN_TEST_CASE(decodenetnum, IPv6AddressWithPort);
+	RUN_TEST_CASE(decodenetnum, IllegalAddress);
+	RUN_TEST_CASE(decodenetnum, IllegalCharInPort);
 }

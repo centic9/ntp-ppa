@@ -2,9 +2,8 @@
  * clocktime - compute the NTP date from a day of year, hour, minute
  *	       and second.
  */
-#include <config.h>
+#include "config.h"
 #include "ntp_fp.h"
-#include "ntp_unixtime.h"
 #include "ntp_stdlib.h"
 #include "ntp_calendar.h"
 
@@ -28,13 +27,17 @@
 /*
  * local calendar helpers
  */
-static int32   ntp_to_year(u_int32);
-static u_int32 year_to_ntp(int32);
+static int32_t  ntp_to_year(uint32_t, time_t);
+static uint32_t year_to_ntp(int32_t);
 
 /*
- * Take a time spec given as day-of-year, hour, minute and second as
- * well as a GMT offset in hours and convert it to a NTP time stamp in
- * '*ts_ui'. The value will be in the range (rec_ui-0.5yrs) to
+ * Take a time spec given as year, day-of-year, hour, minute and second
+ * (in GMT/UTC) and convert it to a NTP time stamp in
+ * '*ts_ui'.  There are two cases: ether the year is > 99, in which
+ * case it is used, or it is < 99 in which case we ignore it and try
+ * to deduce a year,
+ *
+ * The value will be in the range (rec_ui-0.5yrs) to
  * (rec_ui+0.5yrs). A hint for the current start-of-year will be
  * read from '*yearstart'.
  *
@@ -50,29 +53,52 @@ static u_int32 year_to_ntp(int32);
  */
 int
 clocktime(
+	int	year	 ,	/* year */
 	int	yday	 ,	/* day-of-year */
 	int	hour	 ,	/* hour of day */
 	int	minute	 ,	/* minute of hour */
 	int	second	 ,	/* second of minute */
-	int	tzoff	 ,	/* hours west of GMT */
-	u_int32 rec_ui	 ,	/* pivot value */
-	u_long *yearstart,	/* cached start-of-year, should be fixed to u_int32 */
-	u_int32 *ts_ui	 )	/* effective time stamp */
+	time_t	pivot	 ,	/* pivot for time unfolding */
+	uint32_t rec_ui	 ,	/* recent timestamp to get year from */
+	uint32_t *yearstart,	/* cached start-of-year, secs from NTP epoch */
+	uint32_t *ts_ui	 )	/* effective time stamp */
 {
-	u_int32 ystt[3];	/* year start */
-	u_int32 test[3];	/* result time stamp */
-	u_int32 diff[3];	/* abs difference to receive */
-	int32 y, tmp, idx, min;
-	
+	uint32_t ystt[3];	/* year start */
+	uint32_t test[3];	/* result time stamp */
+	uint32_t diff[3];	/* abs difference to receive */
+	int32_t y, idx, min;
+	uint32_t tmp;
+
 	/*
-	 * Compute the offset into the year in seconds.	 Note that
-	 * this could come out to be a negative number.
+	 * Compute the offset into the year in seconds.	 Can't
+	 * be negative as yday is 1-origin.
 	 */
-	tmp = ((int32)second +
-	       SECSPERMIN * ((int32)minute +
-			     MINSPERHR * ((int32)hour + (int32)tzoff +
-					  HRSPERDAY * ((int32)yday - 1))));
+	tmp = ((uint32_t)second +
+	       SECSPERMIN * ((uint32_t)minute +
+			     MINSPERHR * ((uint32_t)hour +
+					  HRSPERDAY * ((uint32_t)yday - 1))));
 	/*
+	 * Year > 1970 - from a 4-digit year stamp, must be greater
+	 * than POSIX epoch. Means we're not dependent on the pivot
+	 * value (derived from the packet receipt timestamp, and thus
+	 * ultimately from the system clock) to be correct. CLOSETIME
+	 * clipping to the receive time will *not* be applied in this
+	 * case. These two lines thus make it possible to recover from
+	 * a trashed or zeroed system clock.
+	 *
+	 * Warning: the hack in the NMEA driver that rectifies 4-digit
+	 * years from 2-digit ones has an expiration date in 2399.
+	 * After that this code will go badly wrong.
+	 */
+	if (year > 1970) {
+	    *yearstart = year_to_ntp(year);
+	    *ts_ui = *yearstart + tmp;
+	    return true;
+	}
+
+        /*
+	 * Year was too small to make sense, probably from a 2-digit
+	 * year stamp.
 	 * Based on the cached year start, do a first attempt. Be
 	 * happy and return if this gets us better than NEARTIME to
 	 * the receive time stamp. Do this only if the cached year
@@ -81,10 +107,10 @@ clocktime(
 	 */
 	if (*yearstart) {
 		/* -- get time stamp of potential solution */
-		test[0] = (u_int32)(*yearstart) + tmp;
+		test[0] = (uint32_t)(*yearstart) + (unsigned int)tmp;
 		/* -- calc absolute difference to receive time */
 		diff[0] = test[0] - rec_ui;
-		if (diff[0] >= 0x80000000u)
+		if (diff[0] >= 0x80000000U)
 			diff[0] = ~diff[0] + 1;
 		/* -- can't get closer if diff < NEARTIME */
 		if (diff[0] < NEARTIME) {
@@ -103,7 +129,7 @@ clocktime(
 	 * around the guess and select the entry with the minimum
 	 * absolute difference to the receive time stamp.
 	 */
-	y = ntp_to_year(rec_ui - tmp);
+	y = ntp_to_year(rec_ui - tmp, pivot);
 	for (idx = 0; idx < 3; idx++) {
 		/* -- get year start of potential solution */
 		ystt[idx] = year_to_ntp(y + idx - 1);
@@ -111,7 +137,7 @@ clocktime(
 		test[idx] = ystt[idx] + tmp;
 		/* -- calc absolute difference to receive time */
 		diff[idx] = test[idx] - rec_ui;
-		if (diff[idx] >= 0x80000000u)
+		if (diff[idx] >= 0x80000000U)
 			diff[idx] = ~diff[idx] + 1;
 	}
 	/* -*- assume current year fits best, then search best fit */
@@ -126,24 +152,25 @@ clocktime(
 	return diff[min] < CLOSETIME;
 }
 
-static int32
+static int32_t
 ntp_to_year(
-	u_int32 ntp)
+    uint32_t ntp,
+    time_t pivot)
 {
-	vint64	     t;
+	time64_t	     t;
 	ntpcal_split s;
 
-	t = ntpcal_ntp_to_ntp(ntp, NULL);
-	s = ntpcal_daysplit(&t);
+	t = ntpcal_ntp_to_ntp(ntp, pivot);
+	s = ntpcal_daysplit(t);
 	s = ntpcal_split_eradays(s.hi + DAY_NTP_STARTS - 1, NULL);
 	return s.hi + 1;
 }
 
-static u_int32
+static uint32_t
 year_to_ntp(
-	int32 year)
+	int32_t year)
 {
-	u_int32 days;
-	days = ntpcal_days_in_years(year-1) - DAY_NTP_STARTS + 1;
+	uint32_t days;
+	days = (uint32_t)ntpcal_days_in_years(year-1) - DAY_NTP_STARTS + 1;
 	return days * SECSPERDAY;
 }

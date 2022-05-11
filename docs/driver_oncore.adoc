@@ -1,0 +1,153 @@
+= Motorola Oncore GPS receiver
+include::include-html.ad[]
+
+== Synopsis
+
+["verse",subs="normal"]
+Name: oncore
+Reference ID: GPS
+Serial Port: /dev/oncore.serial._u_; 9600 bps 8N1.
+PPS Port: /dev/oncore.pps._u_
+
+== Deprecation warning
+
+This refclock is deprecated and obsolete; the entire Oncore line has
+been end-of-lifed. The NTPsec maintainers plan to remove it in a
+future release.  If you have a requirement for it, please make this
+known to us.
+
+This driver reports only two-digit years, and is thus reliant on the
+system clock to be near correct before samples will be processed
+properly. You will not be able to use it to run autonomously, nor will
+it reliably recover from a trashed or zeroed system clock.
+
+It is likely any surving instances of this hardware will have
+era-rollover issues when reporting dates. One or more "g" suffixes
+on your 'time1' option may be useful as a workaround.
+
+== Description
+
+This driver supports most models of the
+https://web.archive.org/web/19990427102123/http://www.mot.com/AECS/PNSB/products/produt.html[Motorola Oncore GPS receivers]
+(Basic, PVT6, VP, UT, UT+, GT, GT+, SL, M12, M12+T), as long as they
+support the _Motorola Binary Protocol_. All are long end-of-lifed as of 2019.
+
+The (formerly) interesting versions of the Oncore were the VP, the
+UT+, the "Remote" which is a prepackaged UT+, and the M12 Timing
+variant.
+
+However, there is one current hardware product that is reported good
+with this driver; the
+https://www.cnssys.com/cnsclock/CNSClockII.php[CNS Clock II].  It
+ships 1PPS on the DCD line of its RS232 port or as a DCD priority
+packet on USB.  Older revisions of the product used M12 hardware,
+newer ones use a u-blox engine but emulate OnCore behavior.  Future
+versions will drop OnCore reporting entirely, at which time the
+possibility of removing this driver will be revisited.
+
+See the CNS Clock vendor product page for specifications.
+
+We expect this should also work with the Furuno line of
+M12 compatibles, including the GT8736 and (now discontinued) GT8536,
+but we don't yet have confirmation from the field.
+
+The driver can use use the "position hold" mode with user provided
+coordinates, the receiver's built-in site-survey, or a similar algorithm
+implemented in this driver to determine the antenna position.
+
+== Monitor Data
+
+The driver always puts a lot of useful information in the clockstats
+file, and when run with debugging can be quite chatty on stdout. When
+first starting to use the driver you should definitely review the
+information written to the clockstats file to verify that the driver is
+running correctly.
+
+In addition, on platforms supporting Shared Memory, all of the messages
+received from the Oncore receiver are made available in shared memory
+for use by other programs. See the link:oncore-shmem.html[Oncore-SHMEM]
+manual page for information on how to use this option. For either
+debugging or using the SHMEM option, an Oncore Reference Manual for the
+specific receiver in use will be required.
+
+== Driver Options
+
++unit+ 'number'::
+  The driver unit number, defaulting to 0. Used as a distinguishing
+  suffix in the driver device name.
++time1+ 'time'::
+   Specifies the time offset calibration factor, in seconds and fraction,
+   with default 0.0.
++time2+ 'time'::
+   Not used by this driver.
++stratum+ 'number'::
+   Specifies the driver stratum, in decimal from 0 to 15, with default 0.
++refid+ 'string'::
+   Specifies the driver reference identifier, an ASCII string from one to
+   four characters, with default +GPS+.
++flag1 {0 | 1}+::
+   Not used by this driver.
++flag2 {0 | 1}+::
+   Not used by this driver.
++flag3 {0 | 1}+::
+   Not used by this driver.
++flag4 {0 | 1}+::
+   Not used by this driver.
++subtype+::
+   Not used by this driver.
++mode+::
+   Not used by this driver.
++path+::
+   Not used by this driver.
++ppspath+::
+   Not used by this driver.
++baud+ 'number'::
+   Not used by this driver.
+
+== Configuration Example
+
+----------------------------------------------------------------------------
+refclock oncore
+----------------------------------------------------------------------------
+
+== Additional Information
+
+The driver was initially developed on FreeBSD, and has since been tested
+on Linux, SunOS and Solaris.
+
+=== Configuration
+
+There is a driver specific configuration file +ntp.oncore+ (or
++ntp.oncore.+'u' or +ntp.oncore+'u' if you must distinguish between more
+than one Oncore receiver _unit_) that contains information on the startup mode,
+the location of the GPS receiver, an offset of the PPS signal from zero,
+and the cable delay. The offset shifts the PPS signal to avoid interrupt
+pileups `on' the second, and adjusts the timestamp accordingly. See the
+driver source for information on this file. The default with no file is:
+no delay, no offset, and a site survey is done to get the location of
+the gps receiver.
+
+The following three options can be set in the driver specific
+configuration file only if the driver is using the PPSAPI. The edge of
+the PPS signal that is `on-time' can be set with the keywords
+[ASSERT/CLEAR] and the word HARDPPS will cause the PPS signal to control
+the kernel PLL.
+
+=== Performance
+
+Even the newest of the Motorola variants, the M12+T with firmware dated 9 Jun
+2004 now reports bad dates due to era rollover.
+
+Performance is really good, other than the rollover issue. With the
+VP/UT+, the generated PPS pulse is referenced to UTC(GPS) with better
+than 50 ns (1 sigma) accuracy. The limiting factor will be the
+timebase of the computer and the precision with which you can
+timestamp the rising flank of the PPS signal. Using FreeBSD, a FPGA
+based Timecounter/PPS interface, and an ovenized quartz oscillator,
+that performance has been reproduced. For more details on this aspect:
+https://web.archive.org/web/19990221121441/http://phk.freebsd.dk/rover.html[Sub-Microsecond
+timekeeping under FreeBSD].
+
+'''''
+
+include::includes/footer.adoc[]

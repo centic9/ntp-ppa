@@ -1,0 +1,150 @@
+'\" t
+.\"     Title: ntplogtemp
+.\"    Author: [see the "AUTHORS" section]
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 06/07/2021
+.\"    Manual: NTPsec
+.\"    Source: NTPsec 1.2.1+
+.\"  Language: English
+.\"
+.TH "NTPLOGTEMP" "1" "06/07/2021" "NTPsec 1\&.2\&.1+" "NTPsec"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+ntplogtemp \- log temperature data
+.SH "SYNOPSIS"
+.sp
+.nf
+ntplogtemp [\-h] [\-l LOGFILE] [\-o] [\-w WAIT] [\-v] [\-V]
+.fi
+.sp
+.nf
+\-h, \-\-help            show this help message and exit
+\-l LOGFILE, \-\-logfile LOGFILE
+                      append log data to LOGFILE instead of stdout
+\-q, \-\-quiet                           be quiet
+\-o, \-\-once            log one line, then exit
+\-w WAIT, \-\-wait WAIT  wait WAIT seconds after each log line, default 60
+\-v, \-\-verbose         be verbose
+\-V, \-\-version         show program\*(Aqs version number and exit
+.fi
+.SH "DESCRIPTION"
+.sp
+ntplogtemp gathers temperature readings across a system\&. The standard user is ntpuser and should have permissions to execute lm_sensors and smartctl\&.
+.sp
+The default is to write the data to stdout once every 60 seconds\&. The log file looks like:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+# time, sensor, value
+1485816568 ZONE0 39\&.0
+1485816568 ZONE1 20\&.0
+1485816568 ZONE2 42\&.0
+1485816568 ZONE3 0\&.0
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Time is the POSIX time of when the log line is written\&.
+.sp
+Sensor is the sensor the temperature reading was obtained from\&.
+.sp
+Value is the temperature reading in celsius\&.
+.SH "OPTIONS"
+.PP
+\-h, \-\-help
+.RS 4
+Displays usage information and exits\&.
+.RE
+.PP
+\-l LOGFILE, \-\-logfile LOGFILE
+.RS 4
+Append log data to LOGFILE instead of stdout
+.RE
+.PP
+\-q, \-\-quiet
+.RS 4
+Quiet output, will not display errors
+.RE
+.PP
+\-o, \-\-once
+.RS 4
+Log the data once, then exit
+.RE
+.PP
+\-v, \-\-verbose
+.RS 4
+Be verbose
+.RE
+.PP
+\-w WAIT, \-\-wait WAIT
+.RS 4
+Wait WAIT seconds after each log line\&. The default is 60 seconds\&. The minimum wait time is 5 seconds\&.
+.RE
+.PP
+\-V, \-\-version
+.RS 4
+show program\(cqs version number and exit
+.RE
+.SH "USAGE"
+.PP
+ntplogtemp
+.RS 4
+This the simplest use of this program\&. It can be used to check the temperature readings of Zones, CPU, and disk drives every minute\&.
+.RE
+.PP
+ntplogtemp \-l /var/log/ntpstats/temperature \-w 60 &
+.RS 4
+This will continuously log the temperature data in the background to the file /var/log/ntpstats/temperature\&. Only log every 60 seconds\&.
+.RE
+.SH "EXIT STATUS"
+.sp
+One of the following exit values will be returned:
+.PP
+0 (EXIT_SUCCESS)
+.RS 4
+Successful program execution\&.
+.RE
+.PP
+1 (EXIT_FAILURE)
+.RS 4
+The operation failed or the command syntax was not valid\&.
+.RE
+.SH "AUTHORS"
+.sp
+Gary E\&. Miller
+.sp
+Keane S\&. Wolter
+.SH "EXIT STATUS"
+.sp
+One of the following exit values will be returned:
+.PP
+0 (EXIT_SUCCESS)
+.RS 4
+Successful program execution\&.
+.RE
+.PP
+1 (EXIT_FAILURE)
+.RS 4
+The operation failed or the command syntax was not valid\&.
+.RE

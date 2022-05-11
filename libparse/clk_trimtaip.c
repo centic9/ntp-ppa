@@ -1,58 +1,18 @@
 /*
- * /src/NTP/ntp4-dev/libparse/clk_trimtaip.c,v 4.11 2005/04/16 17:32:10 kardel RELEASE_20050508_A
- *
- * clk_trimtaip.c,v 4.11 2005/04/16 17:32:10 kardel RELEASE_20050508_A
- *
  * Trimble SV6 clock support - several collected codepieces
  *
- * Copyright (c) 1995-2005 by Frank Kardel <kardel <AT> ntp.org>
- * Copyright (c) 1989-1994 by Frank Kardel, Friedrich-Alexander Universitaet Erlangen-Nuernberg, Germany
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the author nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
+ * Copyright Frank Kardel <kardel@ntp.org>
+ * Copyright the NTPsec project contributors
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
-#if defined(REFCLOCK) && defined(CLOCK_PARSE) && defined(CLOCK_TRIMTAIP)
-
+#include "config.h"
 #include "ntp_fp.h"
-#include "ntp_unixtime.h"
 #include "ntp_calendar.h"
 
 #include "parse.h"
 
-#ifndef PARSESTREAM
 #include "ntp_stdlib.h"
-#include <stdio.h>
-#else
-#include "sys/parsestreams.h"
-extern int printf (const char *, ...);
-#endif
 
 /*	0000000000111111111122222222223333333	/ char
  *	0123456789012345678901234567890123456	\ posn
@@ -93,7 +53,7 @@ clockformat_t clock_trimtaip =
 };
 
 /* parse_cvt_fnc_t cvt_trimtaip */
-static u_long
+static unsigned long
 cvt_trimtaip(
 	     unsigned char *buffer,
 	     int            size,
@@ -103,9 +63,12 @@ cvt_trimtaip(
 	     )
 {
 	long gpsfix;
-	u_char calc_csum = 0;
+	uint8_t calc_csum = 0;
 	long   recv_csum;
 	int	 i;
+
+	UNUSED_ARG(size);
+	UNUSED_ARG(local);
 
 	if (!Strok(buffer, format->fixed_string)) return CVT_NONE;
 #define	OFFS(x) format->field_offsets[(x)].offset
@@ -128,7 +91,7 @@ cvt_trimtaip(
 	recv_csum =	(hexval(buffer[OFFS(O_CHKSUM)]) << 4) |
 		hexval(buffer[OFFS(O_CHKSUM)+1]);
 	if (recv_csum < 0) return CVT_FAIL|CVT_BADTIME;
-	if (((u_char) recv_csum) != calc_csum) return CVT_FAIL|CVT_BADTIME;
+	if (((uint8_t) recv_csum) != calc_csum) return CVT_FAIL|CVT_BADTIME;
 
 	clock_time->utcoffset = 0;
 
@@ -146,7 +109,7 @@ cvt_trimtaip(
  *
  * grab data from input stream
  */
-static u_long
+static unsigned long
 inp_trimtaip(
 	     parse_t      *parseio,
 	     char         ch,
@@ -155,7 +118,8 @@ inp_trimtaip(
 {
 	unsigned int rtc;
 
-	parseprintf(DD_PARSE, ("inp_trimtaip(0x%p, 0x%x, ...)\n", (void*)parseio, ch));
+	parseprintf(DD_PARSE, ("inp_trimtaip(0x%lx, 0x%x, ...)\n",
+                    (unsigned long)parseio, (unsigned)ch));
 
 	switch (ch)
 	{
@@ -179,10 +143,6 @@ inp_trimtaip(
 		return parse_addchar(parseio, ch);
 	}
 }
-
-#else /* not (REFCLOCK && CLOCK_PARSE && CLOCK_TRIMTAIP) */
-int clk_trimtaip_bs;
-#endif /* not (REFCLOCK && CLOCK_PARSE && CLOCK_TRIMTAIP) */
 
 /*
  * History:

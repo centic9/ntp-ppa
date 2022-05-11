@@ -1,0 +1,17 @@
+Document: ntpsec-doc
+Title: The Secure Network Time Protocol (NTPsec) Distribution
+Author: NTPsec project contributors
+Abstract:
+ This distribution is an implementation of RFC 5905 "Network Time Protocol
+ Version 4: Protocol and Algorithms Specification".  NTP is widely used to
+ synchronize a computer to Internet time servers or other sources, such as a
+ satellite receiver.  It can also be used as a server for dependent clients.
+ It provides accuracies typically less than a millisecond on LANs and up to a
+ few tens of milliseconds on WANs.  Typical NTP configurations utilize
+ multiple redundant servers and diverse network paths in order to achieve high
+ accuracy and reliability.
+Section: System/Administration
+
+Format: HTML
+Index: /usr/share/doc/ntpsec-doc/html/index.html
+Files: /usr/share/doc/ntpsec-doc/html/*.html
