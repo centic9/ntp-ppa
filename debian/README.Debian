@@ -222,5 +222,5 @@ define a logfile location in ntp.conf, the daemon will do direct file system
 writes to the specified file, avoiding syslog.  Previous Debian packages of
 ntp (but not ntpsec) did this, with the side effect that they had to ship a
 weekly cron job that stopped the daemon, rotated the log, then restarted the
-daemon.  This is suboptimal for high-stratum NTP servers, where ntpd should be
-allowed to run more or less forever.  This mode of logging is not recommended.
+daemon.  This is suboptimal; ntpd should be allowed to run more or less
+forever.  This mode of logging is not recommended.

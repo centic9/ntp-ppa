@@ -1,3 +1,12 @@
+ntpsec (1.2.1+dfsg1-8) unstable; urgency=medium
+
+  * Fix ntpdate-debian error on ntp.conf (Closes: 1020865)
+  * ntpdig: Only show socket error messages in debug (Closes: 971523)
+  * ntpdig: Continue on errors in non-concurrent mode
+  * ntpdate: Disable JSON (Closes: 1020865)
+
+ -- Richard Laager <rlaager@debian.org>  Tue, 18 Oct 2022 01:15:33 -0500
+
 ntpsec (1.2.1+dfsg1-7) unstable; urgency=medium
 
   * watch: Use FTP

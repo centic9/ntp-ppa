@@ -11,6 +11,10 @@
 0001-Update-to-OpenSSL-3.0.0-alpha15.patch
 0001-ntplogtemp-Fix-printing-blank-line-on-exit.patch
 
+# Forwarded
+ntpdig-only-show-socket-error-messages-in-debug.patch
+ntpdig-continue-on-errors-in-non-concurrent-mode.patch
+
 # Forwarding not needed
 systemd-rename-service.patch
 systemd-alias-ntpsec.patch
@@ -29,3 +33,4 @@ use-var-log-ntpsec-for-stats.patch
 set-statsdir-by-default.patch
 use-private-dir-for-libntpc.patch
 disable-libssl-version-check.patch
+ntpdate-disable-json.patch

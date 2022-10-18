@@ -14,7 +14,7 @@ if [ -r /etc/default/ntpsec-ntpdate ]; then
 fi
 
 if [ "$NTPDATE_USE_NTP_CONF" = yes ]; then
-	if [ -n /etc/ntpsec/ntp.conf ]; then
+	if [ -r /etc/ntpsec/ntp.conf ]; then
 		NTPSERVERS=$(sed -rne 's/^(servers?|peer|pool)[[:space:]]+(-[46][[:space:]]+)?([-_.:[:alnum:]]+).*$/\3/p' /etc/ntpsec/ntp.conf | grep -v '^127\.127\.') || [ $? -le 1 ]
 	fi
 fi

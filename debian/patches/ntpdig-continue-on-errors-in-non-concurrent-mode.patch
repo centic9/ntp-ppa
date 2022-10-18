@@ -1,0 +1,28 @@
+Description: ntpdig: Continue on errors in non-concurrent mode
+ In concurrent mode, select() errors were not fatal.  But in
+ non-concurrent mode, any error from select() would be fatal, even if
+ there was already a valid response received.
+ .
+ For example, I had a scenario where there was an A and AAAA returned
+ for a host (in that order).  The A worked but the AAAA did not.
+ .
+ This change makes the two code paths consistent.
+Forwarded: https://gitlab.com/NTPsec/ntpsec/-/merge_requests/1288.patch
+Author: Richard Laager <rlaager@wiktel.com>
+Bug-Debian: https://bugs.debian.org/971523
+Last-Update: 2022-09-27
+
+--- a/ntpclients/ntpdig.py
++++ b/ntpclients/ntpdig.py
+@@ -125,9 +125,8 @@
+             sockets.append(s)
+         else:
+             r, _, _ = select.select([s], [], [], timeout)
+-            if not r:
+-                return []
+-            read_append(s, packets, packet, sockaddr)
++            if r:
++                read_append(s, packets, packet, sockaddr)
+         while sockets:
+             r, _, _ = select.select(sockets, [], [], timeout)
+             if not r:

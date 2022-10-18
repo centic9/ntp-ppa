@@ -1,0 +1,18 @@
+Description: ntpdate: Disable JSON
+ Stop passing -j to ntpdig so we get human-readable output instead of JSON.
+Forwarded: not-needed
+Author: Richard Laager <rlaager@wiktel.com>
+Bug-Debian: https://bugs.debian.org/1020865
+Last-Update: 2022-09-27
+
+--- a/attic/ntpdate
++++ b/attic/ntpdate
+@@ -88,7 +88,7 @@
+ 
+ if [ "$setclock" = yes -a -z "$ADJUST" ]
+ then
+-    ADJUST="-s -S -M 500 -j"
++    ADJUST="-s -S -M 500"
+ fi
+ 
+ if [ "$echo" = yes ]
