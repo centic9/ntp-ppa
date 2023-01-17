@@ -370,10 +370,12 @@ class BuildContext(Context.Context):
 		else:
 			ln=self.launch_node()
 			if ln.is_child_of(self.bldnode):
-				Logs.warn('Building from the build directory, forcing --targets=*')
+				if Logs.verbose>1:
+					Logs.warn('Building from the build directory, forcing --targets=*')
 				ln=self.srcnode
 			elif not ln.is_child_of(self.srcnode):
-				Logs.warn('CWD %s is not under %s, forcing --targets=* (run distclean?)',ln.abspath(),self.srcnode.abspath())
+				if Logs.verbose>1:
+					Logs.warn('CWD %s is not under %s, forcing --targets=* (run distclean?)',ln.abspath(),self.srcnode.abspath())
 				ln=self.srcnode
 			def is_post(tg,ln):
 				try:
@@ -531,7 +533,7 @@ class inst(Task.Task):
 		if not os.path.isabs(dest):
 			dest=os.path.join(self.env.PREFIX,dest)
 		if destdir and Options.options.destdir:
-			dest=os.path.join(Options.options.destdir,os.path.splitdrive(dest)[1].lstrip(os.sep))
+			dest=Options.options.destdir.rstrip(os.sep)+os.sep+os.path.splitdrive(dest)[1].lstrip(os.sep)
 		return dest
 	def copy_fun(self,src,tgt):
 		if Utils.is_win32 and len(tgt)>259 and not tgt.startswith('\\\\?\\'):

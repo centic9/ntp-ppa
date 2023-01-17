@@ -1,4 +1,0 @@
-FROM python:rc
-
-RUN apt-get update -qq
-RUN apt-get install -y -qq bison libcap-dev pps-tools libbsd-dev

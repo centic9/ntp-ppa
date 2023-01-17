@@ -4,7 +4,7 @@ Description: Use ntpsec as the user
 Forwarded: not-needed
 Origin: vendor
 Author: Richard Laager <rlaager@debian.org>
-Last-Update: 2020-11-16
+Last-Update: 2023-01-16
 --- a/docs/includes/ntpkeygen-body.adoc
 +++ b/docs/includes/ntpkeygen-body.adoc
 @@ -32,7 +32,7 @@
@@ -18,7 +18,7 @@ Last-Update: 2020-11-16
  system, this is usually /dev/urandom.  Immediately after a reboot, on any
 --- a/docs/NTS-QuickStart.adoc
 +++ b/docs/NTS-QuickStart.adoc
-@@ -122,7 +122,7 @@
+@@ -126,7 +126,7 @@
  Note that `ntpd` must be able to read both files and you want to
  make sure that the bad guys can't read your private key.  It may
  be simpler to copy those files over to `/etc/ntp/` and adjust

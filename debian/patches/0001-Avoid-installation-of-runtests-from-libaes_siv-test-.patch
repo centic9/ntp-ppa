@@ -1,0 +1,25 @@
+From 2c494aeac0e4cd09a9c5e32157c816bb8cc0bf42 Mon Sep 17 00:00:00 2001
+From: James Browning <jamesb.fe80@gmail.com>
+Date: Mon, 16 Jan 2023 20:19:05 -0500
+Subject: [PATCH] Avoid installation of "runtests" from libaes_siv test suite
+
+Fixes NTPsec/ntpsec#761
+---
+ libaes_siv/wscript | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/libaes_siv/wscript b/libaes_siv/wscript
+index 6723e3b38..5002f50ba 100644
+--- a/libaes_siv/wscript
++++ b/libaes_siv/wscript
+@@ -27,6 +27,7 @@ def build(ctx):
+             "aes_siv_test.c",
+             "tests.c",
+         ],
++        install_path=None,
+         use="aes_siv",
+         cflags=aes_cflags,
+     )
+-- 
+2.39.0
+

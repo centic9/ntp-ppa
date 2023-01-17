@@ -4,11 +4,11 @@ Description: Use /var/lib/ntpsec for cookies
 Forwarded: not-needed
 Origin: vendor
 Author: Richard Laager <rlaager@debian.org>
-Last-Update: 2020-11-16
+Last-Update: 2023-01-16
 -
 --- a/docs/NTS-QuickStart.adoc
 +++ b/docs/NTS-QuickStart.adoc
-@@ -125,11 +125,10 @@
+@@ -129,11 +129,10 @@
  their owner and mode so `ntpd` running as user `ntpsec` can read them.
  
  You may need to tell your system where to store the keys used
@@ -24,7 +24,7 @@ Last-Update: 2020-11-16
  Again, make sure the bad guys can't read that file.
 --- a/docs/includes/nts-commands.adoc
 +++ b/docs/includes/nts-commands.adoc
-@@ -24,7 +24,7 @@
+@@ -29,7 +29,7 @@
  +cookie+ _location_::
    Use the file (or directory) specified by _location_ to
    store the keys used to make and decode cookies.  The default
@@ -33,7 +33,7 @@ Last-Update: 2020-11-16
  
  +enable+::
    Enable NTS-KE server.
-@@ -91,7 +91,7 @@
+@@ -96,7 +96,7 @@
    The same +aead+ algorithms are also used to encrypt cookies.
    The default is AES_SIV_CMAC_256.  There is no config file option to
    change it, but you can change it by editing the saved cookie key

@@ -1,3 +1,23 @@
+ntpsec (1.2.2+dfsg1-1) unstable; urgency=medium
+
+  * New upstream version
+    - Restore/cleanup NTPv1 support
+    - NTS supports partial wildcards, for example *.example.com
+    - Work on documentation, ntpdate, ntpheat, ntploggpg, ntpq’s sysstats,
+      ntpviz, and seccomp.
+    - NTP auth no longer breaks on NULs.
+    - The NTS server now saves 10 days worth of cookie keys. This will allow
+      clients that only poll once a day to use NTS without using NTS-KE to
+      keep cookies up to date.
+    - rawstats now logs dropped packets and their BOGON code
+    - Add 4 or 6 to DNS/NTS RefID tags to indicate that the DNS or NTS-KE has
+      succeeded but NTP has not worked yet.
+    - Fix hash validation in ntpleapfetch again
+  * Update Standards-Version to 4.6.2 (no changes)
+  * Write pidfile in parent (Closes: 1023023)
+
+ -- Richard Laager <rlaager@debian.org>  Mon, 16 Jan 2023 21:50:45 -0600
+
 ntpsec (1.2.1+dfsg1-8) unstable; urgency=medium
 
   * Fix ntpdate-debian error on ntp.conf (Closes: 1020865)

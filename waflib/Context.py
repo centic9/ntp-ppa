@@ -11,9 +11,9 @@ if sys.hexversion>0x3040000:
 		new_module=lambda x:types.ModuleType(x)
 else:
 	import imp
-HEXVERSION=0x2001400
-WAFVERSION="2.0.20"
-WAFREVISION="668769470956da8c5b60817cb8884cd7d0f87cd4"
+HEXVERSION=0x2001800
+WAFVERSION="2.0.24"
+WAFREVISION="1af97c71f5a6756abf36d0f78ed8fd551596d7cb"
 WAFNAME="waf"
 ABI=20
 DBFILE='.wafpickle-%s-%d-%d'%(sys.platform,sys.hexversion,ABI)

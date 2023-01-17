@@ -479,8 +479,8 @@ set rmargin 10
         if item2:
             for row in rows:
                 try:
-                    values1.append(float(row[item1]))
-                    values2.append(float(row[item2]))
+                    val1 = float(row[item1])
+                    val2 = float(row[item2])
                     if 2200000 < row[0] - last_time:
                         # more than 2,200 seconds between points
                         # data loss, add a break in the plot line
@@ -490,7 +490,12 @@ set rmargin 10
                         + row[item2] + '\n'
                     last_time = row[0]
                 except IndexError:
-                    pass
+                    continue
+                except ValueError:
+                    continue
+                # both values are good, append them.
+                values1.append(val1)
+                values2.append(val2)
         else:
             for row in rows:
                 try:
@@ -503,6 +508,8 @@ set rmargin 10
                     plot_data += row[1] + ' ' + row[item1] + '\n'
                     last_time = row[0]
                 except IndexError:
+                    pass
+                except ValueError:
                     pass
 
         # I know you want to replace the plot_data string concat with
@@ -782,7 +789,7 @@ set terminal %(terminal)s size %(size)s
 set title "%(sitename)s: Local GPS%(clipped)s
 set ytics format "%(fmt)s TDOP" nomirror textcolor rgb '#0060ad'
 set yrange [%(min_y)s:%(max_y)s]
-set y2tics format "%%2.0f nSat"  nomirror textcolor rgb '#dd181f'
+set y2tics format "%%4.1f nSat"  nomirror textcolor rgb '#dd181f'
 set style line 1 lc rgb '#0060ad' lt 1 lw 1 pt 7 ps 0   # --- blue
 set style line 2 lc rgb '#dd181f' lt 1 lw 1 pt 5 ps 0   # --- red
 set key top right

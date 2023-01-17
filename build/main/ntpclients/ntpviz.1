@@ -1,41 +1,42 @@
 '\" t
 .\"     Title: ntpviz
-.\"    Author: [see the "AUTHORS" section]
-.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
-.\"      Date: 06/07/2021
+.\"    Author: [see the "AUTHOR(S)" section]
+.\" Generator: Asciidoctor 2.0.12
+.\"      Date: 2022-12-29
 .\"    Manual: NTPsec
-.\"    Source: NTPsec 1.2.1+
+.\"    Source: NTPsec
 .\"  Language: English
 .\"
-.TH "NTPVIZ" "1" "06/07/2021" "NTPsec 1\&.2\&.1+" "NTPsec"
-.\" -----------------------------------------------------------------
-.\" * Define some portability stuff
-.\" -----------------------------------------------------------------
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" http://bugs.debian.org/507673
-.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.TH "NTPVIZ" "1" "2022-12-29" "NTPsec" "NTPsec"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
-.\" -----------------------------------------------------------------
-.\" * set default formatting
-.\" -----------------------------------------------------------------
-.\" disable hyphenation
+.ss \n[.ss] 0
 .nh
-.\" disable justification (adjust text to left margin only)
 .ad l
-.\" -----------------------------------------------------------------
-.\" * MAIN CONTENT STARTS HERE *
-.\" -----------------------------------------------------------------
+.de URL
+\fI\\$2\fP <\\$1>\\$3
+..
+.als MTO URL
+.if \n[.g] \{\
+.  mso www.tmac
+.  am URL
+.    ad l
+.  .
+.  am MTO
+.    ad l
+.  .
+.  LINKSTYLE blue R < >
+.\}
 .SH "NAME"
-ntpviz \- make visualizations of offset, jitter, etc\&. from stats file data
+ntpviz \- make visualizations of offset, jitter, etc. from stats file data
 .SH "SYNOPSIS"
+.sp
 .sp
 .nf
 ntpviz [OPTIONS]
          [\-c | \-\-clip]
          [\-D DLVL | \-\-debug DLVL]
-         [\-d LOGDIR[,LOGDIR]\&...]
+         [\-d LOGDIR[,LOGDIR]...]
          [\-e endtime]
          [\-g | \-\-general]
          [\-h | \-\-help]
@@ -62,249 +63,281 @@ ntpviz [OPTIONS]
           \-\-peer\-offsets=hosts]
          [@OPTIONFILE]
 .fi
+.br
 .SH "DESCRIPTION"
 .sp
-ntpviz analyzes files in an NTP log directory and generates statistical plots from them\&. It can output either PNG images or the gnuplot programs to generate them to standard output\&. In its default mode it generates an HTML directory containing an index page and either (a) all plots, for a single statfiles directory, or (b) a subset of comparative plots for multiple directories\&.
+ntpviz analyzes files in an NTP log directory and generates
+statistical plots from them.  It can output either PNG images or the
+gnuplot programs to generate them to standard output.  In its default
+mode it generates an HTML directory containing an index page and
+either (a) all plots, for a single statfiles directory, or (b) a
+subset of comparative plots for multiple directories.
 .SS "Basic Options"
-.PP
+.sp
 \-c or \-\-clip
 .RS 4
-Normally all data are plotted\&. This option limits the range of the plots to the data between 1% and 99%; this is useful for ignoring a few spikes in the data\&.
+Normally all data are plotted.  This option limits the range of
+the plots to the data between 1% and 99%; this is useful for
+ignoring a few spikes in the data.
 .RE
-.PP
-\-d LOGDIR[,LOGDIR]\&... or \-\-datadir LOGDIR[,LOGDIR]\&...
+.sp
+\-d LOGDIR[,LOGDIR]... or \-\-datadir LOGDIR[,LOGDIR]...
 .RS 4
-Specifies one or more logfile directories to examine; the default is the single directory /var/log/ntpstats\&.
+Specifies one or more logfile directories to examine; the default is
+the single directory /var/log/ntpstats.
 .RE
-.PP
+.sp
 \-D DLVL or \-\-debug DLVL
 .RS 4
-Set the debug level to DLVL\&. Larger DLVL leads to more verbosity\&.
-
-0 is the default, quiet except for all ERRORs and some WARNINGs\&.
-
-1 shows some environment info and basic program progress\&.
-
-2 leaves the plot file in the system temp directory\&.
-
-9 is painfully verbose\&. 9 also includes profile data\&.
+Set the debug level to DLVL.  Larger DLVL leads to more verbosity.
+.br
+0 is the default, quiet except for all ERRORs and some WARNINGs.
+.br
+1 shows some environment info and basic program progress.
+.br
+2 leaves the plot file in the system temp directory.
+.br
+9 is painfully verbose. 9 also includes profile data.
 .RE
-.PP
+.sp
 \-e TIME or \-\-endtime TIME
 .RS 4
-With \-s and \-e you set the start and end times\&. TIME is either numeric POSIX time (seconds since the start of the epoch) or ISO 8601\-style timestamps (yyyy\-mmm\-ddThh:mm:ss)\&.
-
-The default end time is the last logfile entry timestamp\&.
-
-The default start time is computed as the end time minus DAYS\&.
-
-Alternatively, you may specify either \-s or \-e (but not both) and use \-p to set the plot period in days\&.
+With \-s and \-e you set the start and end times.  TIME is either numeric
+POSIX time (seconds since the start of the epoch) or ISO 8601\-style
+timestamps (yyyy\-mmm\-ddThh:mm:ss).
+.br
+The default end time is the last logfile entry timestamp.
+.br
+The default start time is computed as the end time minus DAYS.
+.br
+Alternatively, you may specify either \-s or \-e (but not both) and use
+\-p to set the plot period in days.
 .RE
-.PP
+.sp
 \-g or \-\-generate
 .RS 4
-Run plot through gnuplot to make png\&. The default is to generate gnuplot programs\&.
+Run plot through gnuplot to make png.  The default is to generate
+gnuplot programs.
 .RE
-.PP
+.sp
 \-n STR or \-\-name STR
 .RS 4
-Set the sitename shown in the plot title, and is effective only for the single\-directory case\&. The default is the basename of the log directory\&.
+Set the sitename shown in the plot title, and is effective only for the
+single\-directory case. The default is the basename of the log directory.
 .RE
-.PP
+.sp
 \-N or \-\-nice
 .RS 4
-Run at the lowest possible priority\&. Only available on UNIX\&.
+Run at the lowest possible priority.  Only available on UNIX.
 .RE
-.PP
+.sp
 \-o OUTDIR or \-\-outdir OUTDIR
 .RS 4
-Set the directory for all output to be OUTDIR, if OUTDIR does not exist it gets created\&. The default OUTDIR is
-\fIntpgraphs\fR\&. Warning: existing PNG files and index\&.html in the output directory will be clobbered\&.
+Set the directory for all output to be OUTDIR, if OUTDIR does
+not exist it gets created.  The default OUTDIR is \fIntpgraphs\fP.
+Warning: existing PNG files and index.html in the output directory
+will be clobbered.
 .RE
-.PP
+.sp
 \-p DAYS or \-\-period DAYS
 .RS 4
-The default DAYS is for 7 days\&. DAYS can be a floating point number, so "\-p 0\&.5" plots 12 hours\&. DAYS is ignored if \-s and \-e are given\&.
+The default DAYS is for 7 days.  DAYS can be a
+floating point number, so "\-p 0.5" plots 12 hours.  DAYS is ignored
+if \-s and \-e are given.
 .RE
-.PP
+.sp
 \-s TIME or \-\-starttime TIME
 .RS 4
-See \-e and \-p\&.
+See \-e and \-p.
 .RE
-.PP
+.sp
 \-T TERMINAL or \-\-terminal TERMINAL
 .RS 4
-Set the gnuplot terminal type for generating the graphs\&. Supported types are
-\fIgif\fR,
-\fIjpg\fR,
-\fIpng\fR,
-\fIpngcairo\fR, and
-\fIsvg\fR\&. The default is
-\fIpng\fR\&. Some prefer
-\fIpngcairo\fR
-or
-\fIsvg\fR\&.
+Set the gnuplot terminal type for generating the graphs.  Supported
+types are \fIgif\fP, \fIjpg\fP, \fIpng\fP, \fIpngcairo\fP, and \fIsvg\fP. The default is
+\fIpng\fP.  Some prefer \fIpngcairo\fP or \fIsvg\fP.
 .RE
-.PP
+.sp
 \-V or \-\-version
 .RS 4
-Print program version and exit\&.
+Print program version and exit.
 .RE
-.PP
+.sp
 \-w SIZE or \-\-width SIZE
 .RS 4
-Set the size of the output plots\&. SIZE can be one of
-\fIs\fR,
-\fIm\fR, or
-\fIl\fR\&.
-\fIs\fR
-is for browser on small screens (1024x768)\&.
-\fIm\fR
-for medium screens (1388x768)\&.
-\fIl\fR
-for large screens (1920x1080)\&.
-\fIm\fR
-is the default\&.
+Set the size of the output plots.  SIZE can be one of \fIs\fP, \fIm\fP, or \fIl\fP.
+\fIs\fP is for browser on small screens (1024x768).  \fIm\fP for medium screens
+(1388x768).  \fIl\fP for large screens (1920x1080).  \fIm\fP is the default.
 .RE
 .SS "Individual Plots"
 .sp
-The plot options choose what graph is generated; invoke only one\&. By default, the gnuplot for the graph is reported; with \-g you get the rendered PNG\&.
+The plot options choose what graph is generated; invoke only one.  By
+default, the gnuplot for the graph is reported; with \-g you get the
+rendered PNG.
 .sp
 The following plots are available:
-.PP
+.sp
 \-\-all\-peer\-jitters
 .RS 4
 Report all peer jitters; this is a different option name from
-\-\-peer\-jitters
-only because of a limitation in the Python standard library\&.
+\f(CR\-\-peer\-jitters\fP only because of a limitation in the Python
+standard library.
 .RE
-.PP
+.sp
 \-\-all\-peer\-offsets
 .RS 4
 Report all peer offsets; this is a different option name from
-\-\-peer\-offsets
-only because of a minor limitation in the Python standard library\&.
+\f(CR\-\-peer\-offsets\fP only because of a minor limitation in the Python
+standard library.
 .RE
-.PP
+.sp
 \-\-local\-error
 .RS 4
 Clock frequency offset from the loop statistics (field 4)
 .RE
-.PP
+.sp
 \-\-local\-freq\-temps
 .RS 4
-Plot local frequency offset and local temperatures\&. This plot is only generated if there is a log file named temps in the log file directory\&.
+Plot local frequency offset and local temperatures.  This plot is
+only generated if there is a log file named temps in the log file
+directory.
 .RE
-.PP
+.sp
 \-\-local\-jitter
 .RS 4
-Clock time\-jitter plot from the loop statistics (field 5)\&.
+Clock time\-jitter plot from the loop statistics (field 5).
 .RE
-.PP
+.sp
 \-\-local\-gps
 .RS 4
-Plot GPS Time Dilution of Precision (TDOP) and the number of satellites used (nSats)\&. This plot is only generated if there is a log file named gpsd in the log file directory\&.
+Plot GPS Time Dilution of Precision (TDOP) and the number of satellites
+used (nSats).  This plot is only generated if there is a log file
+named gpsd in the log file directory.
 .RE
-.PP
+.sp
 \-\-local\-offset
 .RS 4
-Clock time and clock frequency offsets from the loop statistics (fields 3 and 4)\&.
+Clock time and clock frequency offsets from the loop statistics
+(fields 3 and 4).
 .RE
-.PP
+.sp
 \-\-local\-offset\-histogram
 .RS 4
-Frequency histogram of distinct loopstats time offset values (field 3)\&.
+Frequency histogram of distinct loopstats time offset values (field 3).
 .RE
-.PP
+.sp
 \-\-local\-offset\-multiplot
 .RS 4
-Plot comparative local offsets for multiple directories\&.
+Plot comparative local offsets for multiple directories.
 .RE
-.PP
+.sp
 \-\-local\-temps
 .RS 4
-Plot local temperatures\&. This plot is only generated if there is a log file named temps in the log file directory\&.
+Plot local temperatures.  This plot is only generated if
+there is a log file named temps in the log file directory.
 .RE
-.PP
+.sp
 \-\-local\-stability
 .RS 4
-RMS frequency\-jitter plot from the loop statistics (field 6); this is deviation from a root\-mean\-square extrapolation of the moving average of past frequency readings\&.
+RMS frequency\-jitter plot from the loop statistics (field 6);
+this is deviation from a root\-mean\-square extrapolation of the
+moving average of past frequency readings.
 .RE
-.PP
-\-\-peer\-jitters=host1[,host2\&...]
+.sp
+\-\-peer\-jitters=host1[,host2...]
 .RS 4
-Peer jitter from local clock time, from peerstats (field 7) A comma\-separated list of peer names must follow\&. It is a fatal error for any of these names not to appear in peerstats\&.
+Peer jitter from local clock time, from peerstats (field 7)
+A comma\-separated list of peer names must follow. It is a fatal
+error for any of these names not to appear in peerstats.
 .RE
-.PP
-\-\-peer\-offsets=host1[,host2\&...]
+.sp
+\-\-peer\-offsets=host1[,host2...]
 .RS 4
-Peer offset from local clock time from peerstats (field 4)\&. A comma\-separated list of peer names or IP addresses must follow\&. It is a fatal error for any of these names not to appear in peerstats\&.
+Peer offset from local clock time from peerstats (field 4). A
+comma\-separated list of peer names or IP addresses must follow. It
+is a fatal error for any of these names not to appear in peerstats.
 .RE
 .sp
-If no individual plot is specified, all plots and an index HTML page are generated into the output directory\&.
+If no individual plot is specified, all plots and an index HTML page
+are generated into the output directory.
 .sp
-When an index is generated, ntpviz will look for a \fIheader\fR and \fIfooter\fR file in the output directory\&. Neither of these files are required\&. These files may contain arbitrary HTML\&.
+When an index is generated, ntpviz will look for a \fIheader\fP and
+\fIfooter\fP file in the output directory.  Neither of these files are
+required. These files may contain arbitrary HTML.
 .sp
-The \fIheader\fR file will be added almost at the top of the body of the generated index page, and the \fIfooter\fR file will be added almost at the bottom of the body of the generated index page\&.
+The \fIheader\fP file will be added almost at the top of the body of the
+generated index page, and the \fIfooter\fP file will be added almost at
+the bottom of the body of the generated index page.
 .sp
-The contents are at the discretion of the operator\&. One might put links to other related web pages, or notes on the server OS, software versions, hardware configuration, etc\&. into either of these files, as desired\&.
+The contents are at the discretion of the operator. One might put
+links to other related web pages, or notes on the server OS, software
+versions, hardware configuration, etc. into either of these files,
+as desired.
 .sp
-The code includes various sanity checks and will bail out with a message to standard error on, for example, missing logfile data required for a plot\&.
+The code includes various sanity checks and will bail out with a message
+to standard error on, for example, missing logfile data required for a
+plot.
 .SS "Argument File"
 .sp
-Any command line options may also be placed into a command file\&. The command file name (OPTIONFILE) is prefixed on the command line with an atsign (@)\&.
+Any command line options may also be placed into a command file.  The
+command file name (OPTIONFILE) is prefixed on the command line with an
+atsign (@).
 .sp
-Each line in the command file should contain just one option\&. Multiple options per line are allowed but discouraged\&. Blank lines are allowed\&.
+Each line in the command file should contain just one option.  Multiple
+options per line are allowed but discouraged.  Blank lines are allowed.
 .sp
-Comments may be added prepended with an octothorpe (#)\&. Comments may appear on a new line, or trailing, after the # \&.
+Comments may be added prepended with an octothorpe (#).  Comments may
+appear on a new line, or trailing, after the # .
 .sp
-When an option takes a parameter, the option and parameter must be separated by an equal sign (=) or spaces\&.
+When an option takes a parameter, the option and parameter must be
+separated by an equal sign (=) or spaces.
 .sp
 These two ways to invoke ntpviz are equivalent:
 .sp
-.if n \{\
-.RS 4
-.\}
+.if n .RS 4
 .nf
+.fam C
 $ ntpviz \-\-period 1 \-\-outdir day
+.fam
 .fi
-.if n \{\
-.RE
-.\}
+.if n .RE
 .sp
-.if n \{\
-.RS 4
-.\}
+.if n .RS 4
 .nf
+.fam C
 $ cat day/config
 \-\-period=1
 \-\-outdir=day
 $ ntpviz @day/config
+.fam
 .fi
-.if n \{\
-.RE
-.\}
+.if n .RE
 .SH "REQUIREMENTS"
 .sp
-Python and gnuplot\&. The plots will look better with the \fIliberation\fR font package installed\&.
+Python and gnuplot.  The plots will look better with the \fIliberation\fP
+font package installed.
 .SH "AUTHORS"
 .sp
-Eric S\&. Raymond, Gary E\&. Miller, and Daniel Drown\&. The gnuplot in this package is largely based on templates in Daniel Drown\(cqs \fIchrony\-graph\fR project: https://github\&.com/ddrown/chrony\-graph/tree/ntpd
+Eric S. Raymond, Gary E. Miller, and Daniel Drown. The gnuplot in this
+package is largely based on templates in Daniel Drown\(cqs \fIchrony\-graph\fP
+project: \c
+.URL "https://github.com/ddrown/chrony\-graph/tree/ntpd" "" ""
 .SH "EXIT STATUS"
 .sp
 One of the following exit values will be returned:
-.PP
+.sp
 0
 .RS 4
-Successful program execution\&.
+Successful program execution.
 .RE
-.PP
+.sp
 1
 .RS 4
-The operation failed, usually due to a missing logfile required for a plot\&.
+The operation failed, usually due to a missing logfile required for
+a plot.
 .RE
-.PP
+.sp
 2
 .RS 4
-Illegal command\-line option\&.
+Illegal command\-line option.
 .RE

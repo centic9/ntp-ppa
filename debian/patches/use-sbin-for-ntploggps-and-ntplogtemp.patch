@@ -4,7 +4,7 @@ Description: Use sbin for ntploggps and ntplogtemp
 Forwarded: not-needed
 Origin: vendor
 Author: Richard Laager <rlaager@debian.org>
-Last-Update: 2021-09-25
+Last-Update: 2023-01-16
 --- a/ntpclients/ntploggps-man.adoc
 +++ b/ntpclients/ntploggps-man.adoc
 @@ -1,4 +1,4 @@
@@ -23,7 +23,7 @@ Last-Update: 2021-09-25
  
 --- a/wscript
 +++ b/wscript
-@@ -1081,10 +1081,10 @@
+@@ -1115,10 +1115,10 @@
          afterparty(ctx)
  
      if ctx.env['PYTHON_ARGPARSE']:

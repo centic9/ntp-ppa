@@ -4,7 +4,7 @@ Description: Use /etc/ntpsec
 Forwarded: not-needed
 Origin: vendor
 Author: Richard Laager <rlaager@debian.org>
-Last-Update: 2021-09-25
+Last-Update: 2023-01-16
 --- a/docs/includes/ntp-conf-body.adoc
 +++ b/docs/includes/ntp-conf-body.adoc
 @@ -3,7 +3,7 @@
@@ -175,7 +175,7 @@ Last-Update: 2021-09-25
    ".conf" is interpreted.  Files are interpreted in ASCII sort order
 --- a/docs/NTS-QuickStart.adoc
 +++ b/docs/NTS-QuickStart.adoc
-@@ -121,7 +121,7 @@
+@@ -125,7 +125,7 @@
  
  Note that `ntpd` must be able to read both files and you want to
  make sure that the bad guys can't read your private key.  It may
@@ -210,7 +210,7 @@ Last-Update: 2021-09-25
  #define NTS_KE_PORT		4460
 --- a/ntpclients/ntpq.py
 +++ b/ntpclients/ntpq.py
-@@ -609,7 +609,7 @@
+@@ -638,7 +638,7 @@
          except ntp.packet.ControlException as e:
              self.warn(e.message)
          except IOError:
@@ -219,7 +219,7 @@ Last-Update: 2021-09-25
  
      def help_passwd(self):
          self.say("""\
-@@ -1242,7 +1242,7 @@
+@@ -1271,7 +1271,7 @@
              self.warn(e.message)
              return
          except IOError:
@@ -228,7 +228,7 @@ Last-Update: 2021-09-25
              return
          if self.debug > 2:
              self.warn("In Config\nKeyword = :config\nCommand = %s" % line)
-@@ -1428,7 +1428,7 @@
+@@ -1457,7 +1457,7 @@
              self.warn(e.message)
              return
          except IOError:
@@ -237,7 +237,7 @@ Last-Update: 2021-09-25
  
      def help_ifstats(self):
          self.say("""\
-@@ -1453,7 +1453,7 @@
+@@ -1482,7 +1482,7 @@
              self.warn(e.message)
              return
          except IOError:
@@ -248,7 +248,7 @@ Last-Update: 2021-09-25
          self.say("""\
 --- a/tests/pylib/test_packet.py
 +++ b/tests/pylib/test_packet.py
-@@ -2048,11 +2048,11 @@
+@@ -2058,11 +2058,11 @@
          # Keyid not in passwords
          self.assertEqual(cls.control(1), (1, None, None))
          try:

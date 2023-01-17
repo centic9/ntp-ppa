@@ -3,7 +3,7 @@
 # WARNING! Do not edit! https://waf.io/book/index.html#_obtaining_the_waf_file
 
 from __future__ import with_statement
-import atexit,os,sys,errno,inspect,re,datetime,platform,base64,signal,functools,time
+import atexit,os,sys,errno,inspect,re,datetime,platform,base64,signal,functools,time,shlex
 try:
 	import cPickle
 except ImportError:
@@ -364,11 +364,15 @@ def quote_define_name(s):
 	fu=re.sub('_+','_',fu)
 	fu=fu.upper()
 	return fu
-re_sh=re.compile('\\s|\'|"')
+try:
+	shell_quote=shlex.quote
+except AttributeError:
+	import pipes
+	shell_quote=pipes.quote
 def shell_escape(cmd):
 	if isinstance(cmd,str):
 		return cmd
-	return' '.join(repr(x)if re_sh.search(x)else x for x in cmd)
+	return' '.join(shell_quote(x)for x in cmd)
 def h_list(lst):
 	return md5(repr(lst).encode()).digest()
 if sys.hexversion<0x3000000:

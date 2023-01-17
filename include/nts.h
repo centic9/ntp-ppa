@@ -65,6 +65,10 @@ bool nts_ke_setup_send(struct BufCtl_t *buf, int aead,
  */
 
 
+/* 2 byte type, 2 byte length */
+#define NTS_KE_HDR_LNG 4
+#define NTS_KE_U16_LNG 2
+
 /* xxx_append_record_foo makes whole record with one foo */
 /* append_foo appends foo to existing partial record */
 void ke_append_record_null(BufCtl* buf, uint16_t type);
@@ -92,6 +96,17 @@ uint16_t next_bytes(BufCtl* buf, uint8_t *data, int length);
 #define NTS_MAX_COOKIES		8	/* RFC 4.1.6 */
 #define NTS_UID_LENGTH		32	/* RFC 5.3 */
 #define NTS_UID_MAX_LENGTH	64
+
+/* Here for tester */
+struct NTS_Key {
+  uint8_t K[NTS_MAX_KEYLEN];
+  uint32_t I;
+  };
+#ifndef NTS_KEYS
+  #define NTS_nKEYS 10
+#endif
+extern struct NTS_Key nts_keys[NTS_nKEYS];
+extern int nts_nKeys;
 
 
 /* Client side configuration data for an NTS association
@@ -230,6 +245,8 @@ extern uint64_t nts_server_recv_bad;
 extern uint64_t nts_cookie_make;
 extern uint64_t nts_cookie_decode;
 extern uint64_t nts_cookie_decode_old;
+extern uint64_t nts_cookie_decode_old2;
+extern uint64_t nts_cookie_decode_older;
 extern uint64_t nts_cookie_decode_too_old;
 extern uint64_t nts_cookie_decode_error;
 extern uint64_t nts_ke_serves_good;

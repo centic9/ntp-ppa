@@ -24,7 +24,7 @@ Build-Depends: asciidoctor,
 Build-Conflicts: libavahi-compat-libdnssd-dev,
                  libwww-dev,
                  libwww-ssl-dev,
-Standards-Version: 4.6.0
+Standards-Version: 4.6.2
 Rules-Requires-Root: no
 Vcs-Browser: https://salsa.debian.org/debian/ntpsec
 Vcs-Git: https://salsa.debian.org/debian/ntpsec.git

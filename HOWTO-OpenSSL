@@ -2,48 +2,93 @@ NTS needs TLS 1.3 or newer.
 That was first supported in OpenSSL 1.1.1
   (1.1.1a is broken)
 Some OSes/Distros don't support a new enough version of OpenSSL
-This file contains notes on how to download, build, and install 1.1.1g
-It also works for testing 3.0.0 alpha
+This file contains notes on how to download, build, and install 1.1.1m
+It also works for testing 3.0.1
 
 It's rough.  Don't be surprised by bugs/oversights.
 Corrections, clarifications and feedback encouraged.
+
+FreeBSD 13.0 has OpenSSL 3.0.2 available as a package.
+You can just install it and ignore the rest of this note.
+  sudo pkg update
+  sudo pkg install openssl-devel-3.0.2
+openssl-devel-3.0.2            TLSv1.3 capable SSL and crypto library
+
+
+
 
 Download OpenSSL source from here:
   https://www.openssl.org/source/
   https://www.openssl.org/source/old/1.1.1/
 
 You should be able to cut/paste many of these lines.
+But check for the latest versions first.
 
 cd xxx
 mkdir OpenSSL
 cd OpenSSL
-for OpenSSL 1.1.1g
-  wget https://www.openssl.org/source/openssl-1.1.1g.tar.gz
-  tar -xzf openssl-1.1.1g.tar.gz
-  cd openssl-1.1.1g
-for OpenSSL 3.0.0 alpha9
-  wget https://www.openssl.org/source/openssl-3.0.0-alpha9.tar.gz
-  tar -xzf openssl-3.0.0-alpha9.tar.gz
-  cd openssl-3.0.0-alpha9
+for OpenSSL 1.1.1m
+  wget https://www.openssl.org/source/openssl-1.1.1m.tar.gz
+  tar -xzf openssl-1.1.1m.tar.gz
+  cd openssl-1.1.1m
+for OpenSSL 3.0.1
+  wget https://www.openssl.org/source/openssl-3.0.1.tar.gz
+  tar -xzf openssl-3.0.1.tar.gz
+  cd openssl-3.0.1
 
 # Check NOTES.PERL
 #   for CentOS, you need
   sudo yum install perl-core
-    Fedora needs
-  sudo dnf install perl-IPC-Cmd
-For make test on Fedora
-  sudo dnf install perl-Test-Harness perl perl-Pod-Html
+# Fedora 35 for 3.0.1
+  # ./config needs
+  sudo dnf install perl-FindBin 'perl(IPC::Cmd)' 'perl(File::Compare)'
+  # make needs
+  # make test needs
+  sudo dnf install 'perl(Test::Harness)' 'perl(Test::More)' 'perl(File::Copy)'
+  # make install also needs:
+  sudo dnf install 'perl(Pod::Html)'
+# On FreeBSD for 3.0.1
+  sudo pkg install perl5
 
 On Linux
-  ./config --prefix=/usr/local/ssl --openssldir=/usr/local/ssl shared
-	enable-des
-make
+  openssl version -d
+  OPENSSLDIR=`openssl version -d | sed "s/OPENSSLDIR: //"`
+  OPENSSLDIR=`echo $OPENSSLDIR | sed s/\"//g`
+  echo $OPENSSLDIR
+  ./Configure --prefix=/usr/local/ssl --openssldir=$OPENSSLDIR shared
+
+***   If you encounter a problem while building, please open an    ***
+***   issue on GitHub <https://github.com/openssl/openssl/issues>  ***
+***   and include the output from the following command:           ***
+***                                                                ***
+***       perl configdata.pm --dump                                ***
+
+time make -j4
+  # Check that we got it right.  These should match.
+  openssl version -d
+  util/shlib_wrap.sh ./apps/openssl version -d
+  # ./apps/openssl without the wrapper will use the installed libraries
+time make test
+time make build_docs  # doesn't work on 1.1.1
 sudo make install
 
-cd /etc/ld.so.conf.d
-echo "/usr/local/ssl/lib" > openssl-1.1.1g.conf
-echo "/usr/local/ssl/lib" > openssl-3.0.0-alpha.conf
-ldconfig
+sudo su
+  cd /etc/ld.so.conf.d
+  echo "/usr/local/ssl/lib" > openssl-1.1.1m.conf
+  echo "/usr/local/ssl/lib" > openssl-3.0.1.conf    # 32 bit systems
+  echo "/usr/local/ssl/lib64" > openssl-3.0.1.conf  # 64 bit systems
+  # running ldconfig before install doesn't work
+  ldconfig
+
+On FreeBSD, I couldn't figure out how it is supposed to work.
+  Probably, I just need the magic to ldconfig.
+  echo "/usr/local/ssl/lib" >> /etc/ld-elf.so.conf
+  reboot
+or something close to that.
+
+NetBSD:
+  echo "/usr/local/ssl/lib" >> /etc/ld.so.conf
+(no ldconfig on my search path.  Doesn't seem to be needed.)
 
 # check with
 /usr/local/ssl/bin/openssl version
@@ -52,6 +97,10 @@ ldconfig
 # match where wscript looks for your OS.
 # The above works for CentOS 7
 
-Fedora and CentOS 7 need this if you use real certificates:
+----------
+
+On earlier versions of the Configure step (above)
+Fedora and CentOS 7 needed this if you use real certificates:
   nts ca /etc/pki/tls/certs/ca-bundle.trust.crt
+It works correctly now.
 

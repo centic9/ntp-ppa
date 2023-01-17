@@ -60,7 +60,8 @@ void ntp_RAND_priv_bytes(unsigned char *buf, int num);
  * NTP protocol parameters.  See section 3.2.6 of the specification.
  */
 #define	NTP_VERSION	4	/* current version number */
-#define	NTP_OLDVERSION	2 	/* oldest credible version */
+#define	NTP_OLDVERSION	1 	/* oldest credible version: see #707 */
+#define	NTPv1		1 	/* Gets special treatment: see receive() */
 #define	NTP_PORT	123	/* included for non-unix machines */
 #define	NTP_PORTA	"123"	/* or unix without /etc/services */
 
@@ -210,15 +211,16 @@ struct peer_ctl {
 #define BOGON5		0x0010	/* bad authentication */
 #define BOGON6		0x0020	/* bad synch or stratum */
 #define BOGON7		0x0040	/* bad header */
-#define BOGON8		0x0080  /* bad autokey */
-#define BOGON9		0x0100	/* bad crypto */
+#define BOGON8x		0x0080  /* bad autokey -- not used */
+#define BOGON9x		0x0100	/* bad crypto -- not used */
+#define BOGON14		0x2000	/* response took too long */
 #define	PKT_BOGON_MASK	(BOGON1 | BOGON2 | BOGON3 | BOGON4 | BOGON5 |\
-			BOGON6 | BOGON7 | BOGON8 | BOGON9)
+			BOGON6 | BOGON7 | BOGON14)
 /*
  * Peer errors
  */
 #define BOGON10		0x0200	/* peer bad synch or stratum */
-#define	BOGON11		0x0400	/* peer distance exceeded */
+#define BOGON11		0x0400	/* peer distance exceeded */
 #define BOGON12		0x0800	/* peer synchronization loop */
 #define BOGON13		0x1000	/* peer unreacable */
 #define	PEER_BOGON_MASK	(BOGON10 | BOGON11 | BOGON12 | BOGON13)
@@ -310,12 +312,15 @@ struct peer {
 	double	jitter;		/* peer jitter (squares) */
 	double	disp;		/* peer dispersion */
 
+	unsigned int   outcount;    /* packets sent without reply */
+	unsigned int   bogons;      /* bogus packets recvd since last xmit */
+
+	unsigned long	update;     /* receive epoch */
 	/*
 	 * End of clear-to-zero area
 	 */
-	unsigned int   outcount;       /* packets sent without reply */
-	unsigned long	update;		/* receive epoch */
 #define end_clear_to_zero update
+
 	int	unreach;	/* watchdog counter */
 	int	throttle;	/* rate control */
 	uptime_t	outdate;	/* send time last packet */

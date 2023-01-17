@@ -23,7 +23,7 @@ include:
   - template: SAST.gitlab-ci.yml
   - template: License-Scanning.gitlab-ci.yml
   - local: '.gitlab-opttest-ci.yml'
-  - local: '.gitlab-ci-docker-images.yml'
+  - local: '.gitlab-docker-ci.yml'
 
 .job_template: &job_definition
   stage: build
@@ -70,9 +70,10 @@ AsciiDoc-3-Fedora:
     name: fedora
     entrypoint: [ '/bin/bash', '-c' ]
   script:
-    - yum -y install bison gcc openssl-devel libcap-devel pps-tools-devel python3-devel wget unzip libxslt docbook-style-xsl
-    - wget https://asciidoc3.org/asciidoc3-3.2.0.zip
-    - unzip asciidoc3-3.2.0.zip -d asciidoc3
+    - yum -y install bison gcc openssl-devel libcap-devel pps-tools-devel python3-devel wget libxslt docbook-style-xsl
+    - mkdir asciidoc3
+    - wget https://asciidoc3.org/asciidoc3-3.2.3.tar.gz
+    - tar -xpvf asciidoc3-3.2.3.tar.gz -C asciidoc3
     - ln -sv a2x3.py asciidoc3/a2x3
     - ln -sv asciidoc3.py asciidoc3/asciidoc3
     - asciidoc3/asciidoc3 --version || echo -n
@@ -89,7 +90,7 @@ AsciiDoc-no:
   <<: *job_definition
   image: alpine
   script:
-    - apk update && apk add gcc bison musl-dev openssl-dev libcap-dev python2-dev
+    - apk update && apk add gcc bison musl-dev openssl-dev libcap-dev python3-dev pythonispython3
     - python ./waf configure --disable-doc --disable-manpage build
 
 AsciiDoc-classic3-Debian-Old:
@@ -210,29 +211,7 @@ ubuntu-rolling-refclocks:
   script:
     - python3 ./waf configure --disable-doc --disable-manpage --refclock=all build
 
-freebsd-11-basic:
-  <<: *job_definition
-  script:
-    - python ./waf configure --disable-doc --disable-manpage --disable-nts build
-    - DESTDIR=build/prison python ./waf install
-    - DESTDIR=./prison python ./waf install
-    - DESTDIR=../prison python ./waf install
-    - rm -rvf build/prison ./prison ../prison
-  tags:
-    - freebsd-11
-  rules:
-    - if: '$CI_COMMIT_BRANCH && $CI_PROJECT_PATH == "NTPsec/ntpsec"'
-
-freebsd-11-refclocks:
-  <<: *job_definition
-  script:
-    - python ./waf configure --disable-doc --disable-manpage --disable-nts --refclock=all build
-  tags:
-    - freebsd-11
-  rules:
-    - if: '$CI_COMMIT_BRANCH && $CI_PROJECT_PATH == "NTPsec/ntpsec"'
-
-freebsd-12-basic:
+freebsd-basic:
   <<: *job_definition
   script:
     - python ./waf configure --disable-doc --disable-manpage build
@@ -241,16 +220,16 @@ freebsd-12-basic:
     - DESTDIR=../prison python ./waf install
     - rm -rvf build/prison ./prison ../prison
   tags:
-    - freebsd-12
+    - freebsd
   rules:
     - if: '$CI_COMMIT_BRANCH && $CI_PROJECT_PATH == "NTPsec/ntpsec"'
 
-freebsd-12-refclocks:
+freebsd-refclocks:
   <<: *job_definition
   script:
     - python ./waf configure --disable-doc --disable-manpage --refclock=all build
   tags:
-    - freebsd-12
+    - freebsd
   rules:
     - if: '$CI_COMMIT_BRANCH && $CI_PROJECT_PATH == "NTPsec/ntpsec"'
 
@@ -286,9 +265,9 @@ fedora-latest-refclocks:
   script:
     - python3 ./waf configure --disable-doc --disable-manpage --refclock=all build
 
-python3-rc:
+python3:
   <<: *job_definition_allow_failure
-  image: $CI_REGISTRY/ntpsec/ntpsec/python3-rc
+  image: $CI_REGISTRY/ntpsec/ntpsec/python3
   script:
     - python ./waf configure --disable-doc --disable-manpage --refclock=all build
 
@@ -328,35 +307,17 @@ openSUSE-leap-refclocks:
   script:
     - python3 ./waf configure --disable-doc --disable-manpage --disable-nts --refclock=all build
 
-openSUSE-tumbleweed-basic:
-  <<: *job_definition_allow_failure
-  image:
-    name: $CI_REGISTRY/ntpsec/ntpsec/opensuse-tumbleweed
-    entrypoint: [ '/bin/bash', '-c' ]
-  script:
-    - python3 ./waf configure --disable-doc --disable-manpage build --pyshebang "/usr/bin/env python3"
-    - python3 ./waf install
-    - python3 ./waf uninstall
+# debian-stable-basic-32bit:
+#   <<: *job_definition
+#   image: $CI_REGISTRY/ntpsec/ntpsec/debian-stable-i386
+#   script:
+#     - python ./waf configure --disable-doc --disable-manpage build
 
-openSUSE-tumbleweed-refclocks:
-  <<: *job_definition_allow_failure
-  image:
-    name: $CI_REGISTRY/ntpsec/ntpsec/opensuse-tumbleweed
-    entrypoint: [ '/bin/bash', '-c' ]
-  script:
-    - python3 ./waf configure --disable-doc --disable-manpage --refclock=all build
-
-debian-stable-basic-32bit:
-  <<: *job_definition
-  image: $CI_REGISTRY/ntpsec/ntpsec/debian-stable-i386
-  script:
-    - python ./waf configure --disable-doc --disable-manpage build
-
-debian-stable-refclocks-32bit:
-  <<: *job_definition
-  image: $CI_REGISTRY/ntpsec/ntpsec/debian-stable-i386
-  script:
-    - python ./waf configure --disable-doc --disable-manpage --refclock=all build
+# debian-stable-refclocks-32bit:
+#   <<: *job_definition
+#   image: $CI_REGISTRY/ntpsec/ntpsec/debian-stable-i386
+#   script:
+#     - python ./waf configure --disable-doc --disable-manpage --refclock=all build
 
 debian-stable-mDNS-basic:
   <<: *job_definition
@@ -402,24 +363,6 @@ gentoo-basic:
 gentoo-refclocks:
   <<: *job_definition
   image: $CI_REGISTRY/ntpsec/ntpsec/gentoo
-  script:
-    - python ./waf configure --disable-doc --disable-manpage --refclock=all build
-
-gentoo-hardened-basic:
-  <<: *job_definition
-  image: $CI_REGISTRY/ntpsec/ntpsec/gentoo-hardened
-  script:
-    - python ./waf configure --disable-doc --disable-manpage build
-    - DESTDIR=build/prison python ./waf install
-    - DESTDIR=./prison python ./waf install
-    - DESTDIR=../prison python ./waf install
-    - python ./waf install
-    - python ./waf uninstall
-    - rm -rvf build/prison ./prison ../prison
-
-gentoo-hardened-refclocks:
-  <<: *job_definition
-  image: $CI_REGISTRY/ntpsec/ntpsec/gentoo-hardened
   script:
     - python ./waf configure --disable-doc --disable-manpage --refclock=all build
 

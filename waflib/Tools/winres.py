@@ -2,10 +2,12 @@
 # encoding: utf-8
 # WARNING! Do not edit! https://waf.io/book/index.html#_obtaining_the_waf_file
 
+import os
 import re
 from waflib import Task
 from waflib.TaskGen import extension
 from waflib.Tools import c_preproc
+from waflib import Utils
 @extension('.rc')
 def rc_file(self,node):
 	obj_ext='.rc.o'
@@ -39,6 +41,29 @@ class winrc(Task.Task):
 		tmp=rc_parser(self.generator.includes_nodes)
 		tmp.start(self.inputs[0],self.env)
 		return(tmp.nodes,tmp.names)
+	def exec_command(self,cmd,**kw):
+		if self.env.WINRC_TGT_F=='/fo':
+			replace_cmd=[]
+			incpaths=[]
+			while cmd:
+				flag=cmd.pop(0)
+				if flag.upper().startswith('/I'):
+					if len(flag)==2:
+						incpaths.append(cmd.pop(0))
+					else:
+						incpaths.append(flag[2:])
+				else:
+					replace_cmd.append(flag)
+			cmd=replace_cmd
+			if incpaths:
+				env=kw['env']=dict(kw.get('env')or self.env.env or os.environ)
+				pre_includes=env.get('INCLUDE','')
+				env['INCLUDE']=pre_includes+os.pathsep+os.pathsep.join(incpaths)
+		return super(winrc,self).exec_command(cmd,**kw)
+	def quote_flag(self,flag):
+		if self.env.WINRC_TGT_F=='/fo':
+			return flag
+		return super(winrc,self).quote_flag(flag)
 def configure(conf):
 	v=conf.env
 	if not v.WINRC:

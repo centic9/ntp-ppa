@@ -35,7 +35,7 @@ static priv_set_t *lowprivs = NULL;
 static priv_set_t *highprivs = NULL;
 #endif /* HAVE_SOLARIS_PRIVS */
 
-#ifdef HAVE_PRIV_NTP_ADJTIME
+#if defined(HAVE_PRIV_NTP_ADJTIME) && defined(ENABLE_DROPROOT)
 #include <sys/types.h>
 #include <sys/sysctl.h>
 static void CheckFreeBSDdroproot(uid_t uid);
@@ -349,6 +349,7 @@ int scmp_sc[] = {
 	SCMP_SYS(lseek),
 	SCMP_SYS(membarrier),	/* Needed on Alpine 3.11.3 */
 	SCMP_SYS(munmap),
+	SCMP_SYS(newfstatat),
 	SCMP_SYS(open),
 #ifdef __NR_openat
 	SCMP_SYS(openat),	/* SUSE */
@@ -356,6 +357,7 @@ int scmp_sc[] = {
 	SCMP_SYS(poll),
 	SCMP_SYS(pselect6),
 	SCMP_SYS(read),
+	SCMP_SYS(readv),	/* nscd getaddrinfo() provider */
 	SCMP_SYS(recvfrom),    /* Comment this out for testing.
 				* It will die on the first reply.
 				* (Or maybe sooner if a request arrives.)
@@ -365,6 +367,9 @@ int scmp_sc[] = {
 	SCMP_SYS(rt_sigaction),
 	SCMP_SYS(rt_sigprocmask),
 	SCMP_SYS(rt_sigreturn),
+#ifdef __NR_rseq
+	SCMP_SYS(rseq),		/* needed by glibc-2.35+ for resumable sequences */
+#endif
 	SCMP_SYS(sigaction),
 	SCMP_SYS(sigprocmask),
 	SCMP_SYS(sigreturn),
@@ -401,6 +406,7 @@ int scmp_sc[] = {
  * rather than generate a trap.
  */
 	SCMP_SYS(clone),	/* threads */
+	SCMP_SYS(clone3),
 	SCMP_SYS(kill),		/* generate signal */
 	SCMP_SYS(madvise),
 	SCMP_SYS(mprotect),
@@ -449,9 +455,8 @@ int scmp_sc[] = {
 	/* gentoo 64-bit and 32-bit, Intel and Arm use mmap */
 	SCMP_SYS(mmap),
 #endif
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(__riscv)
 	SCMP_SYS(faccessat),
-	SCMP_SYS(newfstatat),
 	SCMP_SYS(renameat),
 	SCMP_SYS(linkat),
 	SCMP_SYS(unlinkat),
@@ -491,7 +496,7 @@ int scmp_sc[] = {
 	return nonroot;
 }
 
-#ifdef HAVE_PRIV_NTP_ADJTIME
+#if defined(HAVE_PRIV_NTP_ADJTIME) && defined(ENABLE_DROPROOT)
 void CheckFreeBSDdroproot(uid_t uid) {
 	/* This checks that mac_ntpd.ko is loaded.
 	 * It defaults to 123 and enabled, aka what we want.

@@ -1,0 +1,128 @@
+Description: Write pidfile in parent
+ systemd expects the PID file to be written by the parent process, not the
+ child.  Fixing this eliminates an error message:
+     Can't open PID file /run/ntpd.pid (yet?) after start:
+     Operation not permitted
+Forwarded: https://gitlab.com/NTPsec/ntpsec/-/merge_requests/1301
+Origin: vendor
+Bug-Debian: https://bugs.debian.org/1023023
+Author: Richard Laager <rlaager@wiktel.com>
+Last-Update: 2023-01-16
+
+From ee708e2c542370fe51ff61d21d90b8ba514f9a98 Mon Sep 17 00:00:00 2001
+From: Richard Laager <rlaager@wiktel.com>
+Date: Mon, 16 Jan 2023 21:26:18 -0600
+Subject: [PATCH] Write pidfile in parent
+
+systemd expects the PID file to be written by the parent process, not the
+child.  Fixing this eliminates an error message:
+    Can't open PID file /run/ntpd.pid (yet?) after start:
+    Operation not permitted
+---
+ include/ntpd.h  |  1 +
+ ntpd/ntp_util.c | 27 +++++++++++++++++++--------
+ ntpd/ntpd.c     | 10 +++++-----
+ 3 files changed, 25 insertions(+), 13 deletions(-)
+
+diff --git a/include/ntpd.h b/include/ntpd.h
+index d0460f1af..edc82ec52 100644
+--- a/include/ntpd.h
++++ b/include/ntpd.h
+@@ -219,6 +219,7 @@ extern	uptime_t	orphwait;		/* orphan wait time */
+ 
+ /* ntp_util.c */
+ extern	void	init_util	(void);
++extern	void 	write_pidfile	(const char *, int);
+ extern	void	write_stats	(void);
+ extern	void	stats_config	(int, const char *);
+ extern	void	record_peer_stats (struct peer *, int);
+diff --git a/ntpd/ntp_util.c b/ntpd/ntp_util.c
+index 94a9350a8..a91d17e77 100644
+--- a/ntpd/ntp_util.c
++++ b/ntpd/ntp_util.c
+@@ -142,6 +142,24 @@ init_util(void)
+ #endif /* DEBUG */
+ }
+ 
++/*
++ * write_pidfile - write the PID file
++ */
++void
++write_pidfile(
++	const char *pidfile,
++	pid_t pid)
++{
++	FILE	*fp;
++
++	if ((fp = fopen(pidfile, "w")) == NULL) {
++		msyslog(LOG_ERR, "LOG: pid file %s: %s",
++		    pidfile, strerror(errno));
++		return;
++	}
++	fprintf(fp, "%ld", (long)pid);
++	fclose(fp);
++}
+ 
+ /*
+  * drift_write - write drift to file, speeds up restart
+@@ -231,7 +249,6 @@ stats_config(
+ 	const char *invalue	/* only one type so far */
+ 	)
+ {
+-	FILE	*fp;
+ 	const char *value;
+ 	size_t	len;
+ 	double	new_drift = 0;
+@@ -298,13 +315,7 @@ stats_config(
+ 	 * Open pid file.
+ 	 */
+ 	case STATS_PID_FILE:
+-		if ((fp = fopen(value, "w")) == NULL) {
+-			msyslog(LOG_ERR, "LOG: pid file %s: %s",
+-			    value, strerror(errno));
+-			break;
+-		}
+-		fprintf(fp, "%d", (int)getpid());
+-		fclose(fp);
++		write_pidfile(value, getpid());
+ 		break;
+ 
+ 	/*
+diff --git a/ntpd/ntpd.c b/ntpd/ntpd.c
+index 3503eaedd..da3638936 100644
+--- a/ntpd/ntpd.c
++++ b/ntpd/ntpd.c
+@@ -563,6 +563,8 @@ main(
+ 		}
+ 		if (rc > 0) {
+ 			/* parent */
++			if (pidfile)
++				write_pidfile(pidfile, rc);
+ 			exit_code = wait_child_sync_if(pipe_fds[0],
+ 						       wait_sync);
+ 			exit(exit_code);
+@@ -588,6 +590,8 @@ main(
+ 		sa.sa_flags = SA_RESTART;
+ 		sigaction(SIGDANGER, &sa, NULL);
+ #endif	/* SIGDANGER */
++	} else if (pidfile) {
++		write_pidfile(pidfile, getpid());
+ 	}
+ 
+ 	/*
+@@ -686,11 +690,7 @@ main(
+             case 'm':
+             case 'n':
+             case 'N':
+-                /* handled elsewhere */
+-                break;
+-	    case 'p':
+-		stats_config(STATS_PID_FILE, pidfile);
+-		break;
++            case 'p':
+             case 'P':
+             case 'q':
+                 /* handled elsewhere */
+-- 
+2.39.0
+
