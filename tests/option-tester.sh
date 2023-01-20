@@ -16,8 +16,13 @@ then
 fi
 
 PURGE=""
-SECCOMP="$(pkg-config libseccomp --variable=includedir)"
-SECCOMP="$SECCOMP/seccomp.h"
+if which pkg-config
+then
+  SECCOMP="$(pkg-config libseccomp --variable=includedir)"
+  SECCOMP="$SECCOMP/seccomp.h"
+else
+  SECCOMP=""
+fi
 LINUX=""
 if [ `uname -s` = "Linux" -a -n "$SECCOMP" -a -f "$SECCOMPH" ]
 then
@@ -38,7 +43,7 @@ then
     DISABLE_NTS="--disable-nts"
   fi
 else
-  if ! $PYTHON ../wafhelpers/tlscheck.py
+  if ! $PYTHON ./wafhelpers/tlscheck.py
   then
     DISABLE_NTS="--disable-nts"
   fi
@@ -87,9 +92,9 @@ doit default ""
 doit minimal "--disable-droproot --disable-mdns-registration --disable-doc --disable-manpage"
 
 # This also tests refclocks without DEBUG
-doit classic "--enable-classic-mode --refclock=all --disable-doc --disable-manpage"
+doit classic "--enable-classic-mode --refclock=all --disable-doc --disable-manpage --enable-pylib=ffi"
 
-doit all     "--enable-warnings --enable-debug --enable-debug-gdb --enable-debug-timing --refclock=all --enable-leap-smear --enable-mssntp --enable-early-droproot --disable-fuzz $LINUX --disable-doc --disable-manpage"
+doit all     "--enable-warnings --enable-attic --enable-debug --enable-debug-gdb --enable-debug-timing --refclock=all --enable-leap-smear --enable-mssntp --enable-early-droproot --disable-fuzz $LINUX --disable-doc --disable-manpage --enable-pylib=ext"
 
 if [ "`which asciidoc 2>/dev/null`" != "" -a \
      "`which xsltproc 2>/dev/null`" != "" ]

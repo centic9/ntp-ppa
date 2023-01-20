@@ -1,413 +1,621 @@
 '\" t
 .\"     Title: ntpd
-.\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
-.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
-.\"      Date: 06/07/2021
+.\"    Author: [see the "AUTHOR(S)" section]
+.\" Generator: Asciidoctor 2.0.12
+.\"      Date: 2022-12-29
 .\"    Manual: NTPsec
-.\"    Source: NTPsec 1.2.1+
+.\"    Source: NTPsec
 .\"  Language: English
 .\"
-.TH "NTPD" "8" "06/07/2021" "NTPsec 1\&.2\&.1+" "NTPsec"
-.\" -----------------------------------------------------------------
-.\" * Define some portability stuff
-.\" -----------------------------------------------------------------
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" http://bugs.debian.org/507673
-.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.TH "NTPD" "8" "2022-12-29" "NTPsec" "NTPsec"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
-.\" -----------------------------------------------------------------
-.\" * set default formatting
-.\" -----------------------------------------------------------------
-.\" disable hyphenation
+.ss \n[.ss] 0
 .nh
-.\" disable justification (adjust text to left margin only)
 .ad l
-.\" -----------------------------------------------------------------
-.\" * MAIN CONTENT STARTS HERE *
-.\" -----------------------------------------------------------------
+.de URL
+\fI\\$2\fP <\\$1>\\$3
+..
+.als MTO URL
+.if \n[.g] \{\
+.  mso www.tmac
+.  am URL
+.    ad l
+.  .
+.  am MTO
+.    ad l
+.  .
+.  LINKSTYLE blue R < >
+.\}
 .SH "NAME"
 ntpd \- Network Time Protocol service daemon
 .SH "SYNOPSIS"
 .sp
+.sp
 .nf
 ntpd
-    [\-46agGhLmnNqx] [assert] [\-c \fIconffile\fR] [\-f \fIdriftfile\fR]
-    [\-i \fIjaildir\fR] [\-k \fIkeyfile\fR] [\-l \fIlogfile\fR] [\-p \fIpidfile\fR]
-    [\-P \fIpriority\fR] [\-s \fIstatsdir\fR]  [\-t  \fIkey\fR]
-    [\-u \fIuser\fR[:\*(Aqgroup\*(Aq]] [\-U \fIinterface_update_interval\fR]
-    [\-v \fIvariable\fR] [\-V \fIvariable\fR] [server\&...]
+    [\-46agGhLmnNqx] [assert] [\-c \fIconffile\fP] [\-f \fIdriftfile\fP]
+    [\-i \fIjaildir\fP] [\-k \fIkeyfile\fP] [\-l \fIlogfile\fP] [\-p \fIpidfile\fP]
+    [\-P \fIpriority\fP] [\-s \fIstatsdir\fP]  [\-t  \fIkey\fP]
+    [\-u \fIuser\fP[:\(aqgroup\(aq]] [\-U \fIinterface_update_interval\fP]
+    [\-v \fIvariable\fP] [\-V \fIvariable\fP] [server...]
 .fi
+.br
 .SH "DESCRIPTION"
 .sp
-The ntpd utility is an operating system daemon which sets and maintains the system time of day in synchronism with Internet standard time servers\&. It is a complete implementation of the Network Time Protocol (NTP) version 4, as defined by RFC 5905, but also retains compatibility with version 3, as defined by RFC 1305, and versions 1 and 2, as defined by RFC 1059 and RFC 1119, respectively\&.
+The \f(CRntpd\fP utility is an operating system daemon which sets and
+maintains the system time of day in synchronism with Internet standard
+time servers. It is a complete implementation of the Network Time
+Protocol (NTP) version 4, as defined by RFC 5905, but also retains
+compatibility with version 3, as defined by RFC 1305, and versions 1 and
+2, as defined by RFC 1059 and RFC 1119, respectively.
 .sp
-The ntpd utility can synchronize time to a theoretical precision of about 232 picoseconds\&. In practice, this limit is unattainable due to quantum limits on the clock speed of ballistic\-electron logic\&.
+The \f(CRntpd\fP utility can synchronize time to a theoretical precision of
+about 232 picoseconds. In practice, this limit is unattainable due to
+quantum limits on the clock speed of ballistic\-electron logic.
 .sp
-Ordinarily, ntpd reads the ntp\&.conf(5) configuration file at startup time in order to determine the synchronization sources and operating modes\&. It is also possible to specify a working, although limited, configuration entirely on the command line, obviating the need for a configuration file\&.
+Ordinarily, \f(CRntpd\fP reads the ntp.conf(5) configuration file at startup
+time in order to determine the synchronization sources and operating
+modes. It is also possible to specify a working, although limited,
+configuration entirely on the command line, obviating the need for a
+configuration file.
 .sp
-The ntpd program normally operates continuously while adjusting the system time and frequency, but in some cases this might not be practical\&. With the \-q option ntpd operates as in continuous mode, but exits just after setting the clock for the first time\&. Most applications will probably want to specify the iburst option with the server command\&. With this option, a volley of messages is exchanged to groom the data and set the clock in about ten seconds\&. With \-q, if nothing is heard after a few minutes, the daemon times out and exits without setting the clock\&.
+The \f(CRntpd\fP program normally operates continuously while adjusting the
+system time and frequency, but in some cases this might not be
+practical. With the \f(CR\-q\fP option \f(CRntpd\fP operates as in continuous mode,
+but exits just after setting the clock for the first time. Most
+applications will probably want to specify the \f(CRiburst\fP option with
+the \f(CRserver\fP command. With this option, a volley of messages is
+exchanged to groom the data and set the clock in about ten
+seconds. With \-q, if nothing is heard after a few minutes, the daemon
+times out and exits without setting the clock.
 .sp
-Various internal ntpd variables can be displayed and configuration options altered while the ntpd is running using the ntpq(1) utility program\&. The state of ntpd can be continuously monitored using ntpmon(1)\&.
+Various internal \f(CRntpd\fP variables can be displayed and configuration
+options altered while the \f(CRntpd\fP is running using the
+ntpq(1) utility program.  The state of \f(CRntpd\fP can be continuously
+monitored using ntpmon(1).
 .sp
-When ntpd starts it looks at the value of umask(2), and if zero ntpd will set the umask(2) to 022\&.
+When \f(CRntpd\fP starts it looks at the value of umask(2), and if
+zero \f(CRntpd\fP will set the umask(2) to 022.
 .SH "OPTIONS"
-.PP
-\-4, \-\-ipv4
-.RS 4
-Force IPv4 DNS name resolution\&. This option must not appear in combination with any of the following options: ipv6\&.
 .sp
-Force DNS resolution of following host names on the command line to the IPv4 namespace\&.
-.RE
-.PP
-\-6, \-\-ipv6
+\f(CR\-4\fP, \f(CR\-\-ipv4\fP
 .RS 4
-Force IPv6 DNS name resolution\&. This option must not appear in combination with any of the following options: ipv4\&.
+Force IPv4 DNS name resolution. This option must not appear in
+combination with any of the following options: ipv6.
 .sp
-Force DNS resolution of following host names on the command line to the IPv6 namespace\&.
-.RE
-.PP
-\-a, \-\-assert
-.RS 4
-REQUIRE(false) to test assert handler\&.
-.RE
-.PP
-\-c \fIstring\fR, \-\-configfile=\fIstring\fR
-.RS 4
-configuration file name\&.
-.sp
-The name and path of the configuration file,
-/etc/ntp\&.conf
-by default\&.
-.RE
-.PP
-\-d, \-\-debug\-level
-.RS 4
-Increase debug verbosity level\&. This option may appear an unlimited number of times\&.
-.RE
-.PP
-\-D \fInumber\fR, \-\-set\-debug\-level=\fInumber\fR
-.RS 4
-Set the debug verbosity level\&. This option may appear an unlimited number of times\&. This option takes an integer number as its argument\&.
-.RE
-.PP
-\-f \fIstring\fR, \-\-driftfile=\fIstring\fR
-.RS 4
-frequency drift file name\&.
-.sp
-The name and path of the frequency file, e\&.g\&.
-/etc/ntp\&.drift\&. This is the same operation as the
-\fIdriftfile\fR
-configuration specification in the
-/etc/ntp\&.conf
-file\&.
-.RE
-.PP
-\-g, \-\-panicgate
-.RS 4
-Allow the first adjustment to be big\&. This option may appear an unlimited number of times\&.
-.sp
-Normally,
-ntpd
-exits with a message to the system log if the offset exceeds the panic threshold, which is 1000 s by default\&. This option allows the time to be set to any value without restriction; however, this can happen only once\&. If the threshold is exceeded after that,
-ntpd
-will exit with a message to the system log\&. This option can be used with the
-\-q
-and
-\-x
-options\&. See the
-\fItinker\fR
-configuration file directive for other options\&.
-.RE
-.PP
-\-G
-.RS 4
-Step any initial offset correction\&.
-.sp
-Normally,
-ntpd
-steps the time if the time offset exceeds the step threshold, which is 128 ms by default, and otherwise slews the time\&. This option forces the initial offset correction to be stepped, so the highest time accuracy can be achieved quickly\&. However, this may also cause the time to be stepped back so this option must not be used if applications requiring monotonic time are running\&. See the
-\fItinker\fR
-configuration file directive for other options\&.
-.RE
-.PP
-\-h, \-\-help
-.RS 4
-Print a usage message summarizing options and exit\&.
-.RE
-.PP
-\-i \fIstring\fR, \-\-jaildir=\fIstring\fR
-.RS 4
-Jail directory\&.
-.sp
-Chroot the server to the directory
-\fIjaildir\fR
-This option also implies that the server attempts to drop root privileges at startup\&. You may need to also specify a
-\-u
-option\&. This option is only available if the OS supports adjusting the clock without full root privileges\&. This option is supported under Linux, NetBSD, and Solaris\&.
-.RE
-.PP
-\-I \fIiface\fR, \-\-interface=\fIiface\fR
-.RS 4
-Listen on an interface name or address\&. This option may appear an unlimited number of times\&.
-.sp
-Open the network address given, or all the addresses associated with the given interface name\&. This option may appear multiple times\&. This option also implies not opening other addresses, except wildcard and localhost\&. This option is deprecated\&. Please consider using the configuration file
-\fIinterface\fR
-command, which is more versatile\&.
-.RE
-.PP
-\-k \fIstring\fR, \-\-keyfile=\fIstring\fR
-.RS 4
-the path to symmetric keys\&.
-.sp
-Specify the name and path of the symmetric key file\&.
-/etc/ntp\&.keys
-is a common location\&. This is the same operation as the
-\fIkeys\fR
-configuration file directive\&.
-.RE
-.PP
-\-l \fIstring\fR, \-\-logfile=\fIstring\fR
-.RS 4
-the path to the log file\&.
-.sp
-Specify the name and path of the log file\&. The default is the system log file\&. This is the same operation as the
-\fIlogfile\fR
-configuration file directive\&. See ntp\&.conf(5) for more info\&.
-.RE
-.PP
-\-L, \-\-novirtualips
-.RS 4
-Do not listen to virtual interfaces\&.
-.sp
-Do not listen to virtual interfaces, defined as those with names containing a colon\&. This option is deprecated\&. Please consider using the configuration file
-interface
-command, which is more versatile\&.
-.RE
-.PP
-\-m, \-\-mdns
-.RS 4
-Register with mDNS as an NTP server\&.
-.sp
-Registers as an NTP server with the local mDNS server which allows the server to be discovered via mDNS client lookup\&.
-.RE
-.PP
-\-n, \-\-nofork
-.RS 4
-Do not fork\&. This option must not appear in combination with any of the following options: wait\-sync\&.
-.RE
-.PP
-\-N, \-\-nice
-.RS 4
-Run at high priority\&.
-.sp
-To the extent permitted by the operating system, run
-ntpd
-at the highest priority\&.
-.RE
-.PP
-\-p \fIstring\fR, \-\-pidfile=\fIstring\fR
-.RS 4
-the path to the PID file\&.
-.sp
-Specify the name and path of the file used to record
-ntpd\*(Aqs process ID\&. This is the same operation as the
-\fIpidfile\fR
-configuration file directive\&.
-.RE
-.PP
-\-P \fInumber\fR, \-\-priority=\fInumber\fR
-.RS 4
-Process priority\&. This option takes an integer number as its argument\&.
-.sp
-To the extent permitted by the operating system, run
-ntpd
-at the specified
-\fIpthread_setschedparam(SCHED_FIFO)\fR
-priority\&.
-.RE
-.PP
-\-q, \-\-quit
-.RS 4
-Set the time and quit\&. This option must not appear in combination with wait\-sync\&.
-.sp
-ntpd
-will not daemonize and will exit after the clock is first synchronized\&. This behavior mimics that of the old
-\fIntpdate\fR
-program, which has been replaced with a shell script\&. The
-\-g
-and
-\-x
-options can be used with this option\&. Note: The kernel time discipline is disabled with this option\&.
-.RE
-.PP
-\-s \fIstring\fR, \-\-statsdir=\fIstring\fR
-.RS 4
-Statistics file location\&.
-.sp
-Specify the directory path for files created by the statistics facility\&. This is the same operation as the
-\fIstatsdir\fR
-configuration file directive\&.
-.RE
-.PP
-\-t \fItkey\fR, \-\-trustedkey=\fItkey\fR
-.RS 4
-Trusted key number\&. This option may appear an unlimited number of times\&.
-.sp
-Add the specified key number to the trusted key list\&.
-.RE
-.PP
-\-u \fIstring\fR, \-\-user=\fIstring\fR
-.RS 4
-Run as userid (or userid:groupid)\&.
-.sp
-Specify a user, and optionally a group, to switch to\&. The user and group may be specified by name or numeric id\&. If no group is specified, then the default group for userid is used\&. This option is only available if the OS supports adjusting the clock without full root privileges\&. This option is supported under Linux, NetBSD, Solaris and other OS\&.
-.RE
-.PP
-\-U \fInumber\fR, \-\-updateinterval=\fInumber\fR
-.RS 4
-interval in seconds between scans for new or dropped interfaces\&. This option takes an integer number as its argument\&.
-.sp
-Give the time in seconds between two scans for new or dropped interfaces\&. For systems with routing socket support, the scans will be performed shortly after the interface change has been detected by the system\&. Use 0 to disable scanning\&. 60 seconds is the minimum time between scans\&.
-.RE
-.PP
-\-w \fInumber\fR, \-\-wait\-sync=\fInumber\fR
-.RS 4
-Seconds to wait for first clock sync\&. This option must not appear in combination with any of the following options: nofork, quit\&. This option takes an integer number as its argument\&.
-.sp
-If greater than zero alters
-ntpd\*(Aqs behavior when forking to daemonize\&. Instead of exiting with status 0 immediately after the fork, the parent waits up to the specified number of seconds for the child to first synchronize the clock\&. The exit status is zero (success) if the clock was synchronized; otherwise, it is ETIMEDOUT\&. This provides the option for a script starting
-ntpd
-to easily wait for the first set of the clock before proceeding\&.
-.RE
-.PP
-\-x, \-\-slew
-.RS 4
-Slew up to 600 seconds\&.
-.sp
-Normally, the time is slewed if the offset is less than the step threshold, which is 128 ms by default, and stepped if above the threshold\&. This option sets the threshold to 600 s, which is well within the accuracy window to set the clock manually\&. Note: Since the slew rate of typical Unix kernels is limited to 0\&.5 ms/s, each second of adjustment requires an amortization interval of 2000 s\&. Thus, an adjustment as much as 600 s will take almost 14 days to complete\&. This option can be used with the
-\-g
-and
-\-q
-options\&. See the
-\fItinker\fR
-configuration file directive for other options\&. Note: The kernel time discipline is disabled with this option\&.
-.RE
-.PP
-\-z \fInvar\fR, \-\-var=\fInvar\fR
-.RS 4
-make ARG an ntp variable (RW)\&. This option may appear an unlimited number of times\&.
-.RE
-.PP
-\-Z \fInvar\fR, \-\-dvar=\fIndvar\fR
-.RS 4
-make ARG an ntp variable (RW|DEF)\&. This option may appear an unlimited number of times\&.
-.RE
-.PP
-\-V, \-\-version
-.RS 4
-Output version of program and exit\&.
+Force DNS resolution of following host names on the command line to
+the IPv4 namespace.
 .RE
 .sp
-Any arguments given after options are interpreted as server addresses or hostnames, with the \fIiburst\fR option implied\&. Associations with these are formed before any associations implied by the configuration file\&.
+\f(CR\-6\fP, \f(CR\-\-ipv6\fP
+.RS 4
+Force IPv6 DNS name resolution. This option must not appear in
+combination with any of the following options: ipv4.
+.sp
+Force DNS resolution of following host names on the command line to
+the IPv6 namespace.
+.RE
+.sp
+\f(CR\-a\fP, \f(CR\-\-assert\fP
+.RS 4
+REQUIRE(false) to test assert handler.
+.RE
+.sp
+\f(CR\-c\fP \fIstring\fP, \f(CR\-\-configfile\fP=\fIstring\fP
+.RS 4
+configuration file name.
+.sp
+The name and path of the configuration file, \f(CR/etc/ntp.conf\fP by
+default.
+.RE
+.sp
+\f(CR\-d\fP, \f(CR\-\-debug\-level\fP
+.RS 4
+Increase debug verbosity level. This option may appear an unlimited
+number of times.
+.RE
+.sp
+\f(CR\-D\fP \fInumber\fP, \f(CR\-\-set\-debug\-level\fP=\fInumber\fP
+.RS 4
+Set the debug verbosity level. This option may appear an unlimited
+number of times. This option takes an integer number as its argument.
+.RE
+.sp
+\f(CR\-f\fP \fIstring\fP, \f(CR\-\-driftfile\fP=\fIstring\fP
+.RS 4
+frequency drift file name.
+.sp
+The name and path of the frequency file, e.g. \f(CR/etc/ntp.drift\fP.
+This is the same operation as the \fIdriftfile\fP
+configuration specification in the \f(CR/etc/ntp.conf\fP file.
+.RE
+.sp
+\f(CR\-g\fP, \f(CR\-\-panicgate\fP
+.RS 4
+Allow the first adjustment to be big. This option may appear an
+unlimited number of times.
+.sp
+Normally, \f(CRntpd\fP exits with a message to the system log if the offset
+exceeds the panic threshold, which is 1000 s by default. This option
+allows the time to be set to any value without restriction; however,
+this can happen only once. If the threshold is exceeded after that,
+\f(CRntpd\fP will exit with a message to the system log. This option can be
+used with the \f(CR\-q\fP and \f(CR\-x\fP options. See the \fItinker\fP configuration
+file directive for other options.
+.RE
+.sp
+\f(CR\-G\fP
+.RS 4
+Step any initial offset correction.
+.sp
+Normally, \f(CRntpd\fP steps the time if the time offset exceeds the step
+threshold, which is 128 ms by default, and otherwise slews the time.
+This option forces the initial offset correction to be stepped, so the
+highest time accuracy can be achieved quickly. However, this may also
+cause the time to be stepped back so this option must not be used if
+applications requiring monotonic time are running. See the \fItinker\fP
+configuration file directive for other options.
+.RE
+.sp
+\f(CR\-h\fP, \f(CR\-\-help\fP
+.RS 4
+Print a usage message summarizing options and exit.
+.RE
+.sp
+\f(CR\-i\fP \fIstring\fP, \f(CR\-\-jaildir\fP=\fIstring\fP
+.RS 4
+Jail directory.
+.sp
+Chroot the server to the directory \fIjaildir\fP This option also implies
+that the server attempts to drop root privileges at startup. You may
+need to also specify a \f(CR\-u\fP option. This option is only available if
+the OS supports adjusting the clock without full root privileges. This
+option is supported under Linux, NetBSD, and Solaris.
+.RE
+.sp
+\f(CR\-I\fP \fIiface\fP, \f(CR\-\-interface\fP=\fIiface\fP
+.RS 4
+Listen on an interface name or address. This option may appear an
+unlimited number of times.
+.sp
+Open the network address given, or all the addresses associated with
+the given interface name. This option may appear multiple times. This
+option also implies not opening other addresses, except wildcard and
+localhost. This option is deprecated. Please consider using the
+configuration file \fIinterface\fP command, which is more versatile.
+.RE
+.sp
+\f(CR\-k\fP \fIstring\fP, \f(CR\-\-keyfile\fP=\fIstring\fP
+.RS 4
+the path to symmetric keys.
+.sp
+Specify the name and path of the symmetric key file. \f(CR/etc/ntp.keys\fP
+is a common location. This is the same operation as the \fIkeys\fP
+configuration file directive.
+.RE
+.sp
+\f(CR\-l\fP \fIstring\fP, \f(CR\-\-logfile\fP=\fIstring\fP
+.RS 4
+the path to the log file.
+.sp
+Specify the name and path of the log file. The default is the system
+log file. This is the same operation as the \fIlogfile\fP
+configuration file directive.  See ntp.conf(5) for more info.
+.RE
+.sp
+\f(CR\-L\fP, \f(CR\-\-novirtualips\fP
+.RS 4
+Do not listen to virtual interfaces.
+.sp
+Do not listen to virtual interfaces, defined as those with names
+containing a colon. This option is deprecated. Please consider using
+the configuration file \f(CRinterface\fP command, which is more versatile.
+.RE
+.sp
+\f(CR\-m\fP, \f(CR\-\-mdns\fP
+.RS 4
+Register with mDNS as an NTP server.
+.sp
+Registers as an NTP server with the local mDNS server which allows the
+server to be discovered via mDNS client lookup.
+.RE
+.sp
+\f(CR\-n\fP, \f(CR\-\-nofork\fP
+.RS 4
+Do not fork. This option must not appear in combination with any of
+the following options: wait\-sync.
+.RE
+.sp
+\f(CR\-N\fP, \f(CR\-\-nice\fP
+.RS 4
+Run at high priority.
+.sp
+To the extent permitted by the operating system, run \f(CRntpd\fP at the
+highest priority.
+.RE
+.sp
+\f(CR\-p\fP \fIstring\fP, \f(CR\-\-pidfile\fP=\fIstring\fP
+.RS 4
+the path to the PID file.
+.sp
+Specify the name and path of the file used to record \f(CRntpd\fP\(cqs process
+ID. This is the same operation as the \fIpidfile\fP
+configuration file directive.
+.RE
+.sp
+\f(CR\-P\fP \fInumber\fP, \f(CR\-\-priority\fP=\fInumber\fP
+.RS 4
+Process priority. This option takes an integer number as its argument.
+.sp
+To the extent permitted by the operating system, run \f(CRntpd\fP at the
+specified \fIpthread_setschedparam(SCHED_FIFO)\fP priority.
+.RE
+.sp
+\f(CR\-q\fP, \f(CR\-\-quit\fP
+.RS 4
+Set the time and quit. This option must not appear in combination with
+wait\-sync.
+.sp
+\f(CRntpd\fP will not daemonize and will exit after the clock is first
+synchronized. This behavior mimics that of the old \fIntpdate\fP program,
+which has been replaced with a shell script. The \f(CR\-g\fP and \f(CR\-x\fP options can be
+used with this option. Note: The kernel time discipline is disabled
+with this option.
+.RE
+.sp
+\f(CR\-s\fP \fIstring\fP, \f(CR\-\-statsdir\fP=\fIstring\fP
+.RS 4
+Statistics file location.
+.sp
+Specify the directory path for files created by the statistics
+facility. This is the same operation as the \fIstatsdir\fP
+configuration file directive.
+.RE
+.sp
+\f(CR\-t\fP \fItkey\fP, \f(CR\-\-trustedkey\fP=\fItkey\fP
+.RS 4
+Trusted key number. This option may appear an unlimited number of
+times.
+.sp
+Add the specified key number to the trusted key list.
+.RE
+.sp
+\f(CR\-u\fP \fIstring\fP, \f(CR\-\-user\fP=\fIstring\fP
+.RS 4
+Run as userid (or userid:groupid).
+.sp
+Specify a user, and optionally a group, to switch to.  The user and
+group may be specified by name or numeric id.  If no group is specified,
+then the default group for userid is used. This option is only available
+if the OS supports adjusting the clock without full root privileges. This
+option is supported under Linux, NetBSD, Solaris and other OS.
+.RE
+.sp
+\f(CR\-U\fP \fInumber\fP, \f(CR\-\-updateinterval\fP=\fInumber\fP
+.RS 4
+interval in seconds between scans for new or dropped interfaces. This
+option takes an integer number as its argument.
+.sp
+Give the time in seconds between two scans for new or dropped
+interfaces. For systems with routing socket support, the scans will be
+performed shortly after the interface change has been detected by the
+system. Use 0 to disable scanning. 60 seconds is the minimum time
+between scans.
+.RE
+.sp
+\f(CR\-w\fP \fInumber\fP, \f(CR\-\-wait\-sync\fP=\fInumber\fP
+.RS 4
+Seconds to wait for first clock sync. This option must not appear in
+combination with any of the following options: nofork, quit.
+This option takes an integer number as its argument.
+.sp
+If greater than zero alters \f(CRntpd\fP\(cqs behavior when forking to
+daemonize. Instead of exiting with status 0 immediately after the
+fork, the parent waits up to the specified number of seconds for the
+child to first synchronize the clock. The exit status is zero
+(success) if the clock was synchronized; otherwise, it is ETIMEDOUT.
+This provides the option for a script starting \f(CRntpd\fP to easily wait
+for the first set of the clock before proceeding.
+.RE
+.sp
+\f(CR\-x\fP, \f(CR\-\-slew\fP
+.RS 4
+Slew up to 600 seconds.
+.sp
+Normally, the time is slewed if the offset is less than the step
+threshold, which is 128 ms by default, and stepped if above the
+threshold. This option sets the threshold to 600 s, which is well
+within the accuracy window to set the clock manually. Note: Since the
+slew rate of typical Unix kernels is limited to 0.5 ms/s, each second
+of adjustment requires an amortization interval of 2000 s. Thus, an
+adjustment as much as 600 s will take almost 14 days to complete. This
+option can be used with the \f(CR\-g\fP and \f(CR\-q\fP options. See the \fItinker\fP
+configuration file directive for other options. Note: The kernel time
+discipline is disabled with this option.
+.RE
+.sp
+\f(CR\-z\fP \fInvar\fP, \f(CR\-\-var\fP=\fInvar\fP
+.RS 4
+make ARG an ntp variable (RW). This option may appear an unlimited
+number of times.
+.RE
+.sp
+\f(CR\-Z\fP \fInvar\fP, \f(CR\-\-dvar\fP=\fIndvar\fP
+.RS 4
+make ARG an ntp variable (RW|DEF). This option may appear an unlimited
+number of times.
+.RE
+.sp
+\f(CR\-V, \-\-version\fP
+.RS 4
+Output version of program and exit.
+.RE
+.sp
+Any arguments given after options are interpreted as server addresses
+or hostnames, with the \fIiburst\fP option implied. Associations with
+these are formed before any associations implied by the configuration
+file.
 .SH "USAGE"
 .SS "How NTP Operates"
 .sp
-The ntpd utility operates by exchanging messages with one or more configured servers over a range of designated poll intervals\&. When started, whether for the first or subsequent times, the program requires several exchanges from the majority of these servers so the signal processing and mitigation algorithms can accumulate and groom the data and set the clock\&. In order to protect the network from bursts, the initial poll interval for each server is delayed an interval randomized over a few seconds\&. At the default initial poll interval of 64s, several minutes can elapse before the clock is set\&. This initial delay to set the clock can be safely and dramatically reduced using the \fIiburst\fR keyword with the \fIserver\fR configuration command, as described in ntp\&.conf(5)\&.
+The \f(CRntpd\fP utility operates by exchanging messages with one or more
+configured servers over a range of designated poll intervals. When
+started, whether for the first or subsequent times, the program requires
+several exchanges from the majority of these servers so the signal
+processing and mitigation algorithms can accumulate and groom the data
+and set the clock. In order to protect the network from bursts, the
+initial poll interval for each server is delayed an interval randomized
+over a few seconds. At the default initial poll interval of 64s, several
+minutes can elapse before the clock is set. This initial delay to set
+the clock can be safely and dramatically reduced using the \fIiburst\fP
+keyword with the \fIserver\fP configuration command, as described in
+ntp.conf(5).
 .sp
-Most operating systems and hardware of today incorporate a time\-of\-year (TOY) chip to maintain the time during periods when the power is off\&. When the machine is booted, the chip is used to initialize the operating system time\&. After the machine has synchronized to an NTP server, the operating system corrects the chip from time to time\&. In the default case, if ntpd detects that the time on the host is more than 1000s from the server time, ntpd assumes something must be terribly wrong, and the only reliable action is for the operator to intervene and set the clock by hand\&. (Reasons for this include there is no TOY chip, or its battery is dead, or that the TOY chip is just of poor quality\&.) This causes ntpd to exit with a panic message to the system log\&. The \-g option overrides this check, and the clock will be set to the server time regardless of the chip time (up to 68 years in the past or future \(em this is a limitation of the NTPv4 protocol)\&. However, and to protect against broken hardware, such as when the CMOS battery fails or the clock counter becomes defective, once the clock has been set an error greater than 1000s will cause ntpd to exit anyway\&.
+Most operating systems and hardware of today incorporate a time\-of\-year
+(TOY) chip to maintain the time during periods when the power is off.
+When the machine is booted, the chip is used to initialize the operating
+system time. After the machine has synchronized to an NTP server, the
+operating system corrects the chip from time to time. In the default
+case, if \f(CRntpd\fP detects that the time on the host is more than 1000s
+from the server time, \f(CRntpd\fP assumes something must be terribly wrong,
+and the only reliable action is for the operator to intervene and set
+the clock by hand. (Reasons for this include there is no TOY chip, or
+its battery is dead, or that the TOY chip is just of poor quality.) This
+causes \f(CRntpd\fP to exit with a panic message to the system log. The \f(CR\-g\fP
+option overrides this check, and the clock will be set to the server time
+regardless of the chip time (up to 68 years in the past or future — this
+is a limitation of the NTPv4 protocol). However, and to protect against
+broken hardware, such as when the CMOS battery fails or the clock
+counter becomes defective, once the clock has been set an error greater
+than 1000s will cause \f(CRntpd\fP to exit anyway.
 .sp
-Under ordinary conditions, ntpd adjusts the clock in small steps so that the timescale is effectively continuous and without discontinuities\&. Under conditions of extreme network congestion, the roundtrip delay jitter can exceed three seconds and the synchronization distance, which is equal to one\-half the roundtrip delay plus error budget terms, can become very large\&. The ntpd algorithms discard sample offsets exceeding 128 ms, unless the interval during which no sample offset is less than 128 ms exceeds 900s\&. The first sample after that, no matter what the offset, steps the clock to the indicated time\&. In practice, this reduces the false alarm rate where the clock is stepped in error to a vanishingly low incidence\&.
+Under ordinary conditions, \f(CRntpd\fP adjusts the clock in small steps so
+that the timescale is effectively continuous and without
+discontinuities. Under conditions of extreme network congestion, the
+roundtrip delay jitter can exceed three seconds and the synchronization
+distance, which is equal to one\-half the roundtrip delay plus error
+budget terms, can become very large. The \f(CRntpd\fP algorithms discard
+sample offsets exceeding 128 ms, unless the interval during which no
+sample offset is less than 128 ms exceeds 900s. The first sample after
+that, no matter what the offset, steps the clock to the indicated time.
+In practice, this reduces the false alarm rate where the clock is stepped
+in error to a vanishingly low incidence.
 .sp
-As the result of this behavior, once the clock has been set it very rarely strays more than 128 ms even under extreme cases of network path congestion and jitter\&. Sometimes, in particular, when ntpd is first started without a valid drift file on a system with a large intrinsic drift the error might grow to exceed 128 ms, which would cause the clock to be set backwards if the local clock time is more than 128 ms in the future relative to the server\&. In some applications, this behavior may be unacceptable\&. There are several solutions, however\&. If the \-x option is included on the command line, the clock will never be stepped and only slew corrections will be used\&. But this choice comes at a cost that should be carefully explored before deciding to use the \-x option\&. The maximum slew rate possible is limited to 500 parts\-per\-million (PPM) as a consequence of the correctness principles on which the NTP protocol and algorithm design are based\&. As a result, the local clock can take a long time to converge to an acceptable offset, about 2,000 s for each second the clock is outside the acceptable range\&. During this interval, the local clock will not be consistent with any other network clock and the system cannot be used for distributed applications that require correctly synchronized network time\&.
+As the result of this behavior, once the clock has been set it very
+rarely strays more than 128 ms even under extreme cases of network path
+congestion and jitter. Sometimes, in particular, when \f(CRntpd\fP is first
+started without a valid drift file on a system with a large intrinsic
+drift the error might grow to exceed 128 ms, which would cause the clock
+to be set backwards if the local clock time is more than 128 ms in the
+future relative to the server. In some applications, this behavior may
+be unacceptable. There are several solutions, however. If the \f(CR\-x\fP
+option is included on the command line, the clock will never be stepped
+and only slew corrections will be used. But this choice comes at a
+cost that should be carefully explored before deciding to use the \f(CR\-x\fP
+option. The maximum slew rate possible is limited to 500
+parts\-per\-million (PPM) as a consequence of the correctness principles
+on which the NTP protocol and algorithm design are based. As a result,
+the local clock can take a long time to converge to an acceptable
+offset, about 2,000 s for each second the clock is outside the
+acceptable range. During this interval, the local clock will not be
+consistent with any other network clock and the system cannot be used
+for distributed applications that require correctly synchronized network
+time.
 .sp
-In spite of the above precautions, sometimes when large frequency errors are present the resulting time offsets stray outside the 128\-ms range and an eventual step or slew time correction is required\&. If following such a correction the frequency error is so large that the first sample is outside the acceptable range, ntpd enters the same state as when the ntp\&.drift file is not present\&. The intent of this behavior is to quickly correct the frequency and restore operation to the normal tracking mode\&. In the most extreme cases, there may be occasional step/slew corrections and subsequent frequency corrections\&. It helps in these cases to use the \fIburst\fR keyword when configuring the server, but ONLY when you have permission to do so from the owner of the target host\&.
+In spite of the above precautions, sometimes when large frequency errors
+are present the resulting time offsets stray outside the 128\-ms range
+and an eventual step or slew time correction is required. If following
+such a correction the frequency error is so large that the first sample
+is outside the acceptable range, \f(CRntpd\fP enters the same state as when
+the \f(CRntp.drift\fP file is not present. The intent of this behavior is to
+quickly correct the frequency and restore operation to the normal
+tracking mode. In the most extreme cases, there may be occasional
+step/slew corrections and subsequent frequency corrections. It helps in
+these cases to use the \fIburst\fP keyword when configuring the server, but
+ONLY when you have permission to do so from the owner of the target host.
 .sp
-Finally, in the past, many startup scripts would run a separate utility to get the system clock close to correct before starting ntpd(8), but this was never more than a mediocre hack and is no longer needed\&. If you are following the best current practice and you still need to set the system time before starting ntpd, please open a bug report and document what is going on, and then look at using ntpdig(1)\&.
+Finally, in the past, many startup scripts would run
+a separate utility to get the system clock close to correct before
+starting ntpd(8), but this was never more than a mediocre hack
+and is no longer needed. If you are following the
+.URL "#starting" "best current practice" " "
+and you still need to set the
+system time before starting \f(CRntpd\fP, please open a bug report and
+document what is going on, and then look at using ntpdig(1).
 .sp
-There is a way to start ntpd(8) that often addresses all of the problems mentioned above\&.
+There is a way to start ntpd(8) that often addresses all of
+the problems mentioned above.
 .SS "Starting NTP (Best Current Practice)"
 .sp
-First, use the \fIiburst\fR option on your \fIserver\fR and \fIpool\fR entries\&.
+First, use the \fIiburst\fP option on your \fIserver\fP and \fIpool\fP entries.
 .sp
-If you can also keep a good ntp\&.drift file then ntpd(8) will effectively "warm\-start" and your system\(cqs clock will be stable in under 11 seconds\*(Aq time\&.
+If you can also keep a good \f(CRntp.drift\fP file then ntpd(8) will
+effectively "warm\-start" and your system\(cqs clock will be stable in under
+11 seconds\(aq time.
 .sp
-As soon as possible in the startup sequence, start ntpd(8) with at least the \-g and perhaps the \-N options\&. Then, start the rest of your "normal" processes\&. This will give ntpd(8) as much time as possible to get the system\(cqs clock synchronized and stable\&.
+As soon as possible in the startup sequence, start
+ntpd(8) with at least the \f(CR\-g\fP and perhaps the \f(CR\-N\fP options.
+Then, start the rest of your "normal" processes. This will give
+ntpd(8) as much time as possible to get the system\(cqs clock
+synchronized and stable.
 .sp
-Finally, if you have processes like \fIdovecot\fR or database servers that require monotonically\-increasing time, run ntpwait(8) as late as possible in the boot sequence (perhaps with the \-v flag) and after ntpwait(8) exits successfully it is as safe as it will ever be to start any processes that require stable time\&.
+Finally, if you have processes like \fIdovecot\fP or database servers that
+require monotonically\-increasing time, run ntpwait(8) as
+late as possible in the boot sequence (perhaps with the \f(CR\-v\fP flag) and
+after ntpwait(8) exits successfully it is as safe as it
+will ever be to start any processes that require stable time.
 .SS "Frequency Discipline"
 .sp
-The ntpd behavior at startup depends on whether the frequency file, usually ntp\&.drift, exists\&. This file contains the latest estimate of clock frequency error\&. When the ntpd is started and the file does not exist, the ntpd enters a special mode designed to quickly adapt to the particular system clock oscillator time and frequency error\&. This takes approximately 15 minutes, after which the time and frequency are set to nominal values and the ntpd enters normal mode, where the time and frequency are continuously tracked relative to the server\&. After one hour the frequency file is created and the current frequency offset written to it\&. When the ntpd is started and the file does exist, the ntpd frequency is initialized from the file and enters normal mode immediately\&. After that, the current frequency offset is written to the file at hourly intervals\&.
+The \f(CRntpd\fP behavior at startup depends on whether the frequency file,
+usually \f(CRntp.drift\fP, exists. This file contains the latest estimate of
+clock frequency error. When the \f(CRntpd\fP is started and the file does not
+exist, the \f(CRntpd\fP enters a special mode designed to quickly adapt to the
+particular system clock oscillator time and frequency error. This takes
+approximately 15 minutes, after which the time and frequency are set to
+nominal values and the \f(CRntpd\fP enters normal mode, where the time and
+frequency are continuously tracked relative to the server. After one
+hour the frequency file is created and the current frequency offset
+written to it. When the \f(CRntpd\fP is started and the file does exist, the
+\f(CRntpd\fP frequency is initialized from the file and enters normal mode
+immediately. After that, the current frequency offset is written to the
+file at hourly intervals.
 .SS "Operating Modes"
 .sp
-ntpd normally operates continuously while monitoring for small changes in frequency and trimming the clock for the ultimate precision\&. However, it can operate in a one\-time mode where the time is set from an external server and frequency is set from a previously recorded frequency file\&.
+\f(CRntpd\fP normally operates continuously while monitoring for small
+changes in frequency and trimming the clock for the ultimate
+precision. However, it can operate in a one\-time mode where the time
+is set from an external server and frequency is set from a previously
+recorded frequency file.
 .sp
-By default, ntpd runs in continuous mode where each of possibly several external servers is polled at intervals determined by an intricate state machine\&. The state machine measures the incidental roundtrip delay jitter and oscillator frequency wander and determines the best poll interval using a heuristic algorithm\&. Ordinarily, and in most operating environments, the state machine will start with 64s intervals and eventually increase in steps to 1024s\&. A small amount of random variation is introduced in order to avoid bunching at the servers\&. In addition, should a server become unreachable for some time, the poll interval is increased in steps to 1024s in order to reduce network overhead\&.
+By default, \f(CRntpd\fP runs in continuous mode where each of possibly
+several external servers is polled at intervals determined by an
+intricate state machine. The state machine measures the incidental
+roundtrip delay jitter and oscillator frequency wander and determines
+the best poll interval using a heuristic algorithm. Ordinarily, and in
+most operating environments, the state machine will start with 64s
+intervals and eventually increase in steps to 1024s. A small amount of
+random variation is introduced in order to avoid bunching at the
+servers. In addition, should a server become unreachable for some time,
+the poll interval is increased in steps to 1024s in order to reduce
+network overhead.
 .sp
-In some cases, it may not be practical for ntpd to run continuously\&. The \-q option is provided to support running ntpd periodically from a cron(8) job\&. Setting this option will cause ntpd to exit just after setting the clock for the first time\&. The procedure for initially setting the clock is the same as in continuous mode; most applications will probably want to specify the \fIiburst\fR keyword with the \fIserver\fR configuration command\&. With this keyword, a volley of messages are exchanged to groom the data and the clock is set in about 10 sec\&. If nothing is heard after a couple of minutes, the daemon times out and exits\&.
+In some cases, it may not be practical for \f(CRntpd\fP to run continuously.
+The \f(CR\-q\fP option is provided to support running \f(CRntpd\fP periodically
+from a cron(8) job. Setting this option will cause \f(CRntpd\fP to exit
+just after setting the clock for the first time. The procedure for
+initially setting the clock is the same as in continuous mode; most
+applications will probably want to specify the \fIiburst\fP keyword with
+the \fIserver\fP configuration command. With this keyword, a volley of messages
+are exchanged to groom the data and the clock is set in about 10 sec. If
+nothing is heard after a couple of minutes, the daemon times out and
+exits.
 .sp
-When kernel support is available to discipline the clock frequency, which is the case for stock Solaris, Linux, and FreeBSD, a useful feature is available to discipline the clock frequency\&. First, ntpd is run in continuous mode with selected servers in order to measure and record the intrinsic clock frequency offset in the frequency file\&. It may take some hours for the frequency and offset to settle down\&. Then the ntpd is stopped and run in one\-time mode as required\&. At each startup, the frequency is read from the file and initializes the kernel frequency\&.
+When kernel support is available to discipline the clock frequency,
+which is the case for stock Solaris, Linux, and FreeBSD, a useful
+feature is available to discipline the clock frequency. First, \f(CRntpd\fP is
+run in continuous mode with selected servers in order to measure and
+record the intrinsic clock frequency offset in the frequency file. It
+may take some hours for the frequency and offset to settle down. Then
+the \f(CRntpd\fP is stopped and run in one\-time mode as required. At each
+startup, the frequency is read from the file and initializes the kernel
+frequency.
 .SS "Poll Interval Control"
 .sp
-This version of NTP includes an intricate state machine to reduce the network load while maintaining a quality of synchronization consistent with the observed jitter and wander\&. There are a number of ways to tailor the operation in order enhance accuracy by reducing the interval or to reduce network overhead by increasing it\&. However, the user is advised to carefully consider the consequences of changing the poll adjustment range from the default minimum of 64 s to the default maximum of 1,024 s\&. The default minimum can be changed with the \fItinker\fR \fIminpoll\fR command to a value not less than 16 s\&. This value is used for all configured associations, unless overridden by the \fIminpoll\fR option on the configuration command\&. Note that most device drivers will not operate properly if the poll interval is less than 64 s and that the broadcast server and manycast client associations will also use the default unless overridden\&.
+This version of NTP includes an intricate state machine to reduce the
+network load while maintaining a quality of synchronization consistent
+with the observed jitter and wander. There are a number of ways to
+tailor the operation in order enhance accuracy by reducing the interval
+or to reduce network overhead by increasing it. However, the user is
+advised to carefully consider the consequences of changing the poll
+adjustment range from the default minimum of 64 s to the default maximum
+of 1,024 s. The default minimum can be changed with the \fItinker\fP
+\fIminpoll\fP command to a value not less than 16 s. This value is used for
+all configured associations, unless overridden by the \fIminpoll\fP option
+on the configuration command. Note that most device drivers will not
+operate properly if the poll interval is less than 64 s and that the
+broadcast server and manycast client associations will also use the
+default unless overridden.
 .sp
-In some cases involving dial up or toll services, it may be useful to increase the minimum interval to a few tens of minutes and maximum interval to a day or so\&. Under normal operation conditions, once the clock discipline loop has stabilized the interval will be increased in steps from the minimum to the maximum\&. However, this assumes the intrinsic clock frequency error is small enough for the discipline loop correct it\&. The capture range of the loop is 500 PPM at an interval of 64s decreasing by a factor of two for each doubling of the interval\&. At a minimum of 1,024 s, for example, the capture range is only 31 PPM\&. If the intrinsic error is greater than this, the drift file ntp\&.drift will have to be specially tailored to reduce the residual error below this limit\&. Once this is done, the drift file is automatically updated once per hour and is available to initialize the frequency on subsequent daemon restarts\&.
-.SS "The huff\-n\*(Aq\-puff Filter"
+In some cases involving dial up or toll services, it may be useful to
+increase the minimum interval to a few tens of minutes and maximum
+interval to a day or so. Under normal operation conditions, once the
+clock discipline loop has stabilized the interval will be increased in
+steps from the minimum to the maximum. However, this assumes the
+intrinsic clock frequency error is small enough for the discipline loop
+correct it. The capture range of the loop is 500 PPM at an interval of
+64s decreasing by a factor of two for each doubling of the interval. At a
+minimum of 1,024 s, for example, the capture range is only 31 PPM. If
+the intrinsic error is greater than this, the drift file \f(CRntp.drift\fP
+will have to be specially tailored to reduce the residual error below
+this limit. Once this is done, the drift file is automatically updated
+once per hour and is available to initialize the frequency on subsequent
+daemon restarts.
+.SS "The huff\-n\(aq\-puff Filter"
 .sp
-In scenarios where a considerable amount of data are to be downloaded or uploaded over telephone modems, timekeeping quality can be seriously degraded\&. This occurs because the differential delays on the two directions of transmission can be quite large\&. In many cases, the apparent time errors are so large as to exceed the step threshold and a step correction can occur during and after the data transfer is in progress\&.
+In scenarios where a considerable amount of data are to be downloaded or
+uploaded over telephone modems, timekeeping quality can be seriously
+degraded. This occurs because the differential delays on the two
+directions of transmission can be quite large. In many cases, the
+apparent time errors are so large as to exceed the step threshold and a
+step correction can occur during and after the data transfer is in
+progress.
 .sp
-The huff\-n\*(Aq\-puff filter is designed to correct the apparent time offset in these cases\&. It depends on knowledge of the propagation delay when no other traffic is present\&. In common scenarios, this occurs during other than work hours\&. The filter maintains a shift register that remembers the minimum delay over the most recent interval measured usually in hours\&. Under conditions of severe delay, the filter corrects the apparent offset using the sign of the offset and the difference between the apparent delay and minimum delay\&. The name of the filter reflects the negative (huff) and positive (puff) correction, which depends on the sign of the offset\&.
+The huff\-n\(aq\-puff filter is designed to correct the apparent time offset
+in these cases. It depends on knowledge of the propagation delay when no
+other traffic is present. In common scenarios, this occurs during other
+than work hours. The filter maintains a shift register that remembers
+the minimum delay over the most recent interval measured usually in
+hours. Under conditions of severe delay, the filter corrects the
+apparent offset using the sign of the offset and the difference between
+the apparent delay and minimum delay. The name of the filter reflects
+the negative (huff) and positive (puff) correction, which depends on the
+sign of the offset.
 .sp
-The filter is activated by the \fItinker\fR command and \fIhuffpuff\fR keyword, as described in ntp\&.conf(5)\&.
+The filter is activated by the \fItinker\fP command and \fIhuffpuff\fP keyword,
+as described in ntp.conf(5).
 .SH "FILES"
 .TS
 allbox tab(:);
-ltB ltB ltB ltB.
+lt lt lt lt.
 T{
+.sp
 File
 T}:T{
+.sp
 Default
 T}:T{
+.sp
 Option
 T}:T{
+.sp
 Option
 T}
-.T&
-lt lt lt lt
-lt lt lt lt
-lt lt lt lt
-lt lt lt lt
-lt lt lt lt
-lt lt lt lt
-lt lt lt lt
-lt lt lt lt
-lt lt lt lt.
 T{
 .sp
 configuration file
 T}:T{
 .sp
-/etc/ntp\&.conf
+\f(CR/etc/ntp.conf\fP
 T}:T{
 .sp
-\-c
+\f(CR\-c\fP
 T}:T{
 .sp
-conffile
+\f(CRconffile\fP
 T}
 T{
 .sp
 configuration directory
 T}:T{
 .sp
-/etc/ntp\&.d
+\f(CR/etc/ntp.d\fP
 T}:T{
 .sp
-\-c
+\f(CR\-c\fP
 T}:T{
 .sp
-conffile
+\f(CRconffile\fP
 T}
 T{
 .sp
@@ -417,10 +625,10 @@ T}:T{
 none
 T}:T{
 .sp
-\-f
+\f(CR\-f\fP
 T}:T{
 .sp
-driftfile
+\f(CRdriftfile\fP
 T}
 T{
 .sp
@@ -430,9 +638,10 @@ T}:T{
 none
 T}:T{
 .sp
+
 T}:T{
 .sp
-leapfile
+\f(CRleapfile\fP
 T}
 T{
 .sp
@@ -442,10 +651,10 @@ T}:T{
 none
 T}:T{
 .sp
-\-p
+\f(CR\-p\fP
 T}:T{
 .sp
-pidfile
+\f(CRpidfile\fP
 T}
 T{
 .sp
@@ -455,10 +664,10 @@ T}:T{
 system log
 T}:T{
 .sp
-\-l
+\f(CR\-l\fP
 T}:T{
 .sp
-logfile
+\f(CRlogfile\fP
 T}
 T{
 .sp
@@ -471,20 +680,20 @@ T}:T{
 none
 T}:T{
 .sp
-includefile
+\f(CRincludefile\fP
 T}
 T{
 .sp
 statistics path
 T}:T{
 .sp
-/var/NTP
+\f(CR/var/NTP\fP
 T}:T{
 .sp
-\-s
+\f(CR\-s\fP
 T}:T{
 .sp
-statsdir
+\f(CRstatsdir\fP
 T}
 T{
 .sp
@@ -494,13 +703,13 @@ T}:T{
 none
 T}:T{
 .sp
-\-k
+\f(CR\-k\fP
 T}:T{
 .sp
-keys
+\f(CRkeys\fP
 T}
 .TE
-.sp 1
+.sp
 .sp
 Configuration files are parsed according to the following rules:
 .sp
@@ -509,12 +718,11 @@ Configuration files are parsed according to the following rules:
 \h'-04' 1.\h'+01'\c
 .\}
 .el \{\
-.sp -1
-.IP "  1." 4.2
+.  sp -1
+.  IP " 1." 4.2
 .\}
-The plain config file (normally
-/etc/ntp\&.conf
-but the path can be overridden by the \-c option) is read first if it exists\&.
+The plain config file (normally \f(CR/etc/ntp.conf\fP but the path can be
+overridden by the \-c option) is read first if it exists.
 .RE
 .sp
 .RS 4
@@ -522,10 +730,12 @@ but the path can be overridden by the \-c option) is read first if it exists\&.
 \h'-04' 2.\h'+01'\c
 .\}
 .el \{\
-.sp -1
-.IP "  2." 4.2
+.  sp -1
+.  IP " 2." 4.2
 .\}
-Then the configuration directory, if it exists, is scanned\&. Normally this directory is /etc/ntp\&.d, but if the \-c option is specified the /etc will be specified by the directory name of the \-c argument\&.
+Then the configuration directory, if it exists, is scanned. Normally
+this directory is /etc/ntp.d, but if the \-c option is specified the
+/etc will be specified by the directory name of the \-c argument.
 .RE
 .sp
 .RS 4
@@ -533,89 +743,97 @@ Then the configuration directory, if it exists, is scanned\&. Normally this dire
 \h'-04' 3.\h'+01'\c
 .\}
 .el \{\
-.sp -1
-.IP "  3." 4.2
+.  sp -1
+.  IP " 3." 4.2
 .\}
-Each file beneath the configuration directory with the extension "\&.conf" is interpreted\&. Files are interpreted in ASCII sort order of their pathnames\&. Files with other extensions or no extensions are ignored\&.
+Each file beneath the configuration directory with the extension
+".conf" is interpreted.  Files are interpreted in ASCII sort order
+of their pathnames.  Files with other extensions or no extensions
+are ignored.
 .RE
 .SH "SIGNALS"
 .sp
-SIGQUIT, SIGINT, and SIGTERM will cause ntpd to clean up and exit\&.
+SIGQUIT, SIGINT, and SIGTERM will cause ntpd to clean up and exit.
 .sp
-SIGHUP checks various things that would otherwise require restarting ntpd\&.
+SIGHUP checks various things that would otherwise
+require restarting ntpd.
 .sp
-It will reopen the log file if it has changed and check for a new leapseconds file if one was specified\&.
+It will reopen the log file if it has changed and
+check for a new leapseconds file if one was specified.
 .sp
-If the NTS server is enabled, it will reload the certificate file if it has changed\&. (It doesn\(cqt check for a new key file, but reloads it when it reloads the certificate file\&.)
+If the NTS server is enabled, it will reload the
+certificate file if it has changed.  (It doesn\(cqt check
+for a new key file, but reloads it when it reloads
+the certificate file.)
 .sp
-It will also retry any pending DNS or NTS lookups\&.
+It will also retry any pending DNS or NTS lookups.
 .sp
-On most systems, you can send SIGHUP to ntpd with
+On most systems, you can send SIGHUP to \f(CRntpd\fP with
 .sp
-.if n \{\
-.RS 4
-.\}
+.if n .RS 4
 .nf
+.fam C
   # killall \-HUP ntpd
+.fam
 .fi
-.if n \{\
-.RE
-.\}
+.if n .RE
 .sp
-If built with debugging enabled (waf configured with \-\-enable\-debug) SIGUSR1 will increase the debug level by 1 and SIGUSR2 will decrease it by 1\&. This may be helpful if you are running with \-n, either just to see the logging on your screen or with gdb\&.
+If built with debugging enabled (waf configured with \f(CR\-\-enable\-debug\fP)
+SIGUSR1 will increase the debug level by 1 and
+SIGUSR2 will decrease it by 1.  This may be helpful if you are
+running with \f(CR\-n\fP, either just to see the logging on your screen
+or with gdb.
 .SH "BUGS"
 .sp
-The \fI\-V\fR option is not backward\-compatible with its use (as the equivalent of \-Z) in older versions\&.
+The \fI\-V\fP option is not backward\-compatible with its use (as the
+equivalent of \-Z) in older versions.
 .SH "STANDARDS"
-.PP
+.sp
 RFC 1059
 .RS 4
-David L\&. Mills,
-\fINetwork Time Protocol (Version 1)\fR, RFC 1059
+David L. Mills, \fINetwork Time Protocol (Version 1)\fP, RFC 1059
 .RE
-.PP
+.sp
 RFC 1119
 .RS 4
-David L\&. Mills,
-\fINetwork Time Protocol (Version 2)\fR, RFC 1119
+David L. Mills, \fINetwork Time Protocol (Version 2)\fP, RFC 1119
 .RE
-.PP
+.sp
 RFC 1305
 .RS 4
-David L\&. Mills,
-\fINetwork Time Protocol (Version 3)\fR, RFC 1305
+David L. Mills, \fINetwork Time Protocol (Version 3)\fP, RFC 1305
 .RE
-.PP
+.sp
 RFC 5905
 .RS 4
-David L\&. Mills and J\&. Martin, Ed\&. and J\&. Burbank and W\&. Kasch,
-\fINetwork Time Protocol Version 4: Protocol and Algorithms Specification\fR, RFC 5905
+David L. Mills and J. Martin, Ed. and J. Burbank and W. Kasch, \fINetwork
+Time Protocol Version 4: Protocol and Algorithms Specification\fP, RFC 5905
 .RE
-.PP
+.sp
 RFC 5907
 .RS 4
-H\&. Gerstung and C\&. Elliott and B\&. Haberman, Ed\&.,
-\fIDefinitions of Managed Objects for Network Time Protocol Version 4: (NTPv4)\fR, RFC 5907
+H&#x2e; Gerstung and C. Elliott and B. Haberman, Ed., \fIDefinitions of Managed
+Objects for Network Time Protocol Version 4: (NTPv4)\fP, RFC 5907
 .RE
-.PP
+.sp
 RFC 5908
 .RS 4
-R\&. Gayraud and B\&. Lourdelet,
-\fINetwork Time Protocol (NTP) Server Option for DHCPv6\fR, RFC 5908
+R&#x2e; Gayraud and B. Lourdelet, \fINetwork Time Protocol (NTP) Server Option
+for DHCPv6\fP, RFC 5908
 .RE
 .SH "EXIT STATUS"
 .sp
 One of the following exit values will be returned:
-.PP
+.sp
 0 (EXIT_SUCCESS)
 .RS 4
-Successful program execution\&.
+Successful program execution.
 .RE
-.PP
+.sp
 1 (EXIT_FAILURE)
 .RS 4
-Execution failed \- examine system logfiles\&.
+Execution failed \- examine system logfiles.
 .RE
 .SH "SEE ALSO"
 .sp
-ntp\&.conf(5), ntpq(1), ntpdig(1)\&.
+ntp.conf(5), ntpq(1), ntpdig(1).

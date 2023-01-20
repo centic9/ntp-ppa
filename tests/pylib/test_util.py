@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 
+import inspect
 import unittest
 import ntp.util
 import ntp.packet
@@ -738,54 +739,34 @@ class TestPylibUtilMethods(unittest.TestCase):
                        ("xmt",
                         ("0x40000000.00000000", "0x40000000.00000000"))))
             self.assertEqual(f(data),
-                             "reftime=00000000.00000000 "
-                             "2036-02-07T06:28:16.000Z,\n"
-                             "clock=10000000.00000000 "
-                             "1908-07-04T21:24:16.000Z,\n"
-                             "org=20000000.00000000 "
-                             "1917-01-05T18:48:32.000Z,\n"
-                             "rec=30000000.00000000 "
-                             "1925-07-09T16:12:48.000Z,\n"
-                             "xmt=40000000.00000000 "
-                             "1934-01-10T13:37:04.000Z\n")
+                   "reftime=00000000.00000000 2036-02-07T06:28:16.000Z,\n"
+                   "clock=10000000.00000000 2044-08-10T03:52:32.000Z,\n"
+                   "org=20000000.00000000 2053-02-11T01:16:48.000Z,\n"
+                   "rec=30000000.00000000 2061-08-14T22:41:04.000Z,\n"
+                   "xmt=40000000.00000000 2070-02-15T20:05:20.000Z\n")
             # Test prettydates, with units
             self.assertEqual(f(data, showunits=True),
-                             "reftime=00000000.00000000 "
-                             "2036-02-07T06:28:16.000Z,\n"
-                             "clock=10000000.00000000 "
-                             "1908-07-04T21:24:16.000Z,\n"
-                             "org=20000000.00000000 "
-                             "1917-01-05T18:48:32.000Z,\n"
-                             "rec=30000000.00000000 "
-                             "1925-07-09T16:12:48.000Z,\n"
-                             "xmt=40000000.00000000 "
-                             "1934-01-10T13:37:04.000Z\n")
+                   "reftime=00000000.00000000 2036-02-07T06:28:16.000Z,\n"
+                   "clock=10000000.00000000 2044-08-10T03:52:32.000Z,\n"
+                   "org=20000000.00000000 2053-02-11T01:16:48.000Z,\n"
+                   "rec=30000000.00000000 2061-08-14T22:41:04.000Z,\n"
+                   "xmt=40000000.00000000 2070-02-15T20:05:20.000Z\n")
             # Test wide terminal
             termsize = (160, 24)
             self.assertEqual(f(data),
-                             "reftime=00000000.00000000 "
-                             "2036-02-07T06:28:16.000Z, "
-                             "clock=10000000.00000000 "
-                             "1908-07-04T21:24:16.000Z, "
-                             "org=20000000.00000000 "
-                             "1917-01-05T18:48:32.000Z,\n"
-                             "rec=30000000.00000000 "
-                             "1925-07-09T16:12:48.000Z, "
-                             "xmt=40000000.00000000 "
-                             "1934-01-10T13:37:04.000Z\n")
+                   "reftime=00000000.00000000 2036-02-07T06:28:16.000Z, "
+                   "clock=10000000.00000000 2044-08-10T03:52:32.000Z, "
+                   "org=20000000.00000000 2053-02-11T01:16:48.000Z,\n"
+                   "rec=30000000.00000000 2061-08-14T22:41:04.000Z, "
+                   "xmt=40000000.00000000 2070-02-15T20:05:20.000Z\n")
             # Test narrow terminal
             termsize = (40, 24)
             self.assertEqual(f(data),
-                             "\nreftime=00000000.00000000 "
-                             "2036-02-07T06:28:16.000Z,\n"
-                             "clock=10000000.00000000 "
-                             "1908-07-04T21:24:16.000Z,\n"
-                             "org=20000000.00000000 "
-                             "1917-01-05T18:48:32.000Z,\n"
-                             "rec=30000000.00000000 "
-                             "1925-07-09T16:12:48.000Z,\n"
-                             "xmt=40000000.00000000 "
-                             "1934-01-10T13:37:04.000Z\n")
+                   "\nreftime=00000000.00000000 2036-02-07T06:28:16.000Z,\n"
+                   "clock=10000000.00000000 2044-08-10T03:52:32.000Z,\n"
+                   "org=20000000.00000000 2053-02-11T01:16:48.000Z,\n"
+                   "rec=30000000.00000000 2061-08-14T22:41:04.000Z,\n"
+                   "xmt=40000000.00000000 2070-02-15T20:05:20.000Z\n")
             termsize = (80, 24)
             # Test ex-obscure cooking
             data = od((("srcadr", ("1.1.1.1", "1.1.1.1")),
@@ -1291,6 +1272,129 @@ class TestPeerSummary(unittest.TestCase):
         cls.polls = [1, 2, 3, 4, 5]
         self.assertEqual(cls.intervals(), [1, 2, 3, 4, 5])
         self.assertEqual(cls.polls, [])
+
+
+class NtpqRvInfoStats(unittest.TestCase):
+    """Test functions by controlling their diet and examining output.
+
+    Iterate through casees a 3 tuple, first element is a sub tuple
+    it gets fed to the subject. The second is compared to the output.
+    The third is a string to append to the test when things break.
+    """
+
+    periodic = 230258.509299404568402
+    packets = 9586785
+
+    def test_periodize(self):
+        """Test ntp.util.periodize by coqtavoric gavage and scatology."""
+        # def periodize(period, clipdigits=0)
+        cases = (
+            ((self.periodic, 5), (round(self.periodic, 5), "2D 15:57:38"), "normal"),
+            ((str(self.periodic), 5), (None, "???"), "period is str"),
+            (
+                (self.periodic, None),
+                (round(self.periodic), "2D 15:57:39"),
+                "clipdigits is None",
+            ),
+            # (('there', 'is'),('no', 'cake'),'broca'), # False test
+        )
+        shot_test(self, ntp.util.periodize, cases)
+
+    def test_packetize(self):
+        """Test ntp.util.packetize by coqtavoric gavage and scatology."""
+        # def packetize(packets, period, clipdigits=0, periodized=False)
+        cases = (
+            ((7.5, self.periodic), ("???", "", ""), "packets is float"),
+            ((0, self.periodic), (0, "", ""), "packets == 0"),
+            (
+                (self.packets, str(self.periodic)),
+                (self.packets, "", ""),
+                "period is str",
+            ),
+            (
+                (self.packets, self.periodic, 0),
+                (self.packets, 42.0, "p/s"),
+                "more packets, clipdigits == 0",
+            ),
+            (
+                (self.packets, self.periodic, 5),
+                (self.packets, 41.63488, "p/s"),
+                "more packets, clipdigits = 5",
+            ),
+            (
+                (self.packets // 200, self.periodic, 0, True),
+                (self.packets // 200, "00:00:05", "/p"),
+                "more time, clipdigits == 5, stringify",
+            ),
+            (
+                (self.packets // 200, self.periodic, 5, True),
+                (self.packets // 200, "00:00:04", "/p"),
+                "more time, clipdigits == 5, stringify",
+            ),
+            (
+                (self.packets // 200, self.periodic, 0, False),
+                (self.packets // 200, 5.0, "s/p"),
+                "more time, clipdigits == 5, float",
+            ),
+            (
+                (self.packets // 200, self.periodic, 5, False),
+                (self.packets // 200, 4.80376, "s/p"),
+                "more time, clipdigits == 5, float",
+            ),
+            # ((50, 10, 0, True),('the', 'cake', 'lies'),'broca') # False test
+        )
+        shot_test(self, ntp.util.packetize, cases)
+
+    def test_uptime(self):
+        # def uptime(period):
+        """Test ntp.util.uptime by coqtavoric gavage and scatology."""
+        cases = [
+            # [['cake'], 'you will be baked', 'broca'],
+            [[-2.6], "23:59:57", "-float"],
+            [[0.0], "00:00:00", "0float"],
+            [[2.3], "00:00:02", "+float"],
+            [[-2], "23:59:58", "-int"],
+            [[0], "00:00:00", "0int"],
+            [[2], "00:00:02", "+int"],
+        ]
+        shot_test(self, ntp.util.uptime, cases)
+
+
+def shot_test(classy, hook, cases):
+    """"Run some tests using inputs and outputs from 2.5d iterable.
+
+    Iterate through the cases iterable, and using a hook function to run
+    tests with parameters, result, and a message from the child iterable.
+    Parameters and results can themselves be iterable.
+
+    Parameters
+        ----------
+        classy : unittest.TestCase derivative class
+            Where the testing happens and where any backing state resides.
+        hook : callable
+            The function that does the testing.
+        cases : iterable
+            Where inputs, comparison outputs, and messages are stored.
+    """
+    if hasattr(classy, "subTest"):
+
+        def st(h, c):
+            for s in c:
+                with classy.subTest(s=s):
+                    classy.assertEqual(h(*s[0]), s[1], msg=s[2])
+
+    else:
+
+        def st(h, c):
+            # Does not handle errors well, as a test tool
+            l_f, l_s = [], []
+            for s in c:
+                i = h(*s[0])
+                l_f.append([i])
+                l_s.append([s[1]])
+            classy.assertEqual(l_f, l_s)
+
+    st(hook, cases)
 
 
 if __name__ == '__main__':

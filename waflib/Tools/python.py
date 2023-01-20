@@ -202,7 +202,7 @@ def check_python_headers(conf,features='pyembed pyext'):
 	pybin=env.PYTHON
 	if not pybin:
 		conf.fatal('Could not find the python executable')
-	v='prefix SO LDFLAGS LIBDIR LIBPL INCLUDEPY Py_ENABLE_SHARED MACOSX_DEPLOYMENT_TARGET LDSHARED CFLAGS LDVERSION'.split()
+	v='prefix SO EXT_SUFFIX LDFLAGS LIBDIR LIBPL INCLUDEPY Py_ENABLE_SHARED MACOSX_DEPLOYMENT_TARGET LDSHARED CFLAGS LDVERSION'.split()
 	try:
 		lst=conf.get_python_variables(["get_config_var('%s') or ''"%x for x in v])
 	except RuntimeError:
@@ -212,8 +212,8 @@ def check_python_headers(conf,features='pyembed pyext'):
 	dct=dict(zip(v,lst))
 	x='MACOSX_DEPLOYMENT_TARGET'
 	if dct[x]:
-		env[x]=conf.environ[x]=dct[x]
-	env.pyext_PATTERN='%s'+dct['SO']
+		env[x]=conf.environ[x]=str(dct[x])
+	env.pyext_PATTERN='%s'+(dct['EXT_SUFFIX']or dct['SO'])
 	num='.'.join(env.PYTHON_VERSION.split('.')[:2])
 	conf.find_program([''.join(pybin)+'-config','python%s-config'%num,'python-config-%s'%num,'python%sm-config'%num],var='PYTHON_CONFIG',msg="python-config",mandatory=False)
 	if env.PYTHON_CONFIG:
@@ -273,8 +273,12 @@ def check_python_headers(conf,features='pyembed pyext'):
 			result=conf.check(lib=name,uselib='PYEMBED',libpath=path,mandatory=False,msg='Checking for library %s in python_LIBPL'%name)
 		if not result:
 			path=[os.path.join(dct['prefix'],"libs")]
-			conf.to_log("\n\n# try again with -L$prefix/libs, and pythonXY name rather than pythonX.Y (win32)\n")
+			conf.to_log("\n\n# try again with -L$prefix/libs, and pythonXY rather than pythonX.Y (win32)\n")
 			result=conf.check(lib=name,uselib='PYEMBED',libpath=path,mandatory=False,msg='Checking for library %s in $prefix/libs'%name)
+		if not result:
+			path=[os.path.normpath(os.path.join(dct['INCLUDEPY'],'..','libs'))]
+			conf.to_log("\n\n# try again with -L$INCLUDEPY/../libs, and pythonXY rather than pythonX.Y (win32)\n")
+			result=conf.check(lib=name,uselib='PYEMBED',libpath=path,mandatory=False,msg='Checking for library %s in $INCLUDEPY/../libs'%name)
 		if result:
 			break
 	if result:

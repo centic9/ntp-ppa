@@ -13,6 +13,36 @@ and project conventions.
 You may also find the articles at https://blog.ntpsec.org/
 interesting.
 
+== Software licenses
+
+For historical reasons the code in this distribution is issued under
+several different but compatible licenses.
+
+Refer to .../docs/copyright.txt for more information about copyrights,
+licensing, and contributor attribution.
+
+Much of the existing and historical code is licensed under the NTP
+license.  Additionally, small portions of the code are licensed under
+the BSD-3-clause and MIT licenses.
+
+The preferred license for new code contributions is BSD-2-clause.
+
+The preferred license for documentation is
+"Creative Commons Attribution 4.0 International" (CC-BY-4.0).
+
+License texts are in the .../LICENSES/ directory in compliance with
+the REUSE specificaton.
+
+== Historicity reconstruction of the git repo
+
+A great deal of effort has been spent researching old file archives
+and old source control data sets and then integrating and correcting
+it all into the git history of this repository.  As near as we can
+tell, this git repo contains all of the currently surviving
+history of the NTP reference implementation.  If you know of or
+possess tarballs or source trees of the project that are not contained
+in this git repo, please let us know, so that we can add them.
+
 == Choice of language
 
 In order to reduce the complexity of maintenance and testing
@@ -94,9 +124,9 @@ Don't call get_systime() from non-main threads.
 We support some cases where systems are not fully POSIX compliant.
 This is an attempt to collect them.
 
-  MacOS (?? or something) doesn't support timer_create(2).
-  We work around that by using the older setitimer(2).
-  POSIX.1-2008 marks getitimer() and setitimer() obsolete.
+MacOS (?? or something) doesn't support timer_create(2).
+We work around that by using the older setitimer(2).
+POSIX.1-2008 marks getitimer() and setitimer() obsolete.
 
 
 Here are the non-standardized APIs that may be used:
@@ -127,7 +157,7 @@ cause buffer overruns and (all too often) exploitable security holes:
 * gmtime(), localtime(), asctime(), ctime(): use the reentrant *_r variants.
 * tmpnam(): use mkstemp() or tmpfile() instead.
 
-Do not rely on dirname() being reentrant, and assume it will modify
+Do not rely on dirname() being reentrant, and do assume it will modify
 (truncate) its argument. The Linux version is re-entrant, but this
 property is not portable.
 
@@ -362,11 +392,11 @@ UTC with some options frozen; full year required, medial T required,
 explicit Zulu timezone). Local times should be expressed in ISO 8601,
 always with the full 4-digit year.
 
-=== Copyrights and licenses
+=== Copyright declarations and license tagging
 
-Much of the historic code in this distribution is under the "NTP
-License" resembling BSD-2-Clause.  Our favored licenses are
-BSD-2-Clause for code and Creative Commons Attribution 4.0 License
+Much of the historic code in this distribution is under the NTP
+license resembling BSD-2-Clause.  Our favored licenses are
+BSD-2-Clause for code and Creative Commons Attribution 4.0 International
 for documentation.
 
 Please do *not* submit code under GPL or other licenses which place
@@ -378,17 +408,17 @@ to contribute a patch to the project.
 Do not specify a year in a copyright statement.  Most of the existing
 copyright statements already present in the project have been scrubbed
 of the year.  There is no need to specify the year in a copyright
-statement.  Several large legally sophisticated companies, include
+statement.  Several large legally sophisticated companies, including
 Amazon, Google, Microsoft, and Facebook, are now publishing open
 source code with copyright statements without a year.  We encourage
 the larger open source community to emulate this.
 
 The string "(c)" is legally meaningless.  Use the word "Copyright".
 
-We use the SPDX convention for inclusion by reference.  You can read
-about this at
+We use SPDX and REUSE to declare and tag licenses.  Refer to
 
       https://spdx.org/licenses
+      https://reuse.software/
 
 When you create a new file, mark it as follows as required:
 
@@ -464,8 +494,8 @@ that appears on a man page.
 
 All headers should be asymmetric Atx-style. Text wraps somewhere around
 column 72 (forget semantic writing) and unless otherwise noted refer to
-the January 2019 revision of the draft AsciiDoc Recommended
-link:https://asciidoctor.org/docs/asciidoc-recommended-practices/[Practices].
+the draft
+link:https://asciidoctor.org/docs/asciidoc-recommended-practices/[AsciiDoc Recommended Practices].
 
 === Version number
 
@@ -664,7 +694,7 @@ INIT:: Daemon setup
 LOG:: Log switching and debug levels
 MAC:: Message authentication hash computation
 MODE6:: Processing of Mode 6 requests
-NTS, NTSc, NTSs:: Network Time Security, RFC xxxx, NTSs=>server, NTSc=>client
+NTS, NTSc, NTSs:: Network Time Security, link:https://datatracker.ietf.org/doc/html/rfc8915[RFC 8915], NTSs=>server, NTSc=>client
 PROTO:: Protocol machine actions
 REFCLOCK:: Reference clock and driver actions
 RESTRICT:: Restrictions
@@ -672,8 +702,8 @@ SYNC:: Server synchronization
 
 == Release Checklist
 
-This is the release checklist to be used by the project manager to cut
-each release.
+This is the release checklist to be used by the release captain and
+the project manager to cut each release.
 
 . Decide that it is time to cut a release.  This decision can be driven
   by landing a significant new feature, landing a critical fix, or just
@@ -706,18 +736,26 @@ each release.
 
 . Run the "./release | sh" script in this (devel) directory.
 
-. Check https://gitlab.com/NTPsec/ntpsec
+. Check https://gitlab.com/NTPsec/ntpsec to assure the tag is there
 
-. Post release announcement to blog.ntpsec.org
+. Post release announcement to blog.ntpsec.org  gitlab.com/ntpsec/blog
 
 . Post release announcement to fediverse @ntpsec@fosstodon.org
 
-. Post release announcement to email announce@ntpsec.org, devel@ntpsec.org, gpsd-dev@nongnu.org, ntp@ietf.org, time-nuts@lists.febo.com
+. Post release announcement to @ntpsec@twitter.com
+
+. Post release announcement to email announce@ntpsec.org
 
 . Modify the .../NEWS.adoc file, adding a new "Repository head" section.
 
 
-== Release Prep Steps.  Ignore this if you are not Mark.
+== Release Prep Steps.  Ignore this if you are not the release captain
+
+What you need:
+  the gpg secret key for signing the tag
+  your ssh key to new cloud instances
+  your gitlab ssh key
+  your service1 ssh key
 
 . start a new Debian instance, at least 256GiB, note the public IP address
 
@@ -727,7 +765,7 @@ each release.
 Host builder
   Hostname IPADDRESS
   User admin
-  IdentityFile ~/.ssh/aws-mra.key
+  IdentityFile ~/.ssh/THESSHKEYFILE
 -------------------------------------------------------------
 
 . ssh to it, then disconnect, to test and set ssh fingerprint
@@ -778,19 +816,19 @@ Host gitlab.com
 ssh -v git@gitlab.com
 -------------------------------------------------------------
 
-. connect to ftp mirror, set ssh fingerprint, then disconnect
+. connect to ftp mirror, init local ssh fingerprint, then disconnect
 
 -------------------------------------------------------------
-ssh -v markatwood@service1.ntpsec.org
+ssh -v mattselsky@service1.ntpsec.org date
 -------------------------------------------------------------
 
-. clone the repo
+. clone the repo to local
 
 -------------------------------------------------------------
 git clone git@gitlab.com:NTPsec/ntpsec.git
 -------------------------------------------------------------
 
-. setup the signing key and init gpg
+. setup the signing key and init the gpg tty interface.
 
 -------------------------------------------------------------
 gpg --import ~/secret.gkey
@@ -798,13 +836,13 @@ GPG_TTY=$(tty); export GPG_TTY
 echo "test" | gpg --clearsign
 -------------------------------------------------------------
 
-. setup gitconfig
+. setup gitconfig, must be set to someone who can push tags
 
 -------------------------------------------------------------
 cat > ~/.gitconfig
 [user]
-        name = Mark Atwood
-        email = mark.atwood@ntpsec.org
+        name = Matt Selsky
+        email = mattselsky@ntpsec.org
 ^D
 -------------------------------------------------------------
 

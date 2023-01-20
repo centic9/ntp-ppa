@@ -177,9 +177,21 @@ def configure(ctx):
     if build_desc:
         build_desc = ' ' + build_desc
     if ctx.env.BIN_GIT:
-        cmd = ctx.env.BIN_GIT + shlex.split("describe --dirty")
-        git_short_hash = ctx.cmd_and_log(cmd).strip()
-        git_short_hash = '-'.join(git_short_hash.split('-')[1:])
+        # 'tag', '7', and 'deadbeef' are fill ins for
+        # a previous tag (always dropped), commits since that tag,
+        # the short commit hash. I can see 5 'git describe' outputs
+        # buildbots and prepush should get: tag-7-gdeadbeef
+        # working developers should get: tag-7-gdeadbeef-dirty
+        # patched shallow builders should get: gdeadbeef-dirty
+        # other shallow builder should get: gdeadbeef
+        # the thorium poisoned get errors and burst into flame
+        # 1-2 tokens gets appended verbatim
+        # 3-4 gets the first token dropped and the rest added
+        # I have never seen 5+ tokens, we should be safe
+        cmd = ctx.env.BIN_GIT + shlex.split("describe --tags --dirty --always")
+        git_short_hash = ctx.cmd_and_log(cmd).strip().split('-')
+        clip = 1 if len(git_short_hash) > 2 else 0
+        git_short_hash = '-'.join(git_short_hash[clip:])
 
         ctx.env.NTPSEC_VERSION = "%s+" % ntpsec_release
         ctx.env.NTPSEC_VERSION_EXTENDED = ("%s+%s%s" %
@@ -509,17 +521,28 @@ int main(int argc, char **argv) {
     if ctx.env.DEST_OS in ["freebsd"]:
         ctx.env.INCLUDES = ["/usr/local/include"]
         ctx.env.LIBPATH = ["/usr/local/lib"]
+        if os.path.isdir("/usr/local/ssl/"):
+          # This assumes OpenSSL is the only thing that was in /usr/local/
+          ctx.env.INCLUDES = ["/usr/local/ssl/include"]
+          ctx.env.LIBPATH = ["/usr/local/ssl/lib"]
     elif ctx.env.DEST_OS == "netbsd" and os.path.isdir("/usr/pkg/include"):
         ctx.env.INCLUDES = ["/usr/pkg/include"]
         ctx.env.LIBPATH = ["/usr/pkg/lib"]
         ctx.env.LDFLAGS += ["-rpath=/usr/pkg/lib"]
+        if os.path.isdir("/usr/local/ssl/"):
+          # This assumes OpenSSL is the only thing that was in /usr/pkg/
+          ctx.env.INCLUDES = ["/usr/local/ssl/include"]
+          ctx.env.LIBPATH = ["/usr/local/ssl/lib"]
     elif ctx.env.DEST_OS == "linux" and os.path.isdir("/usr/local/ssl/"):
         # This supports building OpenSSL from source
         # That allows using OpenSSL 1.1.1 on older CentOS
         # or testing pre-release versions of OpenSSL
         # see HOWTO-OpenSSL
         ctx.env.INCLUDES = ["/usr/local/ssl/include"]
-        ctx.env.LIBPATH = ["/usr/local/ssl/lib"]
+        if os.path.isdir("/usr/local/ssl/lib64/"):
+          ctx.env.LIBPATH = ["/usr/local/ssl/lib64"]
+        else:
+          ctx.env.LIBPATH = ["/usr/local/ssl/lib"]
     elif ctx.env.DEST_OS == "darwin":
         # macports location
         if os.path.isdir("/opt/local/include"):
@@ -625,12 +648,12 @@ int main(int argc, char **argv) {
         ('_Unwind_Backtrace', ["unwind.h"]),
         ('adjtimex', ["sys/time.h", "sys/timex.h"]),
         ('backtrace_symbols_fd', ["execinfo.h"]),
-        ('closefrom', ["stdlib.h"]),
         ('ntp_adjtime', ["sys/time.h", "sys/timex.h"]),     # BSD
         ('ntp_gettime', ["sys/time.h", "sys/timex.h"]),     # BSD
         ('res_init', ["netinet/in.h", "arpa/nameser.h", "resolv.h"]),
         ('strlcpy', ["string.h"]),
         ('strlcat', ["string.h"]),
+        ('timegm', ["time.h"]),
         # Hack.  It's not a function, but this works.
         ('PRIV_NTP_ADJTIME', ["sys/priv.h"])            # FreeBSD
     )
@@ -745,6 +768,12 @@ int main(int argc, char **argv) {
     if ctx.options.refclocks:
         from wafhelpers.refclock import refclock_config
         refclock_config(ctx)
+        # timegm needed by refclock_nmea, it's not in POSIX
+        # It's in Linux, FreeBSD, and NetBSD
+        if not ctx.get_define("HAVE_TIMEGM") and ctx.get_define("CLOCK_NMEA"):
+            ctx.fatal("Refclock NMEA needs timegm")
+            # We should provide an implementation.
+            # Like we do for BSD string functions.
 
     # NetBSD (used to) need to recreate sockets on changed routing.
     # Perhaps it still does. If so, this should be set.  The autoconf
@@ -760,6 +789,9 @@ int main(int argc, char **argv) {
         ctx.define("ENABLE_MSSNTP", 1,
                    comment="Enable MS-SNTP extensions "
                    " https://msdn.microsoft.com/en-us/library/cc212930.aspx")
+
+    if ctx.options.enable_attic:
+        ctx.env.ENABLE_ATTIC = True
 
     if ctx.options.disable_nts:
         ctx.env.DISABLE_NTS = True
@@ -1002,7 +1034,7 @@ def afterparty(ctx):
                 os.symlink(relpath, path_source.abspath())
 
 
-python_scripts = {
+python_scripts = set([
     "ntpclients/ntpdig.py",
     "ntpclients/ntpkeygen.py",
     "ntpclients/ntpq.py",
@@ -1010,7 +1042,7 @@ python_scripts = {
     "ntpclients/ntptrace.py",
     "ntpclients/ntpwait.py",
     "ntpclients/ntpsnmpd.py",
-}
+])
 
 
 def build(ctx):
@@ -1035,7 +1067,7 @@ def build(ctx):
         target3 = bldnode.ant_glob('*ntpc*')
         for _ in target3:
             ctx.exec_command("rm -f %s" % _.abspath())
-        # Finish purging ntp.ntpc 
+        # Finish purging ntp.ntpc
         ctx.add_group()
 
     if ctx.env.REFCLOCK_GENERIC or ctx.env.REFCLOCK_TRIMBLE:
@@ -1048,7 +1080,8 @@ def build(ctx):
     ctx.recurse("ntpfrob")
     ctx.recurse("ntptime")
     ctx.recurse("pylib")
-    ctx.recurse("attic")
+    if ctx.env.ENABLE_ATTIC:
+      ctx.recurse("attic")
     ctx.recurse("etc")
     ctx.recurse("tests")
 
@@ -1098,6 +1131,7 @@ def build(ctx):
     ctx.manpage(8, "ntpclients/ntpsnmpd-man.adoc")
 
     # Skip running unit tests on a cross compile build
+    from waflib import Options
     if not ctx.env.ENABLE_CROSS:
         # Force re-running of tests.  Same as 'waf --alltests'
         if ctx.cmd == "check":
@@ -1106,6 +1140,8 @@ def build(ctx):
             # Print log if -v is supplied
             if verbose > 0:
                 ctx.add_post_fun(test_print_log)
+        elif Options.options.no_tests:
+            return
 
         # Test binaries
         ctx.add_post_fun(bin_test)
@@ -1119,7 +1155,6 @@ def build(ctx):
         ctx.add_post_fun(bin_test_summary)
     else:
         pprint("YELLOW", "Unit test runner skipped on a cross-compiled build.")
-        from waflib import Options
         Options.options.no_tests = True
 
     if ctx.cmd == "build":

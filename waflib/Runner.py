@@ -52,7 +52,7 @@ class Consumer(Utils.threading.Thread):
 		Utils.threading.Thread.__init__(self)
 		self.task=task
 		self.spawner=spawner
-		self.setDaemon(1)
+		self.daemon=True
 		self.start()
 	def run(self):
 		try:
@@ -68,7 +68,7 @@ class Spawner(Utils.threading.Thread):
 		Utils.threading.Thread.__init__(self)
 		self.master=master
 		self.sem=Utils.threading.Semaphore(master.numjobs)
-		self.setDaemon(1)
+		self.daemon=True
 		self.start()
 	def run(self):
 		try:

@@ -53,7 +53,8 @@ NTP_LFP = 0x7     # NTP timestamp
 NTP_MODE = 0x8    # peer mode
 NTP_2BIT = 0x9    # leap bits
 NTP_FLOAT = 0xa   # Float value
-NTP_UPTIME = 0xb  # uptime in days H:M:S (no frac)
+NTP_UPTIME = 0xb  # uptime in daysD H:M:S (usually no frac)
+NTP_PACKETS = 0xc # packet counts
 
 
 class Ntpq(cmd.Cmd):
@@ -415,7 +416,7 @@ usage: timeout [ msec ]
                             items.append((name, (value, rawvalue)))
                     except ntp.packet.ControlException as e:
                         if ntp.control.CERR_UNKNOWNVAR == e.errorcode:
-                            items.append((var, "???"))
+                            items.append((var, ("???", None)))
                             continue
                         raise e
                 queried = ntp.util.OrderedDict(items)
@@ -429,6 +430,7 @@ usage: timeout [ msec ]
             self.say(self.session.response)
             return
         try:
+            runs, runl = None, None
             for (name, legend, fmt) in variables:
                 if name not in queried:
                     continue
@@ -437,19 +439,35 @@ usage: timeout [ msec ]
                 value2 = queried[name + '_r'][0]
                 rawvalue2 = queried[name + '_r'][1]
                 if fmt in (NTP_UINT, NTP_INT, NTP_FLOAT):
-                    if self.showunits:
-                        displayvalue = ntp.util.unitifyvar(rawvalue, name)
-                        displayvalue2 = ntp.util.unitifyvar(rawvalue2, name)
+                    if self.showunits and isinstance(rawvalue, (int, float)):
+                        display = ntp.util.unitifyvar(rawvalue, name)
                     else:
-                        displayvalue = value
-                        displayvalue2 = value2
-                    self.say("%13s \t%9d\t%9d\n" %
-                             (legend, displayvalue, displayvalue2))
+                        display = value
+                    if self.showunits and isinstance(rawvalue2, (int, float)):
+                        display2 = ntp.util.unitifyvar(rawvalue2, name)
+                    else:
+                        display2 = value2
+                        self.say(
+                            "{0:<13} {1:>13} {2:>13}\n".format(
+                                legend, display, display2)
+                        )
+                elif fmt == NTP_PACKETS:
+                    self.say(
+                        "{0:<13} {1[0]:>13} {2[0]:>13} {1[1]:>10}{1[2]:<3} {2[1]:>10}{2[2]:<3}\n".format(
+                                legend,
+                                ntp.util.packetize(value, runs),
+                                ntp.util.packetize(value2, runl),
+                        )
+                    )
                 elif fmt == NTP_UPTIME:
-                    self.say("%13s  %s\t%s\n" % (legend, ntp.util.prettyuptime(
-                        value), ntp.util.prettyuptime(value2)))
+                    runs, display = ntp.util.periodize(value)
+                    runl, display2 = ntp.util.periodize(value2)
+                    self.say(
+                        "{0:<13} {1:>13} {2:>13}\n".format(
+                            legend, display, display2)
+                    )
                 else:
-                    self.warn("unexpected vc type %s for %s, value %s"
+                    self.warn("unexpected vc type %s for %s, value %s %s    "
                               % (fmt, name, value, value2))
         except KeyboardInterrupt:
             self.warn("display interrupted")
@@ -495,33 +513,35 @@ usage: timeout [ msec ]
                      % (associd, self.session.rstatus,
                         ntp.ntpc.statustoa(statype, self.session.rstatus)))
         try:
+            run = 1
             for (name, legend, fmt) in variables:
                 if name not in queried:
                     continue
                 value = queried[name][0]
                 rawvalue = queried[name][1]
                 if fmt in (NTP_ADD, NTP_ADP):
-                    if self.showhostnames & 1:  # if & 1, display names 
+                    if self.showhostnames & 1:  # if & 1, display names
                         if self.debug:
                             self.say("DNS lookup begins...")
                         value = ntp.util.canonicalize_dns(
                             value, family=self.ai_family)
                         if self.debug:
                             self.say("DNS lookup complete.")
-                    self.say("%s  %s\n" % (legend, value))
+                    self.say("%13s %13s\n" % (legend, value))
                 elif fmt == NTP_STR:
                     if value:
-                        self.say("%s  %s\n" % (legend, value))
+                        self.say("%13s %13s\n" % (legend, value))
                 elif fmt in (NTP_UINT, NTP_INT, NTP_FLOAT):
                     if self.showunits:
                         displayvalue = ntp.util.unitifyvar(rawvalue, name)
                     else:
                         displayvalue = value
-                    self.say("%s  %s\n" % (legend, displayvalue))
+                    self.say("%13s %13s\n" % (legend, displayvalue))
                 elif fmt == NTP_LFP:
-                    self.say("%s  %s\n" % (legend, ntp.ntpc.prettydate(value)))
+                    self.say("%13s %13s\n" % (
+                        legend, ntp.ntpc.prettydate(value)))
                 elif fmt == NTP_2BIT:
-                    self.say("%s  %s\n"
+                    self.say("%13s %13s\n"
                              % (legend, ("00", "01", "10", "11")[value]))
                 elif fmt == NTP_MODE:
                     modes = (
@@ -533,6 +553,15 @@ usage: timeout [ msec ]
                         self.say("%s  %s\n" % (legend, modes[value]))
                     except IndexError:
                         self.say("%s  %s%d\n" % (legend, "mode#", value))
+                elif fmt == NTP_PACKETS:
+                    self.say(
+                        "{0:<13} {1[0]:>13} {1[1]:>10}{1[2]:<3}\n".format(
+                            legend, ntp.util.packetize(value, run)
+                        )
+                    )
+                elif fmt == NTP_UPTIME:
+                    run, display = ntp.util.periodize(value)
+                    self.say("{0:<13} {1:>13}\n".format(legend, display))
                 else:
                     self.warn("unexpected vc type %s for %s, value %s"
                               % (fmt, name, value))
@@ -1139,8 +1168,8 @@ usage: cv [ assocID ] [ name=value[,...] ]
         pstats = (
             ("srcadr", "remote host:          ", NTP_ADD),
             ("dstadr", "local address:        ", NTP_ADD),
-            ("timerec", "time last received:   ", NTP_INT),
-            ("timer", "time until next send: ", NTP_INT),
+            ("timerec", "time last received:   ", NTP_UPTIME),
+            ("timer", "time until next send: ", NTP_UPTIME),
             ("timereach", "reachability change:  ", NTP_INT),
             ("sent", "packets sent:         ", NTP_INT),
             ("received", "packets received:     ", NTP_INT),
@@ -1524,21 +1553,28 @@ usage: kerninfo
     def do_sysstats(self, _line):
         "display system uptime and packet counts"
         sysstats = (
-            ("ss_uptime", "uptime:               ", NTP_INT),
+            ("ss_uptime",    "uptime:               ", NTP_UPTIME),
             ("ss_numctlreq", "control requests:     ", NTP_INT),
-            ("ss_reset", "sysstats reset:       ", NTP_UPTIME),
-            ("ss_received", "packets received:     ", NTP_INT),
-            ("ss_thisver", "current version:      ", NTP_INT),
-            ("ss_oldver", "older version:        ", NTP_INT),
-            ("ss_badformat", "bad length or format: ", NTP_INT),
-            ("ss_badauth", "authentication failed:", NTP_INT),
-            ("ss_declined", "declined:             ", NTP_INT),
-            ("ss_restricted", "restricted:           ", NTP_INT),
-            ("ss_limited", "rate limited:         ", NTP_INT),
-            ("ss_kodsent", "KoD responses:        ", NTP_INT),
-            ("ss_processed", "processed for time:   ", NTP_INT),
+        )
+        sysstats2 = (
+            ("ss_reset",     "sysstats reset:       ", NTP_UPTIME),
+            ("ss_received",  "packets received:     ", NTP_PACKETS),
+            ("ss_thisver",   "current version:      ", NTP_PACKETS),
+            ("ss_oldver",    "older version:        ", NTP_PACKETS),
+            ("ss_ver1",      "NTPv1 total:          ", NTP_PACKETS),
+            ("ss_ver1client","NTPv1 clients:        ", NTP_PACKETS),
+            ("ss_ver1zero",  "NTPv1 mode0:          ", NTP_PACKETS),
+            ("ss_ver1symm",  "NTPv1 symm act:       ", NTP_PACKETS),
+            ("ss_badformat", "bad length or format: ", NTP_PACKETS),
+            ("ss_badauth",   "authentication failed:", NTP_PACKETS),
+            ("ss_declined",  "declined:             ", NTP_PACKETS),
+            ("ss_restricted","restricted:           ", NTP_PACKETS),
+            ("ss_limited",   "rate limited:         ", NTP_PACKETS),
+            ("ss_kodsent",   "KoD responses:        ", NTP_PACKETS),
+            ("ss_processed", "processed for time:   ", NTP_PACKETS),
         )
         self.collect_display(associd=0, variables=sysstats, decodestatus=False)
+        self.collect_display2(variables=sysstats2)
 
     def help_sysstats(self):
         self.say("""\
@@ -1557,8 +1593,8 @@ usage: sysstats
             ("mru_deepest",     "peak addresses:       ", NTP_INT),
             ("mru_maxdepth",    "maximum addresses:    ", NTP_INT),
             ("mru_mindepth",    "reclaim above count:  ", NTP_INT),
-            ("mru_maxage",      "reclaim maxage:       ", NTP_INT),
-            ("mru_minage",      "reclaim minage:       ", NTP_INT),
+            ("mru_maxage",      "reclaim maxage:       ", NTP_UPTIME),
+            ("mru_minage",      "reclaim minage:       ", NTP_UPTIME),
             ("mru_mem",         "kilobytes:            ", NTP_INT),
             ("mru_maxmem",      "maximum kilobytes:    ", NTP_INT),
             ("mru_exists",      "alloc: exists:        ", NTP_INT),
@@ -1566,7 +1602,7 @@ usage: sysstats
             ("mru_recycleold",  "alloc: recycle old:   ", NTP_INT),
             ("mru_recyclefull", "alloc: recycle full:  ", NTP_INT),
             ("mru_none",        "alloc: none:          ", NTP_INT),
-            ("mru_oldest_age",  "age of oldest slot:   ", NTP_INT),
+            ("mru_oldest_age",  "age of oldest slot:   ", NTP_UPTIME),
         )
         self.collect_display(associd=0, variables=monstats, decodestatus=False)
 
@@ -1581,19 +1617,19 @@ usage: monstats
     def do_authinfo(self, _line):
         "display symmetric authentication counters"
         authinfo = (
-            ("authreset",          "time since reset:    ", NTP_INT),
+            ("authreset",          "time since reset:    ", NTP_UPTIME),
             ("authkeys",           "stored keys:         ", NTP_INT),
             ("authfreek",          "free keys:           ", NTP_INT),
             ("authklookups",       "key lookups:         ", NTP_INT),
             ("authknotfound",      "keys not found:      ", NTP_INT),
-            ("authencrypts",       "encryptions:         ", NTP_INT),
-            ("authdigestencrypts", "digest encryptions:  ", NTP_INT),
-            ("authcmacencrypts",   "CMAC encryptions:    ", NTP_INT),
-            ("authdecrypts",       "decryptions:         ", NTP_INT),
-            ("authdigestdecrypts", "digest decryptions:  ", NTP_INT),
-            ("authdigestfails",    "digest failures:     ", NTP_INT),
-            ("authcmacdecrypts",   "CMAC decryptions:    ", NTP_INT),
-            ("authcmacfails",      "CMAC failures:       ", NTP_INT),
+            ("authencrypts",       "encryptions:         ", NTP_PACKETS),
+            ("authdigestencrypts", "digest encryptions:  ", NTP_PACKETS),
+            ("authcmacencrypts",   "CMAC encryptions:    ", NTP_PACKETS),
+            ("authdecrypts",       "decryptions:         ", NTP_PACKETS),
+            ("authdigestdecrypts", "digest decryptions:  ", NTP_PACKETS),
+            ("authdigestfails",    "digest failures:     ", NTP_PACKETS),
+            ("authcmacdecrypts",   "CMAC decryptions:    ", NTP_PACKETS),
+            ("authcmacfails",      "CMAC failures:       ", NTP_PACKETS),
             # Old variables no longer supported.
             # Interesting if looking at an old system.
             ("authkuncached",      "uncached keys:       ", NTP_INT),
@@ -1621,6 +1657,8 @@ usage: authinfo
    ("nts_cookie_make",           "NTS make cookies:          ", NTP_UINT),
    ("nts_cookie_decode",         "NTS decode cookies:        ", NTP_UINT),
    ("nts_cookie_decode_old",     "NTS decode cookies old:    ", NTP_UINT),
+   ("nts_cookie_decode_old2",    "NTS decode cookies old2:   ", NTP_UINT),
+   ("nts_cookie_decode_older",   "NTS decode cookies older:  ", NTP_UINT),
    ("nts_cookie_decode_too_old", "NTS decode cookies too old:", NTP_UINT),
    ("nts_cookie_decode_error",   "NTS decode cookies error:  ", NTP_UINT),
    ("nts_ke_probes_good",        "NTS KE client probes good: ", NTP_UINT),
@@ -1642,16 +1680,16 @@ usage: ntsinfo
     def do_iostats(self, _line):
         "display network input and output counters"
         iostats = (
-            ("iostats_reset", "time since reset:     ", NTP_INT),
+            ("iostats_reset", "time since reset:     ", NTP_UPTIME),
             ("total_rbuf", "receive buffers:      ", NTP_INT),
             ("free_rbuf", "free receive buffers: ", NTP_INT),
             ("used_rbuf", "used receive buffers: ", NTP_INT),
             ("rbuf_lowater", "low water refills:    ", NTP_INT),
-            ("io_dropped", "dropped packets:      ", NTP_INT),
-            ("io_ignored", "ignored packets:      ", NTP_INT),
-            ("io_received", "received packets:     ", NTP_INT),
-            ("io_sent", "packets sent:         ", NTP_INT),
-            ("io_sendfailed", "packet send failures: ", NTP_INT),
+            ("io_dropped", "dropped packets:      ", NTP_PACKETS),
+            ("io_ignored", "ignored packets:      ", NTP_PACKETS),
+            ("io_received", "received packets:     ", NTP_PACKETS),
+            ("io_sent", "packets sent:         ", NTP_PACKETS),
+            ("io_sendfailed", "packet send failures: ", NTP_PACKETS),
             ("io_wakeups", "input wakeups:        ", NTP_INT),
             ("io_goodwakeups", "useful input wakeups: ", NTP_INT),
         )
@@ -1668,7 +1706,7 @@ usage: iostats
     def do_timerstats(self, line):
         "display interval timer counters"
         timerstats = (
-            ("timerstats_reset", "time since reset:  ", NTP_INT),
+            ("timerstats_reset", "time since reset:  ", NTP_UPTIME),
             ("timer_overruns", "timer overruns:    ", NTP_INT),
             ("timer_xmts", "calls to transmit: ", NTP_INT),
         )

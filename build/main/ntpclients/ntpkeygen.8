@@ -1,108 +1,139 @@
 '\" t
 .\"     Title: ntpkeygen
-.\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
-.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
-.\"      Date: 06/07/2021
+.\"    Author: [see the "AUTHOR(S)" section]
+.\" Generator: Asciidoctor 2.0.12
+.\"      Date: 2022-12-29
 .\"    Manual: NTPsec
-.\"    Source: NTPsec 1.2.1+
+.\"    Source: NTPsec
 .\"  Language: English
 .\"
-.TH "NTPKEYGEN" "8" "06/07/2021" "NTPsec 1\&.2\&.1+" "NTPsec"
-.\" -----------------------------------------------------------------
-.\" * Define some portability stuff
-.\" -----------------------------------------------------------------
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" http://bugs.debian.org/507673
-.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.TH "NTPKEYGEN" "8" "2022-12-29" "NTPsec" "NTPsec"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
-.\" -----------------------------------------------------------------
-.\" * set default formatting
-.\" -----------------------------------------------------------------
-.\" disable hyphenation
+.ss \n[.ss] 0
 .nh
-.\" disable justification (adjust text to left margin only)
 .ad l
-.\" -----------------------------------------------------------------
-.\" * MAIN CONTENT STARTS HERE *
-.\" -----------------------------------------------------------------
+.de URL
+\fI\\$2\fP <\\$1>\\$3
+..
+.als MTO URL
+.if \n[.g] \{\
+.  mso www.tmac
+.  am URL
+.    ad l
+.  .
+.  am MTO
+.    ad l
+.  .
+.  LINKSTYLE blue R < >
+.\}
 .SH "NAME"
 ntpkeygen \- create and manage NTP host keys
 .SH "SYNOPSIS"
 .sp
+.sp
 .nf
-ntpkeygen [\-V]
+\f(CRntpkeygen\fP [\f(CR\-V\fP]
 .fi
+.br
 .SH "DESCRIPTION"
 .sp
-This program generates a file containing keys that can be used in NTP\(cqs symmetric key cryptography\&.
+This program generates a file containing keys that can be used
+in NTP\(cqs symmetric key cryptography.
 .sp
-The program produces a file containing ten pseudo\-random printable ASCII strings suitable for the MD5 message digest algorithm\&. It also produces an additional ten hex\-encoded random bit strings suitable for the SHA\-1 and other message digest algorithms\&.
+The program produces a file containing ten pseudo\-random printable
+ASCII strings suitable for the MD5 message digest algorithm.
+It also produces an additional ten hex\-encoded random bit strings
+suitable for the SHA\-1 and other message digest algorithms.
 .sp
-The keys file must be distributed and stored using secure means beyond the scope of NTP itself\&. The keys can also be used as passwords for the ntpq utility program\&.
+The keys file must be distributed and stored using secure means
+beyond the scope of NTP itself. The keys can also be used as
+passwords for the \c
+.URL "ntpq.html" "\f(CRntpq\fP" " "
+utility program.
 .SH "COMMAND LINE OPTIONS"
-.PP
-\-V, \-\-version
+.sp
+\f(CR\-V\fP, \f(CR\-\-version\fP
 .RS 4
-Print the version string and exit\&.
+Print the version string and exit.
 .RE
 .SH "RUNNING THE PROGRAM"
 .sp
-The simplest way to run the ntpkeygen program is logged in directly as root\&. The recommended procedure is to change to the keys directory, usually /etc/ntp/, then run the program\&. Then chown the output file to ntp:ntp\&. It should be mode 400\&.
-.if n \{\
-.sp
-.\}
+The simplest way to run the \f(CRntpkeygen\fP program is logged in directly as
+root. The recommended procedure is to change to the keys directory,
+usually \f(CR/etc/ntp/\fP, then run the program.  Then chown the output
+file to ntp:ntp.  It should be mode 400.
+.if n .sp
 .RS 4
 .it 1 an-trap
 .nr an-no-space-flag 1
 .nr an-break-flag 1
 .br
 .ps +1
-\fBWarning\fR
+.B Warning
 .ps -1
 .br
 .sp
-ntpkeygen uses the system randomness source\&. On a POSIX system, this is usually /dev/urandom\&. Immediately after a reboot, on any OS, there may not be sufficient entropy available for this program to perform well\&. Do not run this program from any startup scripts\&. Only run this program on an active host with a lot of available entropy\&.
+\f(CRntpkeygen\fP uses the system randomness source.  On a POSIX
+system, this is usually /dev/urandom.  Immediately after a reboot, on any
+OS, there may not be sufficient entropy available for this program to
+perform well.  Do not run this program from any startup scripts.  Only
+run this program on an active host with a lot of available entropy.
 .sp .5v
 .RE
 .SH "KEY FILE ACCESS AND LOCATION"
 .sp
-File names begin with the prefix \fIntpkey\fR and end with the postfix \fIhostname\&.filestamp\fR, where \fIhostname\fR is the owner name, usually the string returned by the Unix gethostname() routine, and \fIfilestamp\fR is the NTP seconds when the file was generated, in decimal digits\&.
+File names begin with the prefix \fIntpkey\fP and end with the postfix
+\fIhostname.filestamp\fP, where \fIhostname\fP is the owner name, usually the
+string returned by the Unix gethostname() routine, and \fIfilestamp\fP is
+the NTP seconds when the file was generated, in decimal digits.
 .sp
-ntpkeygen also makes a soft link from ntp\&.keys to the generated file\&. ntp\&.keys is the normal file used in ntp\&.conf\&.
+\f(CRntpkeygen\fP also makes a soft link from \f(CRntp.keys\fP to the generated
+file.  \f(CRntp.keys\fP is the normal file used in \f(CRntp.conf\fP.
 .SH "RANDOM SEED FILE"
 .sp
-All key generation schemes must have means to randomize the entropy seed used to initialize the internal pseudo\-random number generator used by the library routines\&.
+All key generation schemes must have means to randomize the
+entropy seed used to initialize the internal pseudo\-random
+number generator used by the library routines.
 .sp
-It is important to understand that entropy must be evolved for each generation, for otherwise the random number sequence would be predictable\&. Various means dependent on external events, such as keystroke intervals can be used to do this and some systems have built\-in entropy sources\&.
+It is important to understand that entropy must be evolved for each
+generation, for otherwise the random number sequence would be
+predictable. Various means dependent on external events, such as
+keystroke intervals can be used to do this and some systems have
+built\-in entropy sources.
 .sp
-This implementation uses Python\(cqs random\&.SystemRandom class, which relies on os\&.urandom()\&. The security of os\&.urandom() is improved in Python 3\&.5+\&.
+This implementation uses Python\(cqs random.SystemRandom class, which relies on
+os.urandom().  The security of os.urandom() is improved in
+.URL "https://docs.python.org/library/os.html#os.urandom" "Python 3.5+" "."
 .SH "CRYPTOGRAPHIC DATA FILES"
 .sp
-Unlike NTP Classic, this implementation generates only AES keys, not MD5 or SHA1\&.
+Unlike NTP Classic, this implementation generates only AES keys,
+not MD5 or SHA1.
 .sp
-Since the file contains private shared keys, it should be visible only to root or ntp\&.
+Since the file contains private shared keys, it should be visible
+only to root or ntp.
 .sp
-In order to use a shared key, the line to be used must also be setup on the target server\&.
+In order to use a shared key, the line to be used must also be setup
+on the target server.
 .sp
-This file is also used to authenticate remote configuration commands used by the ntpq(1) utility\&.
+This file is also used to authenticate remote configuration
+commands used by the ntpq(1) utility.
 .sp
-Comments may appear in the file and are preceded with the # character\&.
+Comments may appear in the file and are preceded with the \f(CR#\fP
+character.
 .sp
-Following any headers the keys are entered one per line in the format:
+Following any headers the keys are entered one per line in the
+format:
 .TS
 allbox tab(:);
-ltB ltB.
+lt lt.
 T{
+.sp
 Field
 T}:T{
+.sp
 Meaning
 T}
-.T&
-lt lt
-lt lt
-lt lt.
 T{
 .sp
 keyno
@@ -115,7 +146,7 @@ T{
 type
 T}:T{
 .sp
-Type of key (MD5, SHA\-1, AES\-CMAC etc)\&. This program generates only AES\&.
+Type of key (MD5, SHA\-1, AES\-CMAC etc). This program generates only AES.
 T}
 T{
 .sp
@@ -125,17 +156,17 @@ T}:T{
 the actual key, printable ASCII or hex
 T}
 .TE
-.sp 1
+.sp
 .SH "EXIT STATUS"
 .sp
 One of the following exit values will be returned:
-.PP
+.sp
 0 (EXIT_SUCCESS)
 .RS 4
-Successful program execution\&.
+Successful program execution.
 .RE
-.PP
+.sp
 1 (EXIT_FAILURE)
 .RS 4
-The operation failed or the command syntax was not valid\&.
+The operation failed or the command syntax was not valid.
 .RE

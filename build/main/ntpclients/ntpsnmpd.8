@@ -1,184 +1,192 @@
 '\" t
 .\"     Title: ntpsnmpd
-.\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
-.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
-.\"      Date: 06/07/2021
+.\"    Author: [see the "AUTHOR(S)" section]
+.\" Generator: Asciidoctor 2.0.12
+.\"      Date: 2022-12-29
 .\"    Manual: NTPsec
-.\"    Source: NTPsec 1.2.1+
+.\"    Source: NTPsec
 .\"  Language: English
 .\"
-.TH "NTPSNMPD" "8" "06/07/2021" "NTPsec 1\&.2\&.1+" "NTPsec"
-.\" -----------------------------------------------------------------
-.\" * Define some portability stuff
-.\" -----------------------------------------------------------------
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" http://bugs.debian.org/507673
-.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.TH "NTPSNMPD" "8" "2022-12-29" "NTPsec" "NTPsec"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
-.\" -----------------------------------------------------------------
-.\" * set default formatting
-.\" -----------------------------------------------------------------
-.\" disable hyphenation
+.ss \n[.ss] 0
 .nh
-.\" disable justification (adjust text to left margin only)
 .ad l
-.\" -----------------------------------------------------------------
-.\" * MAIN CONTENT STARTS HERE *
-.\" -----------------------------------------------------------------
+.de URL
+\fI\\$2\fP <\\$1>\\$3
+..
+.als MTO URL
+.if \n[.g] \{\
+.  mso www.tmac
+.  am URL
+.    ad l
+.  .
+.  am MTO
+.    ad l
+.  .
+.  LINKSTYLE blue R < >
+.\}
 .SH "NAME"
 ntpsnmpd \- NTP Simple Network Management Protocol sub\-agent
 .SH "SYNOPSIS"
 .sp
-ntpsnmpd [\-nxdDlhV] [ntp host]
+\f(CRntpsnmpd\fP [\f(CR\-nxdDlhV\fP] [ntp host]
 .SH "DESCRIPTION"
 .sp
-[experimental]
+\f(CR[experimental]\fP
 .sp
-ntpsnmpd is an AgentX Simple Network Management Protocol sub\-agent\&.
+\f(CRntpsnmpd\fP is an AgentX Simple Network Management Protocol sub\-agent.
 .sp
-It functions as a bridge between the Mode 6 protocol used for Network Time Protocol monitoring, and an SNMP master agent\&. The user must have running NTP and SNMP daemons for ntpsnmpd to work\&.
+It functions as a bridge between the Mode 6 protocol used for Network
+Time Protocol monitoring, and an SNMP master agent. The user must have
+running NTP and SNMP daemons for ntpsnmpd to work.
 .SH "OPTIONS"
-.PP
-\-c filename, \-\-configfile=filename
+.sp
+\f(CR\-c\fP filename, \f(CR\-\-configfile\fP=filename
 .RS 4
-Alternate path for the configuration file, /etc/ntpsnmpd\&.conf by default
+Alternate path for the configuration file, /etc/ntpsnmpd.conf by default
 .RE
-.PP
-\-n, \-\-nofork
+.sp
+\f(CR\-n\fP, \f(CR\-\-nofork\fP
 .RS 4
 Do not fork
 .RE
-.PP
-\-x, \-\-master\-addr
+.sp
+\f(CR\-x\fP, \f(CR\-\-master\-addr\fP
 .RS 4
 Specify address for connecting to the master agent
 .RE
-.PP
-\-d, \-\-debug
+.sp
+\f(CR\-d\fP, \f(CR\-\-debug\fP
 .RS 4
-Increase debugging level by 1\&.
+Increase debugging level by 1.
 .RE
-.PP
-\-D num, \-\-set\-debug\-level=num
+.sp
+\f(CR\-D\fP num, \f(CR\-\-set\-debug\-level\fP=num
 .RS 4
-The debug level is set to the following integer argument\&.
+The debug level is set to the following integer argument.
 .RE
-.PP
-\-l filename, \-\-logfile=filename
+.sp
+\f(CR\-l\fP filename, \f(CR\-\-logfile\fP=filename
 .RS 4
-Log debugging output to the specified file\&.
+Log debugging output to the specified file.
 .RE
-.PP
-\-h, \-\-help
+.sp
+\f(CR\-h\fP, \f(CR\-\-help\fP
 .RS 4
-Print a usage message summarizing options end exit\&.
+Print a usage message summarizing options end exit.
 .RE
-.PP
-\-V, \-\-version
+.sp
+\f(CR\-V\fP, \f(CR\-\-version\fP
 .RS 4
-Print the version string and exit\&.
+Print the version string and exit.
 .RE
 .SH "CONFIGURATION FILES"
 .sp
-.if n \{\
-.RS 4
-.\}
+.if n .RS 4
 .nf
-Note that filenames in the options should be enclosed in quotes\&.
+.fam C
+Note that filenames in the options should be enclosed in quotes.
 This is a temporary measure that will not be the case in future
-versions\&.
+versions.
+.fam
 .fi
-.if n \{\
-.RE
-.\}
-.SS "/etc/ntpsnmpd\&.conf"
-.PP
-master\-addr \fIaddr\fR
-.RS 4
-The address of the SNMP master agent to connect to\&. Can be either a named socket or an IP address / hostname and port number\&.
-.RE
-.PP
-ntp\-addr \fIaddr\fR
-.RS 4
-The address of the NTP daemon to monitor\&.
-.RE
-.PP
-logfile \fIfilename\fR
-.RS 4
-Log debugging output to the specified file\&.
-.RE
-.PP
-loglevel \fIlevel\fR
-.RS 4
-Threshold for log messages\&. Equivalent to \-D
-.RE
-.SS "/var/ntpsnmpd/notify\&.conf"
+.if n .RE
+.SS "/etc/ntpsnmpd.conf"
 .sp
-.if n \{\
+\f(CRmaster\-addr\fP \fIaddr\fP
 .RS 4
-.\}
+The address of the SNMP master agent to connect to. Can be either a named
+socket or an IP address / hostname and port number.
+.RE
+.sp
+\f(CRntp\-addr\fP \fIaddr\fP
+.RS 4
+The address of the NTP daemon to monitor.
+.RE
+.sp
+\f(CRlogfile\fP \fIfilename\fP
+.RS 4
+Log debugging output to the specified file.
+.RE
+.sp
+\f(CRloglevel\fP \fIlevel\fP
+.RS 4
+Threshold for log messages. Equivalent to \-D
+.RE
+.SS "/var/ntpsnmpd/notify.conf"
+.sp
+.if n .RS 4
 .nf
+.fam C
 This file is used to store the state of options that can be set
-by writing to certain OIDs\&. Any comments will be overwritten by
-ntpsnmpd upon write\&.
+by writing to certain OIDs. Any comments will be overwritten by
+ntpsnmpd upon write.
+.fam
 .fi
-.if n \{\
-.RE
-.\}
-.PP
-notify\-mode\-change [ True | False ]
+.if n .RE
+.sp
+\f(CRnotify\-mode\-change\fP [ True | False ]
 .RS 4
-Enable notifications on ntpd mode change\&.
+Enable notifications on ntpd mode change.
 .RE
-.PP
-notify\-stratum\-change [ True | False ]
+.sp
+\f(CRnotify\-stratum\-change\fP [ True | False ]
 .RS 4
-Enable notifications on NTP stratum change\&.
+Enable notifications on NTP stratum change.
 .RE
-.PP
-notify\-syspeer\-change [ True | False ]
+.sp
+\f(CRnotify\-syspeer\-change\fP [ True | False ]
 .RS 4
-Enable notifications when ntpd selects a new system peer\&.
+Enable notifications when ntpd selects a new system peer.
 .RE
-.PP
-notify\-add\-association [ True | False ]
+.sp
+\f(CRnotify\-add\-association\fP [ True | False ]
 .RS 4
-Enable notifications when ntpd adds a new peer\&.
+Enable notifications when ntpd adds a new peer.
 .RE
-.PP
-notify\-rm\-association [ True | False ]
+.sp
+\f(CRnotify\-rm\-association\fP [ True | False ]
 .RS 4
-Enable notifications when ntpd removes a peer\&.
+Enable notifications when ntpd removes a peer.
 .RE
-.PP
-notify\-leap\-announced [ True | False ]
+.sp
+\f(CRnotify\-leap\-announced\fP [ True | False ]
 .RS 4
-Enable notifications on leap second announcement\&.
+Enable notifications on leap second announcement.
 .RE
-.PP
-notify\-heartbeat [ True | False ]
+.sp
+\f(CRnotify\-heartbeat\fP [ True | False ]
 .RS 4
-Send heartbeat notification\&.
+Send heartbeat notification.
 .RE
-.PP
-heartbeat\-interval \fIinterval\fR
+.sp
+\f(CRheartbeat\-interval\fP \fIinterval\fP
 .RS 4
-Frequency of heartbeat notification in integer seconds\&.
+Frequency of heartbeat notification in integer seconds.
 .RE
 .SH "KNOWN LIMITATIONS"
 .sp
-This program is still experimental in nature\&. Parts of the AgentX standard are not yet fully implemented, logging not fleshed out yet, some options missing, etc\&.
+This program is still experimental in nature. Parts of the AgentX standard
+are not yet fully implemented, logging not fleshed out yet, some options
+missing, etc.
 .SH "KNOWN DEVIATIONS FROM RFC 5907"
 .sp
-The ntpEntStatusEntityUptime OID specifies a bizarre time format\&. This does not match what the SNMP tools expect to see from a TimeTicks variable\&. Instead the daemon returns a normal TimeTicks value\&.
+The ntpEntStatusEntityUptime OID specifies a bizarre time format. This
+does not match what the SNMP tools expect to see from a TimeTicks variable.
+Instead the daemon returns a normal TimeTicks value.
 .sp
-The ntpEntNotifConfigChanged trap is left unimplemented\&. This is because there currently is no way to implement what it wants, and it demands alerts regarding changes that are not part of NTP\(cqs jurisdiction\&.
+The ntpEntNotifConfigChanged trap is left unimplemented. This is because
+there currently is no way to implement what it wants, and it demands alerts
+regarding changes that are not part of NTP\(cqs jurisdiction.
 .sp
-The ntpEntTimeResolution OID currently uses data from the sys_fuzz variable as the base for it\(cqs calculations\&. It is by no means certain that this is the correct choice, and the returned data should be taken with scepticism\&.
+The ntpEntTimeResolution OID currently uses data from the sys_fuzz variable
+as the base for it\(cqs calculations. It is by no means certain that this is
+the correct choice, and the returned data should be taken with scepticism.
 .sp
-The ntpEntStatPktModeTable is unimplemented due to not currently having a data source\&.
+The ntpEntStatPktModeTable is unimplemented due to not currently having a
+data source.
 .SH "EXIT STATUS"
 .sp
-Always returns 0\&.
+Always returns 0.

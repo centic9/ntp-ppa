@@ -6,7 +6,7 @@ import re
 from waflib.Tools import ccroot
 from waflib import Utils
 from waflib.Logs import debug
-c_compiler={'win32':['msvc','gcc','clang'],'cygwin':['gcc','clang'],'darwin':['clang','gcc'],'aix':['xlc','gcc','clang'],'linux':['gcc','clang','icc'],'sunos':['suncc','gcc'],'irix':['gcc','irixcc'],'hpux':['gcc'],'osf1V':['gcc'],'gnu':['gcc','clang'],'java':['gcc','msvc','clang','icc'],'default':['clang','gcc'],}
+c_compiler={'win32':['msvc','gcc','clang'],'cygwin':['gcc','clang'],'darwin':['clang','gcc'],'aix':['xlc','gcc','clang'],'linux':['gcc','clang','icc'],'sunos':['suncc','gcc'],'irix':['gcc','irixcc'],'hpux':['gcc'],'osf1V':['gcc'],'gnu':['gcc','clang'],'java':['gcc','msvc','clang','icc'],'gnukfreebsd':['gcc','clang'],'default':['clang','gcc'],}
 def default_compilers():
 	build_platform=Utils.unversioned_sys_platform()
 	possible_compiler_list=c_compiler.get(build_platform,c_compiler['default'])

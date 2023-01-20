@@ -1,151 +1,174 @@
 '\" t
 .\"     Title: ntpfrob
-.\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
-.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
-.\"      Date: 06/07/2021
+.\"    Author: [see the "AUTHOR(S)" section]
+.\" Generator: Asciidoctor 2.0.12
+.\"      Date: 2022-12-29
 .\"    Manual: NTPsec
-.\"    Source: NTPsec 1.2.1+
+.\"    Source: NTPsec
 .\"  Language: English
 .\"
-.TH "NTPFROB" "8" "06/07/2021" "NTPsec 1\&.2\&.1+" "NTPsec"
-.\" -----------------------------------------------------------------
-.\" * Define some portability stuff
-.\" -----------------------------------------------------------------
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" http://bugs.debian.org/507673
-.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.TH "NTPFROB" "8" "2022-12-29" "NTPsec" "NTPsec"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
-.\" -----------------------------------------------------------------
-.\" * set default formatting
-.\" -----------------------------------------------------------------
-.\" disable hyphenation
+.ss \n[.ss] 0
 .nh
-.\" disable justification (adjust text to left margin only)
 .ad l
-.\" -----------------------------------------------------------------
-.\" * MAIN CONTENT STARTS HERE *
-.\" -----------------------------------------------------------------
+.de URL
+\fI\\$2\fP <\\$1>\\$3
+..
+.als MTO URL
+.if \n[.g] \{\
+.  mso www.tmac
+.  am URL
+.    ad l
+.  .
+.  am MTO
+.    ad l
+.  .
+.  LINKSTYLE blue R < >
+.\}
 .SH "NAME"
 ntpfrob \- frob the clock hardware
 .SH "SYNOPSIS"
 .sp
-ntpfrob [\-A] [\-b \fIbump\fR] [\-a \fItick\fR] [\-p \fIppsdev\fR] [\-c] [\-e] [\-r] [\-?] [\-h]
+\f(CRntpfrob\fP [\f(CR\-A\fP] [\f(CR\-b\fP \fIbump\fP] [\f(CR\-a\fP \fItick\fP] [\f(CR\-p\fP \fIppsdev\fP] [\f(CR\-c\fP] [\f(CR\-e\fP] [\f(CR\-r\fP] [\f(CR\-?\fP] [\f(CR\-h\fP]
 .SH "DESCRIPTION"
 .sp
-The ntpfrob program frobs the local clock hardware\&. It collects several small diagnostic functions into a set that will differ depending on your platform and underlying system calls\&. Portions of it formerly traveled as tickadj and some undocumented small utilities\&.
+The ntpfrob program frobs the local clock hardware.  It collects
+several small diagnostic functions into a set that will differ
+depending on your platform and underlying system calls.  Portions of
+it formerly traveled as \f(CRtickadj\fP and some undocumented small
+utilities.
 .SH "COMMAND LINE OPTIONS"
-.PP
-\-a \fItick\fR
+.sp
+\f(CR\-a\fP \fItick\fP
 .RS 4
-Set the kernel variable
-tick
-to the value
-\fItick\fR
-specifies\&.
+Set the kernel variable \f(CRtick\fP to the value \fItick\fP specifies.
 .RE
-.PP
-\-A
+.sp
+\f(CR\-A\fP
 .RS 4
-Display the kernel variable
-tick\&.
+Display the kernel variable \f(CRtick\fP.
 .RE
-.PP
-\-b \fIbump\fR
+.sp
+\f(CR\-b\fP \fIbump\fP
 .RS 4
-Bump the clock by a specified number of microseconds\&.
+Bump the clock by a specified number of microseconds.
 .RE
-.PP
-\-c
+.sp
+\f(CR\-c\fP
 .RS 4
-Compute and display clock jitter\&.
+Compute and display clock jitter.
 .RE
-.PP
-\-d
+.sp
+\f(CR\-d\fP
 .RS 4
-display values extracted via adjtimex(2)\&.
+display values extracted via adjtimex(2).
 .RE
-.PP
-\-D
+.sp
+\f(CR\-D\fP
 .RS 4
-display values extracted via adjtimex(2) forcibly including PPS\&.
+display values extracted via adjtimex(2) forcibly including PPS.
 .RE
-.PP
-\-e
+.sp
+\f(CR\-e\fP
 .RS 4
-Measure clock precision\&.
+Measure clock precision.
 .RE
-.PP
-\-j
+.sp
+\f(CR\-j\fP
 .RS 4
-Generate a report in self\-describing JSON\&.
+Generate a report in self\-describing JSON.
 .RE
-.PP
-\-p \fIppsdev\fR
+.sp
+\f(CR\-p\fP \fIppsdev\fP
 .RS 4
 Look for PPS pulses on a specified device
 .RE
-.PP
-\-r
+.sp
+\f(CR\-r\fP
 .RS 4
-Raw mode\&. Only applies to the jitter mode, and means the raw clock samples should be emitted to stdout for post analysis\&.
+Raw mode.  Only applies to the jitter mode, and means the raw
+clock samples should be emitted to stdout for post analysis.
 .RE
-.PP
-\-?
+.sp
+\f(CR\-?\fP
 .RS 4
-Print usage and exit\&.
+Print usage and exit.
 .RE
-.PP
-\-h
+.sp
+\f(CR\-h\fP
 .RS 4
-Print usage and exit\&.
+Print usage and exit.
 .RE
-.PP
-\-V
+.sp
+\f(CR\-V\fP
 .RS 4
-Print the version string and exit\&.
+Print the version string and exit.
 .RE
 .SH "USAGE"
 .sp
-Documentation for some of these functions is scanty; this is a problem inherited from ancient days along with their code\&. If you suspect you may need to use them, reading the source code may be wise\&. If you believe you understand the code in more detail than any of these descriptions, please explain it to the NTPsec maintainers\&.
+Documentation for some of these functions is scanty; this is a problem
+inherited from ancient days along with their code. If you suspect you
+may need to use them, reading the source code may be wise. If you
+believe you understand the code in more detail than any of these
+descriptions, please explain it to the NTPsec maintainers.
 .sp
-Normally this tool reports in an eyeball\-friendly unstructured text format\&. With the \-j option (where applicable) it reports JSON records\&. Note that the \-j option should be given before any mode option\&.
+Normally this tool reports in an eyeball\-friendly unstructured text
+format. With the \-j option (where applicable) it reports JSON records.
+Note that the \-j option should be given before any mode option.
 .sp
-The reporting formats of this tool should be considered unstable; they may change as diagnostics are added or improved\&. JSON reports will be kept forward\-compatible through changes\&.
+The reporting formats of this tool should be considered unstable;
+they may change as diagnostics are added or improved.  JSON
+reports will be kept forward\-compatible through changes.
 .SS "Clock tick adjustment"
 .sp
-The \-A function reads your clock\(cqs tick rate in microseconds\&. The \-a function sets it\&. Both rely on the adjtimex(2) system call\&. This mode finishes by reporting the tick value and (if available) the tick adjustment value\&.
+The \-A function reads your clock\(cqs tick rate in microseconds.  The \-a
+function sets it. Both rely on the adjtimex(2) system call.  This
+mode finishes by reporting the tick value and (if available) the
+tick adjustment value.
 .sp
-The \-j option applies to this mode\&.
+The \-j option applies to this mode.
 .sp
-Tweaking your tick rate is almost never necessary on hardware new enough to have a fully POSIX\&.1\-2001\-conformant Unix\&.
+Tweaking your tick rate is almost never necessary on hardware new
+enough to have a fully POSIX.1\-2001\-conformant Unix.
 .SS "Clock bump"
 .sp
-Sometimes it is diagnostically interesting to perturb your clock to watch how ntpd responds and makes corrections\&. This option does that\&.
+Sometimes it is diagnostically interesting to perturb your clock
+to watch how ntpd responds and makes corrections. This
+option does that.
 .SS "Clock jitter measurement"
 .sp
-The \-c option can be used to determine the timing jitter due to the operating system in a gettimeofday() call\&. For most systems, the dominant contribution to the jitter budget is the period of the hardware interrupt, usually in the range between 10 us and 1 ms\&. For those systems with microsecond counters, the jitter is dominated only by the operating system\&.
+The \-c option can be used to determine the timing jitter due to the
+operating system in a gettimeofday() call.  For most systems, the
+dominant contribution to the jitter budget is the period of the
+hardware interrupt, usually in the range between 10 us and 1 ms. For
+those systems with microsecond counters, the jitter is dominated
+only by the operating system.
 .sp
-The \-j option applies to this mode\&. With the \-r option, write the raw, unsorted clock samples to standard output for post\-analysis\&. All but the last \-j or \-r option before the \-c mode flag is ignored\&.
+The \-j option applies to this mode.  With the \-r option, write
+the raw, unsorted clock samples to standard output for post\-analysis.
+All but the last \-j or \-r option before the \-c mode flag is ignored.
 .SS "Pulse\-per\-second check"
 .sp
-The \-p option shows whether the PPS\-API (RFC 2783 kernel PPS interface) finds PPS on a specified device\&.
+The \-p option shows whether the  PPS\-API (RFC 2783 kernel
+PPS interface) finds PPS on a specified device.
 .SS "Measure clock precision"
 .sp
-The \-e option measure the resolution of the system clock, watching how the current time changes as we read it repeatedly\&.
+The \-e option measure the resolution of the system clock, watching how
+the current time changes as we read it repeatedly.
 .sp
-The \-j option applies to this mode\&.
+The \-j option applies to this mode.
 .SH "EXIT STATUS"
 .sp
 One of the following exit values will be returned:
-.PP
+.sp
 0 (EXIT_SUCCESS)
 .RS 4
-Successful program execution\&.
+Successful program execution.
 .RE
-.PP
+.sp
 1 (EXIT_FAILURE)
 .RS 4
-The operation failed or the command invocation was not valid\&.
+The operation failed or the command invocation was not valid.
 .RE

@@ -41,7 +41,7 @@ def r1(code):
 	return code.replace('.encode()','')
 @subst('Runner.py')
 def r4(code):
-	return code.replace('next(self.biter)','self.biter.next()')
+	return code.replace('next(self.biter)','self.biter.next()').replace('self.daemon = True','self.setDaemon(1)')
 @subst('Context.py')
 def r5(code):
 	return code.replace("('Execution failure: %s'%str(e),ex=e)","('Execution failure: %s'%str(e),ex=e),None,sys.exc_info()[2]")

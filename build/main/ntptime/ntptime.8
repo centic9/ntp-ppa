@@ -1,119 +1,127 @@
 '\" t
 .\"     Title: ntptime
-.\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
-.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
-.\"      Date: 06/07/2021
+.\"    Author: [see the "AUTHOR(S)" section]
+.\" Generator: Asciidoctor 2.0.12
+.\"      Date: 2022-12-29
 .\"    Manual: NTPsec
-.\"    Source: NTPsec 1.2.1+
+.\"    Source: NTPsec
 .\"  Language: English
 .\"
-.TH "NTPTIME" "8" "06/07/2021" "NTPsec 1\&.2\&.1+" "NTPsec"
-.\" -----------------------------------------------------------------
-.\" * Define some portability stuff
-.\" -----------------------------------------------------------------
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" http://bugs.debian.org/507673
-.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.TH "NTPTIME" "8" "2022-12-29" "NTPsec" "NTPsec"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
-.\" -----------------------------------------------------------------
-.\" * set default formatting
-.\" -----------------------------------------------------------------
-.\" disable hyphenation
+.ss \n[.ss] 0
 .nh
-.\" disable justification (adjust text to left margin only)
 .ad l
-.\" -----------------------------------------------------------------
-.\" * MAIN CONTENT STARTS HERE *
-.\" -----------------------------------------------------------------
+.de URL
+\fI\\$2\fP <\\$1>\\$3
+..
+.als MTO URL
+.if \n[.g] \{\
+.  mso www.tmac
+.  am URL
+.    ad l
+.  .
+.  am MTO
+.    ad l
+.  .
+.  LINKSTYLE blue R < >
+.\}
 .SH "NAME"
 ntptime \- read and set kernel time variables
 .SH "SYNOPSIS"
 .sp
+.sp
 .nf
-ntptime [\-chr] [\-e \fIest_error\fR] [\-f \fIfrequency\fR] [\-j]
-        [\-m \fImax_error\fR] [\-o \fIoffset\fR] [\-s \fIstatus\fR]
-        [\-t \fItime_constant\fR]
+ntptime [\f(CR\-chr\fP] [\f(CR\-e\fP \fIest_error\fP] [\f(CR\-f\fP \fIfrequency\fP] [\-j]
+        [\f(CR\-m\fP \fImax_error\fP] [\f(CR\-o\fP \fIoffset\fP] [\f(CR\-s\fP \fIstatus\fP]
+        [\f(CR\-t\fP \fItime_constant\fP]
 .fi
+.br
 .SH "DESCRIPTION"
 .sp
-Checks the kernel configuration for the NTP user interface syscalls ntp_gettime() and ntp_adjtime()\&. If present, the current timekeeping data are displayed\&. If not, a disappointment is displayed\&. See the kernel page file in the HTML documentation in distribution for further details\&.
+Checks the kernel configuration for the NTP user interface
+syscalls \f(CRntp_gettime()\fP and \f(CRntp_adjtime()\fP.  If present, the current
+timekeeping data are displayed.  If not, a disappointment is
+displayed.  See the kernel page file in the HTML documentation in
+distribution for further details.
 .sp
-A similar display can be obtained using the ntpq program and kerninfo command\&.
+A similar display can be obtained using the \f(CRntpq\fP program
+and \f(CRkerninfo\fP command.
 .sp
-This program is useful only with kernels featuring the ntp_adjtime(2) system call or local equivalent, as described in the A Kernel Model for Precision Timekeeping page,
+This program is useful only with kernels featuring the ntp_adjtime(2)
+system call or local equivalent, as described in the \c
+.URL "kern.html" "A
+Kernel Model for Precision Timekeeping"  page,
 .SH "OPTIONS"
-.PP
-\-c
+.sp
+\f(CR\-c\fP
 .RS 4
-Display the execution time of
-ntptime
-itself\&.
+Display the execution time of \f(CRntptime\fP itself.
 .RE
-.PP
-\-e \fIest_error\fR
+.sp
+\f(CR\-e\fP \fIest_error\fP
 .RS 4
-Specify estimated error, in microseconds\&.
+Specify estimated error, in microseconds.
 .RE
-.PP
-\-f \fIfrequency\fR
+.sp
+\f(CR\-f\fP \fIfrequency\fP
 .RS 4
-Specify frequency offset, in parts per million\&.
+Specify frequency offset, in parts per million.
 .RE
-.PP
-\-h
+.sp
+\f(CR\-h\fP
 .RS 4
-Display help information\&.
+Display help information.
 .RE
-.PP
-\-j
+.sp
+\f(CR\-j\fP
 .RS 4
-Report in JSON rather than plain text\&.
+Report in JSON rather than plain text.
 .RE
-.PP
-\-m \fImax_error\fR
+.sp
+\f(CR\-m\fP \fImax_error\fP
 .RS 4
-Specify max possible errors, in microseconds\&.
+Specify max possible errors, in microseconds.
 .RE
-.PP
-\-o \fIoffset\fR
+.sp
+\f(CR\-o\fP \fIoffset\fP
 .RS 4
-Specify clock offset, in microseconds\&.
+Specify clock offset, in microseconds.
 .RE
-.PP
-\-r
+.sp
+\f(CR\-r\fP
 .RS 4
-Display Unix and NTP times in raw format\&.
+Display Unix and NTP times in raw format.
 .RE
-.PP
-\-s \fIstatus\fR
+.sp
+\f(CR\-s\fP \fIstatus\fP
 .RS 4
-Specify clock status\&. Better know what you are doing\&.
+Specify clock status. Better know what you are doing.
 .RE
-.PP
-\-t \fItime_constant\fR
+.sp
+\f(CR\-t\fP \fItime_constant\fP
 .RS 4
-Specify time constant, an integer in the range 0\-10\&.
+Specify time constant, an integer in the range 0\-10.
 .RE
-.PP
-\-V
+.sp
+\f(CR\-V\fP
 .RS 4
-Print the version string and exit\&.
+Print the version string and exit.
 .RE
 .SH "BUGS"
 .sp
-The format for modes and status in the JSON report is less than ideal\&.
+The format for modes and status in the JSON report is less than ideal.
 .SH "EXIT STATUS"
 .sp
 One of the following exit values will be returned:
-.PP
+.sp
 0 (EXIT_SUCCESS)
 .RS 4
-Successful program execution\&.
+Successful program execution.
 .RE
-.PP
+.sp
 1 (EXIT_FAILURE)
 .RS 4
-The operation failed or the command invocation was not valid\&.
+The operation failed or the command invocation was not valid.
 .RE

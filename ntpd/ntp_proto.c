@@ -139,12 +139,15 @@ static int sys_orphwait = NTP_ORPHWAIT; /* orphan wait */
 
 // proto stats structure and variables
 struct statistics_counters {
-	uptime_t	sys_stattime;		/* time since sysstats reset */
 	uint64_t	sys_received;		/* packets received */
 	uint64_t	sys_processed;		/* packets for this host */
 	uint64_t	sys_restricted;		/* restricted packets */
 	uint64_t	sys_newversion;		/* current version  */
 	uint64_t	sys_oldversion;		/* old version */
+	uint64_t	sys_version1;		/* old cruft: NTPv1 */
+	uint64_t	sys_version1client;	/*  NTPv1: mode 3 many */
+	uint64_t	sys_version1zero;	/*  NTPv1: mode 0 as per RFC */
+	uint64_t	sys_version1symm;	/*  NTPv1: mode 1 old Windows */
 	uint64_t	sys_badlength;		/* bad length or format */
 	uint64_t	sys_badauth;		/* bad authentication */
 	uint64_t	sys_declined;		/* declined */
@@ -152,17 +155,18 @@ struct statistics_counters {
 	uint64_t	sys_kodsent;		/* KoD sent */
 };
 volatile struct statistics_counters stat_proto_hourago, stat_proto_total;
+uptime_t	sys_stattime;		/* time since sysstats "reset" */
 
 uptime_t	use_stattime;		/* time since usestats reset */
 
 uptime_t stat_stattime(void)
 {
-  return current_time - stat_proto_hourago.sys_stattime;
+  return current_time - sys_stattime;
 }
 
 uptime_t stat_total_stattime(void)
 {
-  return current_time - stat_proto_total.sys_stattime;
+  return current_time;
 }
 
 #define stat_sys_dumps(member)\
@@ -178,6 +182,10 @@ stat_sys_dumps(processed)
 stat_sys_dumps(restricted)
 stat_sys_dumps(newversion)
 stat_sys_dumps(oldversion)
+stat_sys_dumps(version1)
+stat_sys_dumps(version1client)
+stat_sys_dumps(version1zero)
+stat_sys_dumps(version1symm)
 stat_sys_dumps(badlength)
 stat_sys_dumps(badauth)
 stat_sys_dumps(declined)
@@ -315,10 +323,10 @@ parse_packet(
 	rbufp->extens_present = false;
 	rbufp->ntspacket.valid = false;
 
-	if(PKT_VERSION(pkt->li_vn_mode) > 4) {
+	if(PKT_VERSION(pkt->li_vn_mode) > NTP_VERSION) {
 		/* Unsupported version */
 		return false;
-	} else if(PKT_VERSION(pkt->li_vn_mode) == 4) {
+	} else if(PKT_VERSION(pkt->li_vn_mode) == MODE_SERVER) {
 		/* Only version 4 packets support extensions. */
 		/* But they also support shared key authentication. */
 		if (recv_length > (LEN_PKT_NOMAC+MAX_MAC_LEN)) {
@@ -458,43 +466,73 @@ static bool check_early_restrictions(
 	      PKT_VERSION(rbufp->recv_buffer[0]) != NTP_VERSION));
 }
 
+/* rawstats_filter
+ * Don't print all rejectioned packets or we could get DoSed.
+ * Print the packet we use.
+ * Print the first rejection.
+ *   In particular, we get to see why a response is rejected.
+ *   Took-too-long, BOGON14 is common.
+ *   This lets us see how long it did take.
+ */
+static void rawstats_filter(
+  struct peer *peer,
+  struct recvbuf *rbufp,
+  unsigned int flag,
+  unsigned int outcount) {
+	peer->flash |= flag;
+	peer->bogons += 1;
+	if (peer->bogons > 1) {
+		/* only print one bogon */
+		return;
+	}
+	record_raw_stats(peer, rbufp, flag, outcount);
+#if 0
+	record_raw_stats(peer,
+			 PKT_LEAP(rbufp->pkt.li_vn_mode),
+			 PKT_VERSION(rbufp->pkt.li_vn_mode),
+			 PKT_MODE(rbufp->pkt.li_vn_mode),
+			 PKT_TO_STRATUM(rbufp->pkt.stratum),
+			 rbufp->pkt.ppoll, rbufp->pkt.precision,
+			 rbufp->pkt.rootdelay, rbufp->pkt.rootdisp,
+			 /* FIXME: this cast is disgusting */
+			 *(const uint32_t*)rbufp->pkt.refid,
+			 outcount);
+#endif
+}
 
+/* Handle MODE_SERVER, replies to our requests.
+ * Authentication done upstream.
+ */
 static void
 handle_procpkt(
 	struct recvbuf *rbufp,
 	struct peer *peer
 	)
 {
-	int outcount = peer->outcount;
+	unsigned int outcount = peer->outcount;
 
 	peer->flash &= ~PKT_BOGON_MASK;
 
 	/* Duplicate detection */
 	if(rbufp->pkt.xmt == peer->xmt) {
-		peer->flash |= BOGON1;
+		rawstats_filter(peer, rbufp, BOGON1, outcount);
+		peer->oldpkt++;
+		return;
+	}
+	if(outcount == 0) {
+		rawstats_filter(peer, rbufp, BOGON1, outcount);
 		peer->oldpkt++;
 		return;
 	}
 
 	/* Origin timestamp validation */
-	if(PKT_MODE(rbufp->pkt.li_vn_mode) == MODE_SERVER) {
-		if(outcount == 0) {
-			peer->flash |= BOGON1;
-			peer->oldpkt++;
-			return;
-		}
-		if(rbufp->pkt.org == 0) {
-			peer->flash |= BOGON3;
-			peer->bogusorg++;
-			return;
-		} else if(rbufp->pkt.org != peer->org_rand) {
-			peer->flash |= BOGON2;
-			peer->bogusorg++;
-			return;
-		}
-	} else {
-		/* This case should be unreachable. */
-		stat_proto_total.sys_declined++;
+	if(rbufp->pkt.org == 0) {
+		rawstats_filter(peer, rbufp, BOGON3, outcount);
+		peer->bogusorg++;
+		return;
+	} else if(rbufp->pkt.org != peer->org_rand) {
+		rawstats_filter(peer, rbufp, BOGON2, outcount);
+		peer->bogusorg++;
 		return;
 	}
 
@@ -523,13 +561,13 @@ handle_procpkt(
 	if (PKT_LEAP(rbufp->pkt.li_vn_mode) == LEAP_NOTINSYNC ||
 	    PKT_TO_STRATUM(rbufp->pkt.stratum) < sys_floor ||
 	    PKT_TO_STRATUM(rbufp->pkt.stratum) >= sys_ceiling) {
-		peer->flash |= BOGON6;
+		rawstats_filter(peer, rbufp, BOGON6, outcount);
 		return;
 	}
 
 	if(scalbn((double)rbufp->pkt.rootdelay/2.0 + (double)rbufp->pkt.rootdisp, -16) >=
 	   sys_maxdisp) {
-		peer->flash |= BOGON7;
+		rawstats_filter(peer, rbufp, BOGON7, outcount);
 		return;
 	}
 
@@ -565,9 +603,7 @@ handle_procpkt(
 	   makes the desired security invariant easier to verify.
 	*/
 	if(delta > sys_maxdist) {
-	  peer->flash |= BOGON1; /*XXX we should probably allocate a
-				   new bogon bit here rather than
-				   recycling BOGON1. */
+	  rawstats_filter(peer, rbufp, BOGON14, outcount);
 	  peer->oldpkt++;
 	  return;
 	}
@@ -584,23 +620,8 @@ handle_procpkt(
 	peer->xmt = rbufp->pkt.xmt;
 	peer->dst = rbufp->recv_time;
 
-	record_raw_stats(peer,
-			 /* What we want to be reporting is values in
-			    the packet, not the values in the peer
-			    structure, but when we reach here they're
-			    the same thing. Passing the values in the
-			    peer structure is a convenience, because
-			    they're already in the l_fp format that
-			    record_raw_stats() expects. */
-			 PKT_LEAP(rbufp->pkt.li_vn_mode),
-			 PKT_VERSION(rbufp->pkt.li_vn_mode),
-			 PKT_MODE(rbufp->pkt.li_vn_mode),
-			 PKT_TO_STRATUM(rbufp->pkt.stratum),
-			 rbufp->pkt.ppoll, rbufp->pkt.precision,
-			 rbufp->pkt.rootdelay, rbufp->pkt.rootdisp,
-			 /* FIXME: this cast is disgusting */
-			 *(const uint32_t*)rbufp->pkt.refid,
-			 outcount);
+	/* Record good packet */
+	record_raw_stats(peer, rbufp, 0, outcount);
 
 	/* If either burst mode is armed, enable the burst.
 	 * Compute the headway for the next packet and delay if
@@ -642,6 +663,37 @@ receive(
 
 	stat_proto_total.sys_received++;
 
+#ifdef NTPv1
+	/*Hack for NTPv1.  See #707 */
+	if ((NTPv1 == PKT_VERSION(rbufp->recv_buffer[0])) && \
+		(48 == rbufp->recv_length)) {
+	  mode = PKT_MODE(rbufp->recv_buffer[0]);
+	  stat_proto_total.sys_version1++;
+	  /* There is a lot of crufty old NTPv1 SNTP traffic.
+	   * NTPv1 has no mode field. */
+	  switch (mode) {
+	    case MODE_CLIENT:
+		/* Some packets come with MODE_CLIENT. They will just work. */
+		stat_proto_total.sys_version1client++;
+		break;
+	    case MODE_UNSPEC:
+		/* Some packets come with 0. Patch them.
+		 *   This assumes the client doesn't check the returned mode. */
+		rbufp->recv_buffer[0] = PKT_LI_VN_MODE(0, NTPv1, MODE_CLIENT);
+		stat_proto_total.sys_version1zero++;
+		break;
+	    case MODE_ACTIVEx:
+		/* Windows XP and Server 2003 send MODE_ACTIVE
+		 *   https://kb.meinbergglobal.com/kb/time_sync/timekeeping_on_windows/configuring_w32time_as_ntp_client
+		 * Again, this assumes the client doesn't check the returned mode. */
+		rbufp->recv_buffer[0] = PKT_LI_VN_MODE(0, NTPv1, MODE_CLIENT);
+		stat_proto_total.sys_version1symm++;
+		break;
+	    default:
+		break;
+	  }
+	}
+#endif
 	if(!is_packet_not_low_rot(rbufp)) {
 		stat_proto_total.sys_badlength++;
 		return;
@@ -757,6 +809,7 @@ receive(
 		stat_proto_total.sys_processed++;
 		break;
 	    case MODE_SERVER:  /* Reply to our request to a server. */
+/* FIXME: Where is the shared key case tested? */
 		if ((peer->cfg.flags & FLAG_NTS)
 		     && (!rbufp->extens_present
 #ifndef DISABLE_NTS
@@ -2159,6 +2212,7 @@ peer_xmit(
 
 	peer->sent++;
         peer->outcount++;
+        peer->bogons = 0;
 	peer->throttle += (1 << peer->cfg.minpoll) - 2;
 	DPRINT(1, ("transmit: at %u %s->%s mode %d keyid %08x len %u\n",
 		   current_time, peer->dstadr ?
@@ -2172,7 +2226,7 @@ peer_xmit(
 
 static void
 leap_smear_add_offs(l_fp *t) {
-	t += leap_smear.offset;
+	*t += leap_smear.offset;
 }
 
 #endif	/* ENABLE_LEAP_SMEAR */
@@ -2246,6 +2300,13 @@ fast_xmit(
 		 * the packet transmit time, and eventually to the
 		 * reftime to make sure the reftime isn't later than
 		 * the transmit/receive times.
+		 */
+		/* Note: This returns the same data for all versions.
+		 * Currently, the mode is always Server.
+		 * The version is copied from the request.
+		 * There are minor differences between v3 and v4.
+		 * So far, nobody cares.
+		 * Note: There is significant NTPv1 traffic.  See #707
 		 */
 		xpkt.li_vn_mode = PKT_LI_VN_MODE(sys_vars.sys_leap,
 		    PKT_VERSION(rbufp->pkt.li_vn_mode), MODE_SERVER);
@@ -2366,6 +2427,25 @@ dns_take_server(
 
 	server->cfg.flags &= (unsigned)~FLAG_LOOKUP;
 	server->srcadr = *rmtadr;
+	{ /* HACK: fixup refid to show progress */
+	char tag[REFIDLEN];
+	if (server->cfg.flags & FLAG_NTS) {
+		memcpy(tag, "NTS?", REFIDLEN);
+	} else {
+		memcpy(tag, "DNS?", REFIDLEN);
+	}
+	switch(AF(rmtadr)) {
+	  case AF_INET:
+		tag[REFIDLEN-1] = '4';
+		break;
+	  case AF_INET6:
+		tag[REFIDLEN-1] = '6';
+		break;
+	  default:
+		break;
+	}
+	memcpy(&server->refid, tag, REFIDLEN);
+	}
 	peer_add_hash(server);
 	restrict_source(server);
 
@@ -2781,7 +2861,7 @@ init_proto(const bool verbose)
 #endif
 	get_systime(&dummy);
 	sys_survivors = 0;
-	stat_proto_total.sys_stattime = current_time;
+	sys_stattime = current_time;
 	orphwait = current_time + (unsigned long)sys_orphwait;
 	proto_clr_stats();
 	use_stattime = current_time;
@@ -2904,7 +2984,7 @@ void
 proto_clr_stats(void)
 {
     stat_proto_hourago = stat_proto_total;
-	stat_proto_hourago.sys_stattime = current_time;
+    sys_stattime = current_time;
 }
 
 

@@ -227,6 +227,8 @@ class qm2rcc(Task.Task):
 		code='<!DOCTYPE RCC><RCC version="1.0">\n<qresource>\n%s\n</qresource>\n</RCC>'%txt
 		self.outputs[0].write(code)
 def configure(self):
+	if'COMPILER_CXX'not in self.env:
+		self.fatal('No CXX compiler defined: did you forget to configure compiler_cxx first?')
 	self.find_qt5_binaries()
 	self.set_qt5_libs_dir()
 	self.set_qt5_libs_to_check()
@@ -236,8 +238,6 @@ def configure(self):
 	self.simplify_qt5_libs()
 	if not has_xml:
 		Logs.error('No xml.sax support was found, rcc dependencies will be incomplete!')
-	if'COMPILER_CXX'not in self.env:
-		self.fatal('No CXX compiler defined: did you forget to configure compiler_cxx first?')
 	frag='#include <QMap>\nint main(int argc, char **argv) {QMap<int,int> m;return m.keys().size();}\n'
 	uses='QT5CORE'
 	for flag in[[],'-fPIE','-fPIC','-std=c++11',['-std=c++11','-fPIE'],['-std=c++11','-fPIC']]:
@@ -287,7 +287,7 @@ def find_qt5_binaries(self):
 				qtbin=os.path.join(qtdir,'bin')
 				paths.append(qtbin)
 	cand=None
-	prev_ver=['5','0','0']
+	prev_ver=['0','0','0']
 	for qmk in('qmake-qt5','qmake5','qmake'):
 		try:
 			qmake=self.find_program(qmk,path_list=paths)
@@ -301,7 +301,7 @@ def find_qt5_binaries(self):
 			else:
 				if version:
 					new_ver=version.split('.')
-					if new_ver>prev_ver:
+					if new_ver[0]=='5'and new_ver>prev_ver:
 						cand=qmake
 						prev_ver=new_ver
 	if not cand:
@@ -364,7 +364,7 @@ def set_qt5_libs_dir(self):
 		except Errors.WafError:
 			qtdir=self.cmd_and_log(env.QMAKE+['-query','QT_INSTALL_PREFIX']).strip()
 			qtlibs=os.path.join(qtdir,'lib')
-	self.msg('Found the Qt5 libraries in',qtlibs)
+	self.msg('Found the Qt5 library path',qtlibs)
 	env.QTLIBS=qtlibs
 @conf
 def find_single_qt5_lib(self,name,uselib,qtlibs,qtincludes,force_static):
@@ -474,8 +474,8 @@ def set_qt5_libs_to_check(self):
 			pat=self.env.cxxstlib_PATTERN
 		if Utils.unversioned_sys_platform()=='darwin':
 			pat=r"%s\.framework"
-		re_qt=re.compile(pat%'Qt5?(?P<name>.*)'+'$')
-		for x in dirlst:
+		re_qt=re.compile(pat%'Qt5?(?P<name>\\w+)'+'$')
+		for x in sorted(dirlst):
 			m=re_qt.match(x)
 			if m:
 				self.qt5_vars.append("Qt5%s"%m.group('name'))

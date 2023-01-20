@@ -32,31 +32,35 @@ NTS is a method for using TLS/SSL to authenticate NTP traffic on the net.
 That means that bad guys can't forge packets that will give your
 system bogus time.
 
-The RFC hasn't been published yet (August 2020).  Nothing has changed
-recently, but there may be minor adjustments when it is finalized.
+It is specified in RFC 8915, published in September 2020.
 
-Note: The NTP Pool does not currently support NTS.
+Note: The https://www.ntppool.org/[NTP Pool] does not currently support NTS.
 
 It is strongly suggested that you get a "normal", unauthenticated,
 NTP server working before enabling NTS.  This may reduce the time
 spent debugging.  See the link:quick.adoc[Client Quick Start Guide].
+
+While NTPsec already supported NTS as RFC 8915 still was in the draft
+phase, there unfortunately were incompatible changes introduced shortly
+before it was published. As a result, while NTPsec-versions before 1.1.9
+do in principle support NTS, they cannot talk to any NTS servers or
+clients that implement the final RFC, which includes NTPsec-versions from
+1.1.9 onwards. And NTPsec 1.1.9 requires manually specifying the correct
+port number (4460), because it still defaulted to 123. 1.2.0 is the first
+version of NTPsec to fully support NTS as specified in RFC 8915.
 
 [[client]]
 == NTS Client Configuration
 
 Append the keyword `nts` to the end of your `server` lines.  Do this only for
 servers that speak NTS.  If the server uses a port other than 4460 for NTS key
-exchange, you also need to specify the port number.  As of August 2020, the
+exchange, you also need to specify the port number.  As of August 2022, the
 following should work:
 
-Public NTP servers supporting NTS:
+A https://netfuture.ch/2021/12/transparent-trustworthy-time-with-ntp-and-nts/#server-list[list of public NTS servers]
+is availabe, with more info on NTS.  Look here first.
 
-------------------------------------------------------------
-server time.cloudflare.com nts     # Global, anycast
-server nts.ntp.se:4443 nts         # Sweden
-------------------------------------------------------------
-
-These are development machines, so there may be gaps in availability:
+Listed below are development machines, so there may be gaps in availability, and they may run unreleased versions of NTPsec:
 
 ------------------------------------------------------------
 server ntpmon.dcs1.biz nts	# Singapore

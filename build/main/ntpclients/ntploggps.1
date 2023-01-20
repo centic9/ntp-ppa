@@ -1,143 +1,155 @@
 '\" t
 .\"     Title: ntploggps
-.\"    Author: [see the "AUTHORS" section]
-.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
-.\"      Date: 06/07/2021
+.\"    Author: [see the "AUTHOR(S)" section]
+.\" Generator: Asciidoctor 2.0.12
+.\"      Date: 2022-12-29
 .\"    Manual: NTPsec
-.\"    Source: NTPsec 1.2.1+
+.\"    Source: NTPsec
 .\"  Language: English
 .\"
-.TH "NTPLOGGPS" "1" "06/07/2021" "NTPsec 1\&.2\&.1+" "NTPsec"
-.\" -----------------------------------------------------------------
-.\" * Define some portability stuff
-.\" -----------------------------------------------------------------
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" http://bugs.debian.org/507673
-.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.TH "NTPLOGGPS" "1" "2022-12-29" "NTPsec" "NTPsec"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
-.\" -----------------------------------------------------------------
-.\" * set default formatting
-.\" -----------------------------------------------------------------
-.\" disable hyphenation
+.ss \n[.ss] 0
 .nh
-.\" disable justification (adjust text to left margin only)
 .ad l
-.\" -----------------------------------------------------------------
-.\" * MAIN CONTENT STARTS HERE *
-.\" -----------------------------------------------------------------
+.de URL
+\fI\\$2\fP <\\$1>\\$3
+..
+.als MTO URL
+.if \n[.g] \{\
+.  mso www.tmac
+.  am URL
+.    ad l
+.  .
+.  am MTO
+.    ad l
+.  .
+.  LINKSTYLE blue R < >
+.\}
 .SH "NAME"
 ntploggps \- log gpsd data
 .SH "SYNOPSIS"
 .sp
+.sp
 .nf
 ntploggps [\-h] [\-l LOGFILE] [\-o] [\-w WAIT] [\-v] [\-V]
 .fi
+.br
 .sp
+.if n .RS 4
 .nf
+.fam C
 \-h, \-\-help            show this help message and exit
 \-l LOGFILE, \-\-logfile LOGFILE
                       append log data to LOGFILE instead of stdout
 \-o, \-\-once            log one line, then exit
 \-w WAIT, \-\-wait WAIT  wait WAIT seconds after each log line, default 5
 \-v, \-\-verbose         be verbose
-\-V, \-\-version         show program\*(Aqs version number and exit
+\-V, \-\-version         show program\(aqs version number and exit
+.fam
 .fi
+.if n .RE
 .SH "DESCRIPTION"
 .sp
-ntploggps connects to a local gpsd daemon and logs the number of satellites in use and the Time Dilution of Precision (TDOP)\&. ntploggps can run as any user, no special privileges are required\&.
+ntploggps connects to a local gpsd daemon and logs the number of satellites
+in use and the Time Dilution of Precision (TDOP).  ntploggps can run as
+any user, no special privileges are required.
 .sp
-The default is to write the data to stdout about once every 5 seconds\&. The log file looks like:
+The default is to write the data to stdout about once every 5 seconds.
+The log file looks like:
 .sp
-.if n \{\
-.RS 4
-.\}
+.if n .RS 4
 .nf
+.fam C
 # Time       Device     TDOP     nSat
-1483668619\&.0 /dev/ttyS0 0\&.820000 7
-1483668624\&.0 /dev/ttyS0 0\&.820000 7
-1483668629\&.0 /dev/ttyS0 0\&.820000 7
+1483668619.0 /dev/ttyS0 0.820000 7
+1483668624.0 /dev/ttyS0 0.820000 7
+1483668629.0 /dev/ttyS0 0.820000 7
+.fam
 .fi
-.if n \{\
-.RE
-.\}
+.if n .RE
 .sp
-Time is the POSIX time of when the log line is written\&.
+\f(CRTime\fP is the POSIX time of when the log line is written.
 .sp
-Device is the GPS device the data came from\&.
+\f(CRDevice\fP is the GPS device the data came from.
 .sp
-TDOP is the Time Dilution of Precision as reported by the GPS\&. Some GPS always output a static TDOP\&.
+\f(CRTDOP\fP is the Time Dilution of Precision as reported by the GPS.  Some
+GPS always output a static TDOP.
 .sp
-nSat is the number of satellites in use\&.
+\f(CRnSat\fP is the number of satellites in use.
 .SH "OPTIONS"
-.PP
-\-h, \-\-help
+.sp
+\f(CR\-h, \-\-help\fP
 .RS 4
-Displays usage information and exits\&.
+Displays usage information and exits.
 .RE
-.PP
-\-l LOGFILE, \-\-logfile LOGFILE
+.sp
+\f(CR\-l LOGFILE, \-\-logfile LOGFILE\fP
 .RS 4
 Append log data to LOGFILE instead of stdout
 .RE
-.PP
-\-o, \-\-once
+.sp
+\f(CR\-o, \-\-once\fP
 .RS 4
-Log one line, then exit\&.
+Log one line, then exit.
 .RE
-.PP
-\-v, \-\-verbose
+.sp
+\f(CR\-v, \-\-verbose\fP
 .RS 4
 Be verbose
 .RE
-.PP
-\-w WAIT, \-\-wait WAIT
+.sp
+\f(CR\-w WAIT, \-\-wait WAIT\fP
 .RS 4
-Wait WAIT seconds after each log line\&. The default is 5 seconds\&. This is just the minimum wait time\&. gpsd may be reporting data at a much slower interval\&.
+Wait WAIT seconds after each log line.  The default is 5 seconds.  This
+is just the minimum wait time.  gpsd may be reporting data at a much
+slower interval.
 .RE
-.PP
-\-V, \-\-version
+.sp
+\f(CR\-V, \-\-version\fP
 .RS 4
 show program\(cqs version number and exit
 .RE
 .SH "USAGE"
-.PP
-ntploggps
+.sp
+\f(CRntploggps\fP
 .RS 4
-This the simplest use of this program\&. It can be used to check the status of the local gpsd daemon\&.
+This the simplest use of this program. It can be used to check the
+status of the local gpsd daemon.
 .RE
-.PP
-ntploggps \-l /var/log/ntpstats/gpsd \-w 60 &
+.sp
+\f(CRntploggps \-l /var/log/ntpstats/gpsd \-w 60\fP &
 .RS 4
-This will continuously log the gpsd data in the background to the file /var/log/ntpstats/gpsd\&. Only log every 60 seconds\&.
+This will continuously log the gpsd data in the background to the file
+/var/log/ntpstats/gpsd.  Only log every 60 seconds.
 .RE
 .SH "EXIT STATUS"
 .sp
 One of the following exit values will be returned:
-.PP
+.sp
 0 (EXIT_SUCCESS)
 .RS 4
-Successful program execution\&.
+Successful program execution.
 .RE
-.PP
+.sp
 1 (EXIT_FAILURE)
 .RS 4
-The operation failed or the command syntax was not valid\&.
+The operation failed or the command syntax was not valid.
 .RE
 .SH "AUTHORS"
 .sp
-Gary E\&. Miller
+Gary E. Miller
 .SH "EXIT STATUS"
 .sp
 One of the following exit values will be returned:
-.PP
+.sp
 0 (EXIT_SUCCESS)
 .RS 4
-Successful program execution\&.
+Successful program execution.
 .RE
-.PP
+.sp
 1 (EXIT_FAILURE)
 .RS 4
-The operation failed or the command syntax was not valid\&.
+The operation failed or the command syntax was not valid.
 .RE

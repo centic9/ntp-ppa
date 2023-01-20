@@ -1,99 +1,114 @@
 '\" t
 .\"     Title: ntptrace
-.\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
-.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
-.\"      Date: 06/07/2021
+.\"    Author: [see the "AUTHOR(S)" section]
+.\" Generator: Asciidoctor 2.0.12
+.\"      Date: 2022-12-29
 .\"    Manual: NTPsec
-.\"    Source: NTPsec 1.2.1+
+.\"    Source: NTPsec
 .\"  Language: English
 .\"
-.TH "NTPTRACE" "1" "06/07/2021" "NTPsec 1\&.2\&.1+" "NTPsec"
-.\" -----------------------------------------------------------------
-.\" * Define some portability stuff
-.\" -----------------------------------------------------------------
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.\" http://bugs.debian.org/507673
-.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
-.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.TH "NTPTRACE" "1" "2022-12-29" "NTPsec" "NTPsec"
 .ie \n(.g .ds Aq \(aq
 .el       .ds Aq '
-.\" -----------------------------------------------------------------
-.\" * set default formatting
-.\" -----------------------------------------------------------------
-.\" disable hyphenation
+.ss \n[.ss] 0
 .nh
-.\" disable justification (adjust text to left margin only)
 .ad l
-.\" -----------------------------------------------------------------
-.\" * MAIN CONTENT STARTS HERE *
-.\" -----------------------------------------------------------------
+.de URL
+\fI\\$2\fP <\\$1>\\$3
+..
+.als MTO URL
+.if \n[.g] \{\
+.  mso www.tmac
+.  am URL
+.    ad l
+.  .
+.  am MTO
+.    ad l
+.  .
+.  LINKSTYLE blue R < >
+.\}
 .SH "NAME"
 ntptrace \- trace peers of an NTP server
 .SH "SYNOPSIS"
 .sp
+.sp
 .nf
-ntptrace [\-V | \-\-version] [\-n |\-\-numeric]
-    [\-m \fInumber\fR | \-\-max\-hosts=\fInumber\fR]
-    [\-r \fIhost\fR | \-\-host=\fIremote\fR]
-    \fIhostname\fR
+\f(CRntptrace\fP [\f(CR\-V\fP | \f(CR\-\-version\fP] [\f(CR\-n\fP |\f(CR\-\-numeric\fP]
+    [\f(CR\-m\fP \fInumber\fP | \f(CR\-\-max\-hosts=\fP\fInumber\fP]
+    [\f(CR\-r\fP \fIhost\fP | \f(CR\-\-host=\fP\fIremote\fP]
+    \fIhostname\fP
 .fi
+.br
 .SH "DESCRIPTION"
 .sp
-ntptrace is a python script that uses the ntpq utility program to follow the chain of NTP servers from a given host back to the primary time source\&.
+\f(CRntptrace\fP is a python script that uses the ntpq utility program to
+follow the chain of NTP servers from a given host back to the primary
+time source.
 .sp
-For ntptrace to work properly, each of these servers must implement the NTP Control and Monitoring Protocol specified in RFC 1305 and enable NTP Mode 6 control packets\&. Nowadays it is usual for public timeservers to disable Mode 6 queries, so this script is unlikely to be very useful unless you have a collection of specially\-configured timeservers on your LAN\&.
+For \f(CRntptrace\fP to work properly, each of these servers must
+implement the NTP Control and Monitoring Protocol specified in RFC 1305
+and enable NTP Mode 6 control packets.  Nowadays it is usual for
+public timeservers to disable Mode 6 queries, so this script is
+unlikely to be very useful unless you have a collection of
+specially\-configured timeservers on your LAN.
 .sp
-If given no arguments, ntptrace starts with localhost\&. Here is an example of the output from ntptrace:
+If given no arguments, ntptrace starts with localhost. Here is an
+example of the output from ntptrace:
 .sp
-.if n \{\
-.RS 4
-.\}
+.if n .RS 4
 .nf
+.fam C
 % ntptrace
-localhost: stratum 4, offset 0\&.0019529, synch distance 0\&.144135
-server2ozo\&.com: stratum 2, offset 0\&.0124263, synch distance 0\&.115784
-usndh\&.edu: stratum 1, offset 0\&.0019298, synch distance 0\&.011993, refid \*(AqGPS\*(Aq
+localhost: stratum 4, offset 0.0019529, synch distance 0.144135
+server2ozo.com: stratum 2, offset 0.0124263, synch distance 0.115784
+usndh.edu: stratum 1, offset 0.0019298, synch distance 0.011993, refid \(aqGPS\(aq
+.fam
 .fi
-.if n \{\
-.RE
-.\}
+.if n .RE
 .sp
-On each line, the fields are (left to right): the host name, the host stratum, the time offset between that host and the local host (as measured by ntptrace; this is why it is not always zero for "localhost"), the host synchronization distance, and (only for stratum\-1 servers) the reference clock ID\&. All times are given in seconds\&. Note that the stratum is the server hop count to the primary source, while the synchronization distance is the estimated error relative to the primary source\&. These terms are precisely defined in RFC 1305\&.
+On each line, the fields are (left to right): the host name, the host
+stratum, the time offset between that host and the local host (as
+measured by \f(CRntptrace\fP; this is why it is not always zero for
+"localhost"), the host synchronization distance, and (only for stratum\-1
+servers) the reference clock ID. All times are given in seconds. Note
+that the stratum is the server hop count to the primary source, while
+the synchronization distance is the estimated error relative to the
+primary source. These terms are precisely defined in RFC 1305.
 .SH "OPTIONS"
-.PP
-\-n, \-\-numeric
-.RS 4
-Print IP addresses instead of hostnames\&.
 .sp
-Output hosts as dotted\-quad numeric format rather than converting to the canonical host names\&.
-.RE
-.PP
-\-m number, \-\-max\-hosts=\fInumber\fR
+\f(CR\-n\fP, \f(CR\-\-numeric\fP
 .RS 4
-Maximum number of peers to trace\&. This option takes an integer number as its argument\&. The default
-\fInumber\fR
-for this option is 99\&.
+Print IP addresses instead of hostnames.
+.sp
+Output hosts as dotted\-quad numeric format rather than converting to
+the canonical host names.
 .RE
-.PP
-\-r string, \-\-host=\fIstring\fR
+.sp
+\f(CR\-m\fP number, \f(CR\-\-max\-hosts\fP=\fInumber\fP
 .RS 4
-Trace a single remote host\&.
+Maximum number of peers to trace. This option takes an integer number
+as its argument. The default \fInumber\fP for this option is 99.
 .RE
-.PP
-\-V, \-\-version
+.sp
+\f(CR\-r\fP string, \f(CR\-\-host\fP=\fIstring\fP
 .RS 4
-Print the version string and exit\&.
+Trace a single remote host.
+.RE
+.sp
+\f(CR\-V\fP, \f(CR\-\-version\fP
+.RS 4
+Print the version string and exit.
 .RE
 .SH "EXIT STATUS"
 .sp
 One of the following exit values will be returned:
-.PP
+.sp
 0 (EXIT_SUCCESS)
 .RS 4
-Successful program execution\&.
+Successful program execution.
 .RE
-.PP
+.sp
 1 (EXIT_FAILURE)
 .RS 4
-The operation failed or the invocation was not valid\&.
+The operation failed or the invocation was not valid.
 .RE

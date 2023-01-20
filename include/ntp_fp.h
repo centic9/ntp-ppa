@@ -76,12 +76,6 @@ static inline l_fp lfpinit_u(uint32_t sec, uint32_t frac) {
 }
 
 /*
- * Fractional precision (of an l_fp) is actually the number of
- * bits in an int32_t/uint32_t.
- */
-#define	FRACTION_PREC	(32)
-
-/*
  * The second fixed point format is 32 bits, with the decimal between
  * bits 15 and 16.  There is a signed version (s_fp) and an unsigned
  * version (u_fp).  This is used to represent synchronizing distance
@@ -90,7 +84,7 @@ static inline l_fp lfpinit_u(uint32_t sec, uint32_t frac) {
  * dispersion values (in local byte order).  In network byte order
  * it looks like:
  *
- *    0               1               2               3
+ *    0                   1                   2                   3
  *    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *   |		  Integer Part	     |	   Fraction Part	     |
@@ -112,8 +106,9 @@ typedef struct {
  * Operations on the long fp format.  The only reason these aren't
  * native operations is to be independent of whether the l_fp
  * type is signed or unsigned.
+ * Can l_fp ever be signed??
  */
-#define	L_NEG(v)	(v) = (l_fp)(-(int64_t)(v))
+#define	L_NEG(v)	(v) = -(v)
 #define	L_ISNEG(v)	M_ISNEG(lfpuint(v))
 #define	L_ISGT(a, b)	((int64_t)(a) > (int64_t)(b))
 #define	L_ISGTU(a, b)	((a) > (b))
@@ -156,7 +151,6 @@ extern	char *	mfptoa		(l_fp, short);
 extern	char *	mfptoms		(l_fp, short);
 
 extern	bool	hextolfp	(const char *, l_fp *);
-extern	void	set_prettydate_pivot(time_t);
 extern	char *	prettydate	(const l_fp);
 extern	char *	rfc3339date	(const l_fp);
 extern	char *	rfc3339time     (time_t);
@@ -165,7 +159,7 @@ extern	char *	rfc3339time     (time_t);
 extern	void	set_sys_fuzz	(double);
 #endif
 extern	void	get_systime	(l_fp *);
-extern	bool	step_systime	(doubletime_t, int (*settime)(struct timespec *));
+extern	bool	step_systime	(doubletime_t);
 extern	bool	adj_systime	(double, int (*adjtime)(const struct timeval *, struct timeval *));
 
 #define	lfptoa(fpv, ndec)	mfptoa((fpv), (ndec))

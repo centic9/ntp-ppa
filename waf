@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 # encoding: latin-1
 # Thomas Nagy, 2005-2018
 #
@@ -32,13 +32,13 @@ POSSIBILITY OF SUCH DAMAGE.
 
 import os, sys, inspect
 
-VERSION="2.0.20"
-REVISION="36f5354d605298f6a89c09e0c7ef6c1d"
-GIT="f1d78d12462b1fddda21584dedc83a1d269f0970"
+VERSION="2.0.24"
+REVISION="c88b74123ce8b9d1a27999f7cf96dff0"
+GIT="c140c3f538c4a21f3d88bab9403b42c696759dcb"
 INSTALL=''
-C1='#2'
-C2='#,'
-C3='#%'
+C1='#/'
+C2='#*'
+C3='#('
 cwd = os.getcwd()
 join = os.path.join
 

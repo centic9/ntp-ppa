@@ -77,6 +77,7 @@ static int do_average(void) {
 		sum += random();
 	}
 	clock_gettime(CLOCK_REALTIME, &stop);
+	(void)sum;	/* Squash unused warning */
 
 	/* Beware of overflowing 32 bits. */
 	sec = (stop.tv_sec-start.tv_sec);
@@ -127,7 +128,11 @@ static int do_avg_priv(unsigned int bytes) {
 
 	clock_gettime(CLOCK_REALTIME, &start);
 	for (int i = 0; i < BATCHSIZE; i++) {
+#ifdef LIBRESSL_VERSION_NUMBER
+            err += RAND_bytes((unsigned char *)&rnd, bytes);
+#else
             err += RAND_priv_bytes((unsigned char *)&rnd, bytes);
+#endif
 	}
 	clock_gettime(CLOCK_REALTIME, &stop);
 
@@ -160,7 +165,7 @@ static int do_fastest(void) {
 			fastest = nanos;
 		}
 	}
-
+	(void)sum;	/* Squash unused warning */
 	return fastest;
 }
 
@@ -209,7 +214,11 @@ static int do_fast_priv(unsigned bytes) {
 
 	for (int i = 0; i < BATCHSIZE; i++) {
                 clock_gettime(CLOCK_REALTIME, &start);
+#ifdef LIBRESSL_VERSION_NUMBER
+                err += RAND_bytes((unsigned char *)&rnd, bytes);
+#else
                 err += RAND_priv_bytes((unsigned char *)&rnd, bytes);
+#endif
 		clock_gettime(CLOCK_REALTIME, &stop);
 		sec = (stop.tv_sec-start.tv_sec);
 		nanos = sec*BILLION + (stop.tv_nsec-start.tv_nsec);
