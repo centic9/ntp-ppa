@@ -1,0 +1,15 @@
+Index: git/ntpd/ntpd.c
+===================================================================
+--- git.orig/ntpd/ntpd.c	2023-01-20 07:52:49.906695327 +0100
++++ git/ntpd/ntpd.c	2023-01-20 07:55:41.219267334 +0100
+@@ -1306,8 +1306,8 @@
+ 			char *captext;
+ 			
+ 			captext = (0 != interface_interval)
+-				      ? "cap_sys_time,cap_net_bind_service=pe"
+-				      : "cap_sys_time=pe";
++				      ? "cap_ipc_lock,cap_sys_time,cap_net_bind_service=pe"
++				      : "cap_ipc_lock,cap_sys_time=pe";
+ 			caps = cap_from_text(captext);
+ 			if (!caps) {
+ 				msyslog(LOG_ERR,

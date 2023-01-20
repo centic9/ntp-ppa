@@ -4,3 +4,5 @@
 build
 attic/clock
 .DS_Store
+.pc/
+debian/files
