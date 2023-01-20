@@ -1,3 +1,9 @@
+ntp (1:4.2.8p15+dfsg-1ubuntu3~ppa2) jammy; urgency=medium
+
+  * Revert as ntpd fails to start up now.
+
+ -- Dominik Stadler (Ubuntu key) <dominik.stadler@gmx.at>  Fri, 20 Jan 2023 09:09:04 +0100
+
 ntp (1:4.2.8p15+dfsg-1ubuntu3~ppa1) jammy; urgency=medium
 
   * Try to apply patch for file-handle-leak
