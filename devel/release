@@ -1,0 +1,56 @@
+#! /bin/sh
+# Generate commands to cut an ntpsec release.
+#
+# VERSION must contain the correct release number.
+
+# KEY=B48237761A2690222C995F445A22E330161C3978
+KEY=E57235D22764129FA4F2F4D17F52608ED0E49D76	# Release manager's GPG key ID
+DST=markatwood@service1.ntpsec.org:/usr/local/jail/ftp.ntpsec.org/data/ftp/pub/releases/
+
+# No user-serviceable parts below this line
+
+V=`cat ../VERSION`
+UV=`cat ../VERSION | tr '.' '_'`
+
+TAR=ntpsec-${V}.tar.gz
+
+cat <<EOF
+# Pipe this to sh to actually perform a release.
+
+set -e		# Bail out if the tarball build fails
+set -x		# Echo commands
+
+./make-tarball	# Build and test the tarball; bail out if that fails
+
+echo V is ${V}
+echo UV is ${UV}
+echo KEY is ${KEY}
+echo DST is ${DST}
+echo TAR is ${TAR}
+
+# Commit pending modifications to the repository.
+git commit -Ssecurity@ntpsec.org -a -s -m 'version ${V}'
+
+# Tag the new head version
+git tag -u ${KEY} -m 'version ${V}' NTPsec_${UV}
+
+# Push the repository upstream.
+git push  
+git push --tags
+
+# Generate GPG detached signature of the release tarball.
+gpg -u ${KEY} -a --output ${TAR}.asc --detach-sign ${TAR}
+
+# Generate sha256sum file for the release tarball.
+shasum -a 256 ${TAR} >${TAR}.sum
+
+# GPG sign that sha256sum file.
+gpg -u ${KEY} -a --output ${TAR}.sum.asc --clearsign ${TAR}.sum
+
+# Copy the release tarball, GPG detached signature of the release
+# tarball, and the signed sha256sum file to the ftp artifact server.
+scp ntpsec-${V}.tar* ${DST}
+
+EOF
+
+# end

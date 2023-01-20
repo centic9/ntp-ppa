@@ -1,32 +1,38 @@
 /*
  * dolfptoa - do the grunge work of converting an l_fp number to decimal
+ *
+ * Warning: this conversion is lossy in the low-order bits of the fractional
+ * part.  It's good enough for statistics and logging, but do not expect
+ * it to round-trip through atolfp(). 1444359386.1798776096, for example, may
+ * dump as ...095 or ...097.
  */
-#include <config.h>
+#include "config.h"
 #include <stdio.h>
+#include <string.h>
 
 #include "ntp_fp.h"
 #include "lib_strbuf.h"
-#include "ntp_string.h"
 #include "ntp_stdlib.h"
 
 char *
 dolfptoa(
-	u_int32 fpi,
-	u_int32 fpv,
-	char sign,
+	l_fp lfp,
+	bool neg,
 	short ndec,
-	int msec
+	bool msec
 	)
 {
-	u_char *cp, *cpend, *cpdec;
+	uint32_t fpi = lfpuint(lfp);
+	uint32_t fpv = lfpfrac(lfp);
+	uint8_t *cp, *cpend, *cpdec;
 	int dec;
-	u_char cbuf[24];
+	uint8_t cbuf[24];
 	char *buf, *bp;
 
 	/*
 	 * Get a string buffer before starting
 	 */
-	LIB_GETBUF(buf);
+	buf = lib_getbuf();
 
 	/*
 	 * Zero the character buffer
@@ -40,14 +46,18 @@ dolfptoa(
 	 * including a possible rounding from the fractional part.
 	 */
 	cp = cpend = cpdec = &cbuf[10];
-	for (dec = (int)(cp - cbuf); dec > 0 && fpi != 0; dec--) {
+	for (dec = cp - cbuf; dec > 0 && fpi != 0; dec--) {
 		/* can add another digit */
-		u_int32 digit;
-		
+		uint32_t digit;
+
 		digit  = fpi;
 		fpi   /= 10U;
+		/*
+		 * This should be able to be replaced by [digit -= fpi * 10].
+		 * It is being left as is at the moment for subtle bug avoidance.
+		 */
 		digit -= (fpi << 3) + (fpi << 1); /* i*10 */
-		*--cp  = (u_char)digit;
+		*--cp  = (uint8_t)digit;
 	}
 
 	/*
@@ -55,21 +65,36 @@ dolfptoa(
 	 * determine the number of decimal places.
 	 */
 	dec = ndec;
-	if (dec < 0)
+	if (dec < 0) {
 		dec = 0;
+	}
 	if (msec) {
 		dec   += 3;
 		cpdec += 3;
 	}
-	if ((size_t)dec > sizeof(cbuf) - (cpend - cbuf))
-		dec = (int)(sizeof(cbuf) - (cpend - cbuf));
-	
+	if (dec > (long)sizeof(cbuf) - (cpend - cbuf))
+		dec = (long)sizeof(cbuf) - (cpend - cbuf);
+
 	/*
 	 * If there's a fraction to deal with, do so.
 	 */
 	for (/*NOP*/;  dec > 0 && fpv != 0;  dec--)  {
-		u_int32 digit, tmph, tmpl;
-		
+		uint32_t digit, tmph, tmpl;
+
+		/* FIXME - get rid of this ugly kludge! */
+#define M_ADD(r_i, r_f, a_i, a_f)	/* r += a */ \
+		do { \
+			uint32_t add_t = (r_f); \
+			(r_f) += (a_f); \
+			(r_i) += (a_i) + ((uint32_t)(r_f) < add_t); \
+		} while (false)
+
+#define	M_LSHIFT(v_i, v_f)		/* v <<= 1 */ \
+		do { \
+			(v_i) = ((uint32_t)(v_i) << 1) | ((uint32_t)(v_f) >> 31);	\
+			(v_f) = ((uint32_t)(v_f) << 1); \
+		} while (false)
+
 		/*
 		 * The scheme here is to multiply the fraction
 		 * (0.1234...) by ten.  This moves a junk of BCD into
@@ -83,27 +108,29 @@ dolfptoa(
 		M_LSHIFT(digit, fpv);
 		M_LSHIFT(digit, fpv);
 		M_ADD(digit, fpv, tmph, tmpl);
-		*cpend++ = (u_char)digit;
+#undef M_ADD
+#undef M_LSHIFT
+		*cpend++ = (uint8_t)digit;
 	}
 
 	/* decide whether to round or simply extend by zeros */
 	if (dec > 0) {
 		/* only '0' digits left -- just reposition end */
-		cpend += dec; 
+		cpend += dec;
 	} else {
 		/* some bits remain in 'fpv'; do round */
-		u_char *tp    = cpend;
+		uint8_t *tp    = cpend;
 		int     carry = ((fpv & 0x80000000) != 0);
 
-		for (dec = (int)(tp - cbuf);  carry && dec > 0;  dec--) {
+		for (dec = tp - cbuf;  carry && dec > 0;  dec--) {
 			*--tp += 1;
 			if (*tp == 10)
 				*tp = 0;
-			else 
-				carry = FALSE;
+			else
+				carry = false;
 		}
 
-		if (tp < cp) /* rounding from 999 to 1000 or similiar? */
+		if (tp < cp) /* rounding from 999 to 1000 or similar? */
 			cp = tp;
 	}
 
@@ -120,8 +147,8 @@ dolfptoa(
 		cp = cpdec - 1;
 
 	bp = buf;
-	if (sign)
-		*bp++ = sign;
+	if (neg)
+		*bp++ = '-';
 	while (cp < cpend) {
 		if (cp == cpdec)
 			*bp++ = '.';
@@ -138,37 +165,33 @@ dolfptoa(
 
 char *
 mfptoa(
-	u_int32	fpi,
-	u_int32	fpf,
+	l_fp	lfp,
 	short	ndec
 	)
 {
-	int	isneg;
+	bool	isneg = L_ISNEG(lfp);
 
-	isneg = M_ISNEG(fpi);
 	if (isneg) {
-		M_NEG(fpi, fpf);
+		L_NEG(lfp);
 	}
 
-	return dolfptoa(fpi, fpf, (isneg?'-':'+'), ndec, FALSE);
+	return dolfptoa(lfp, isneg, ndec, false);
 }
 
 
 char *
 mfptoms(
-	u_int32	fpi,
-	u_int32	fpf,
+	l_fp	lfp,
 	short	ndec
 	)
 {
-	int	isneg;
+	bool	isneg = L_ISNEG(lfp);
 
-	isneg = M_ISNEG(fpi);
 	if (isneg) {
-		M_NEG(fpi, fpf);
+		L_NEG(lfp);
 	}
 
-	return dolfptoa(fpi, fpf, (isneg?'-':'+'), ndec, TRUE);
+	return dolfptoa(lfp, isneg, ndec, true);
 }
 
 

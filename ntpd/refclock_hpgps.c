@@ -1,22 +1,19 @@
 /*
- * refclock_hpgps - clock driver for HP 58503A GPS receiver
+ * refclock_hpgps - clock driver for HP GPS receivers
  */
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
-#if defined(REFCLOCK) && defined(CLOCK_HPGPS)
-
+#include "config.h"
+#include "ntp.h"
 #include "ntpd.h"
 #include "ntp_io.h"
+#include "ntp_calendar.h"
 #include "ntp_refclock.h"
 #include "ntp_stdlib.h"
 
 #include <stdio.h>
 #include <ctype.h>
 
-/* Version 0.1 April  1, 1995  
+/* Version 0.1 April  1, 1995
  *         0.2 April 25, 1995
  *             tolerant of missing timecode response prompt and sends
  *             clear status if prompt indicates error;
@@ -44,7 +41,7 @@
  * The same driver also handles the HP Z3801A which is available surplus
  * from the cell phone industry.  It's popular with hams.
  * It needs a different line setup: 19200 baud, 7 data bits, odd parity
- * That is selected by adding "mode 1" to the server line in ntp.conf
+ * That is selected by adding "subtype 1" to the server line in ntp.conf
  * HP Z3801A code from Jeff Mock added by Hal Murray, Sep 2005
  *
  *
@@ -56,7 +53,7 @@
  * the receiver. The receiver responds with a timecode string of ASCII
  * printing characters, followed by a <cr><lf>, followed by a prompt string
  * issued by the receiver, in the following format:
- * T#yyyymmddhhmmssMFLRVcc<cr><lf>scpi > 
+ * T#yyyymmddhhmmssMFLRVcc<cr><lf>scpi >
  *
  * The driver processes the response at the <cr> and <lf>, so what the
  * driver sees is the prompt from the previous poll, followed by this
@@ -72,7 +69,7 @@
  * so the first approximation for fudge time1 is nominally -0.955 seconds.
  * This number probably needs adjusting for each machine / OS type, so far:
  *  -0.955000 on an HP 9000 Model 712/80 HP-UX 9.05
- *  -0.953175 on an HP 9000 Model 370    HP-UX 9.10 
+ *  -0.953175 on an HP 9000 Model 370    HP-UX 9.10
  *
  * This receiver also provides a 1PPS signal, but I haven't figured out
  * how to deal with any of the CLK or PPS stuff yet. Stay tuned.
@@ -80,10 +77,8 @@
  */
 
 /*
- * Fudge Factors
- *
- * Fudge time1 is used to accomodate the timecode serial interface adjustment.
- * Fudge flag4 can be set to request a receiver status screen summary, which
+ * Fudge time1 is used to accommodate the timecode serial interface adjustment.
+ * Option flag4 can be set to request a receiver status screen summary, which
  * is recorded in the clockstats file.
  */
 
@@ -91,11 +86,12 @@
  * Interface definitions
  */
 #define	DEVICE		"/dev/hpgps%d" /* device name and unit */
-#define	SPEED232	B9600	/* uart speed (9600 baud) */
-#define	SPEED232Z	B19200	/* uart speed (19200 baud) */
-#define	PRECISION	(-10)	/* precision assumed (about 1 ms) */
-#define	REFID		"GPS\0"	/*  reference ID */
-#define	DESCRIPTION	"HP 58503A GPS Time and Frequency Reference Receiver" 
+#define	SPEED232	B9600		/* uart speed (9600 baud) */
+#define	SPEED232Z	B19200		/* uart speed (19200 baud) */
+#define	PRECISION	(-10)		/* precision assumed (about 1 ms) */
+#define	REFID		"GPS\0"		/* reference ID */
+#define NAME		"HPGPS"		/* shortname */
+#define	DESCRIPTION	"HP GPS Time and Frequency Reference Receiver"
 
 #define SMAX            23*80+1 /* for :SYSTEM:PRINT? status screen response */
 
@@ -125,8 +121,7 @@ struct hpgpsunit {
 /*
  * Function prototypes
  */
-static	int	hpgps_start	(int, struct peer *);
-static	void	hpgps_shutdown	(int, struct peer *);
+static	bool	hpgps_start	(int, struct peer *);
 static	void	hpgps_receive	(struct recvbuf *);
 static	void	hpgps_poll	(int, struct peer *);
 
@@ -134,29 +129,30 @@ static	void	hpgps_poll	(int, struct peer *);
  * Transfer vector
  */
 struct	refclock refclock_hpgps = {
+	NAME,			/* basename of driver */
 	hpgps_start,		/* start up driver */
-	hpgps_shutdown,		/* shut down driver */
+	NULL,			/* shut down driver in the standard way */
 	hpgps_poll,		/* transmit poll message */
-	noentry,		/* not used (old hpgps_control) */
-	noentry,		/* initialize driver */
-	noentry,		/* not used (old hpgps_buginfo) */
-	NOFLAGS			/* not used */
+	NULL,			/* not used (old hpgps_control) */
+	NULL,			/* initialize driver */
+	NULL			/* timer - not used */
 };
 
 
 /*
  * hpgps_start - open the devices and initialize data for processing
  */
-static int
+static bool
 hpgps_start(
 	int unit,
 	struct peer *peer
 	)
 {
-	register struct hpgpsunit *up;
+	struct hpgpsunit *up;
 	struct refclockproc *pp;
 	int fd;
-	int speed, ldisc;
+	unsigned int ldisc;
+	unsigned int speed;
 	char device[20];
 
 	/*
@@ -164,16 +160,18 @@ hpgps_start(
 	 * Default is HP 58503A, mode arg selects HP Z3801A
 	 */
 	snprintf(device, sizeof(device), DEVICE, unit);
-	ldisc = LDISC_CLK;
+	ldisc = LDISC_STD;
 	speed = SPEED232;
-	/* mode parameter to server config line shares ttl slot */
-	if (1 == peer->ttl) {
+	/* subtype parameter to server config line shares mode slot */
+	if (1 == peer->cfg.mode) {
 		ldisc |= LDISC_7O1;
 		speed = SPEED232Z;
 	}
-	fd = refclock_open(device, speed, ldisc);
+	fd = refclock_open(peer->cfg.path ? peer->cfg.path : device,
+			   peer->cfg.baud ? peer->cfg.baud : speed, ldisc);
 	if (fd <= 0)
-		return (0);
+		/* coverity[leaked_handle] */
+		return false;
 	/*
 	 * Allocate and initialize unit structure
 	 */
@@ -187,7 +185,7 @@ hpgps_start(
 		close(fd);
 		pp->io.fd = -1;
 		free(up);
-		return (0);
+		return false;
 	}
 	pp->unitptr = up;
 
@@ -195,8 +193,10 @@ hpgps_start(
 	 * Initialize miscellaneous variables
 	 */
 	peer->precision = PRECISION;
+	pp->clockname = NAME;
 	pp->clockdesc = DESCRIPTION;
-	memcpy((char *)&pp->refid, REFID, 4);
+	memcpy((char *)&pp->refid, REFID, REFIDLEN);
+	peer->sstclktype = CTL_SST_TS_UHF;
 	up->tzhour = 0;
 	up->tzminute = 0;
 
@@ -212,28 +212,7 @@ hpgps_start(
 	if (write(pp->io.fd, "*IDN?\r:PTIME:TZONE?\r", 20) != 20)
 	    refclock_report(peer, CEVNT_FAULT);
 
-	return (1);
-}
-
-
-/*
- * hpgps_shutdown - shut down the clock
- */
-static void
-hpgps_shutdown(
-	int unit,
-	struct peer *peer
-	)
-{
-	register struct hpgpsunit *up;
-	struct refclockproc *pp;
-
-	pp = peer->procptr;
-	up = pp->unitptr;
-	if (-1 != pp->io.fd)
-		io_closeclock(&pp->io);
-	if (NULL != up)
-		free(up);
+	return true;
 }
 
 
@@ -245,7 +224,7 @@ hpgps_receive(
 	struct recvbuf *rbufp
 	)
 {
-	register struct hpgpsunit *up;
+	struct hpgpsunit *up;
 	struct refclockproc *pp;
 	struct peer *peer;
 	l_fp trtmp;
@@ -272,11 +251,8 @@ hpgps_receive(
 	*pp->a_lastcode = '\0';
 	pp->lencode = refclock_gtlin(rbufp, pp->a_lastcode, BMAX, &trtmp);
 
-#ifdef DEBUG
-	if (debug)
-	    printf("hpgps: lencode: %d timecode:%s\n",
-		   pp->lencode, pp->a_lastcode);
-#endif
+	DPRINT(1, ("hpgps: lencode: %d timecode:%s\n",
+		   pp->lencode, pp->a_lastcode));
 
 	/*
 	 * If there's no characters in the reply, we can quit now
@@ -301,18 +277,19 @@ hpgps_receive(
 	if (up->linecnt-- > 0) {
 		if ((int)(pp->lencode + 2) <= (SMAX - (up->lastptr - up->statscrn))) {
 			*up->lastptr++ = '\n';
-			memcpy(up->lastptr, pp->a_lastcode, pp->lencode);
+			memcpy(up->lastptr, pp->a_lastcode, (size_t)pp->lencode);
 			up->lastptr += pp->lencode;
 		}
-		if (up->linecnt == 0) 
-		    record_clock_stats(&peer->srcadr, up->statscrn);
-               
+		if (up->linecnt == 0) {
+		    record_clock_stats(peer, up->statscrn);
+		}
+
 		return;
 	}
 
-	record_clock_stats(&peer->srcadr, pp->a_lastcode);
+	record_clock_stats(peer, pp->a_lastcode);
 	pp->lastrec = trtmp;
-            
+
 	up->lastptr = up->statscrn;
 	*up->lastptr = '\0';
 	up->pollcnt = 2;
@@ -336,36 +313,33 @@ hpgps_receive(
 
 	strlcpy(prompt, pp->a_lastcode, sizeof(prompt));
 	tcp = strrchr(pp->a_lastcode,'>');
-	if (tcp == NULL)
-	    tcp = pp->a_lastcode; 
-	else
+	if (tcp == NULL) {
+	    tcp = pp->a_lastcode;
+	} else {
 	    tcp++;
+	}
 	prompt[tcp - pp->a_lastcode] = '\0';
-	while ((*tcp == ' ') || (*tcp == '\t')) tcp++;
+	while ((*tcp == ' ') || (*tcp == '\t')) {
+	    tcp++;
+	}
 
 	/*
 	 * deal with an error indication in the prompt here
 	 */
 	if (strrchr(prompt,'E') > strrchr(prompt,'s')){
-#ifdef DEBUG
-		if (debug)
-		    printf("hpgps: error indicated in prompt: %s\n", prompt);
-#endif
+	        DPRINT(1, ("hpgps: error indicated in prompt: %s\n", prompt));
 		if (write(pp->io.fd, "*CLS\r\r", 6) != 6)
 		    refclock_report(peer, CEVNT_FAULT);
 	}
 
 	/*
-	 * make sure we got a timezone or timecode format and 
+	 * make sure we got a timezone or timecode format and
 	 * then process accordingly
 	 */
 	m = sscanf(tcp,"%c%c", &tcodechar1, &tcodechar2);
 
 	if (m != 2){
-#ifdef DEBUG
-		if (debug)
-		    printf("hpgps: no format indicator\n");
-#endif
+	        DPRINT(1, ("hpgps: no format indicator\n"));
 		refclock_report(peer, CEVNT_BADREPLY);
 		return;
 	}
@@ -376,20 +350,14 @@ hpgps_receive(
 	    case '-':
 		m = sscanf(tcp,"%d,%d", &up->tzhour, &up->tzminute);
 		if (m != MTZONE) {
-#ifdef DEBUG
-			if (debug)
-			    printf("hpgps: only %d fields recognized in timezone\n", m);
-#endif
+		        DPRINT(1, ("hpgps: only %d fields recognized in timezone\n", m));
 			refclock_report(peer, CEVNT_BADREPLY);
 			return;
 		}
-		if ((up->tzhour < -12) || (up->tzhour > 13) || 
+		if ((up->tzhour < -12) || (up->tzhour > 13) ||
 		    (up->tzminute < -59) || (up->tzminute > 59)){
-#ifdef DEBUG
-			if (debug)
-			    printf("hpgps: timezone %d, %d out of range\n",
-				   up->tzhour, up->tzminute);
-#endif
+		        DPRINT(1, ("hpgps: timezone %d, %d out of range\n",
+				   up->tzhour, up->tzminute));
 			refclock_report(peer, CEVNT_BADREPLY);
 			return;
 		}
@@ -399,11 +367,8 @@ hpgps_receive(
 		break;
 
 	    default:
-#ifdef DEBUG
-		if (debug)
-		    printf("hpgps: unrecognized reply format %c%c\n",
-			   tcodechar1, tcodechar2);
-#endif
+	        DPRINT(1, ("hpgps: unrecognized reply format %c%c\n",
+			   tcodechar1, tcodechar2));
 		refclock_report(peer, CEVNT_BADREPLY);
 		return;
 	} /* end of tcodechar1 switch */
@@ -413,51 +378,46 @@ hpgps_receive(
 
 	    case '2':
 		m = sscanf(tcp,"%*c%*c%4d%2d%2d%2d%2d%2d%c%c%c%c%c%2hx",
-			   &pp->year, &month, &day, &pp->hour, &pp->minute, &pp->second,
-			   &timequal, &freqqual, &leapchar, &servchar, &syncchar,
-			   &expectedsm);
+			   &pp->year, &month, &day, &pp->hour, &pp->minute,
+                           &pp->second,
+			   &timequal, &freqqual, &leapchar, &servchar,
+                           &syncchar,
+			   (short unsigned int*)&expectedsm);
 		n = NTCODET2;
 
 		if (m != MTCODET2){
-#ifdef DEBUG
-			if (debug)
-			    printf("hpgps: only %d fields recognized in timecode\n", m);
-#endif
+		        DPRINT(1, ("hpgps: only %d fields recognized in timecode\n", m));
 			refclock_report(peer, CEVNT_BADREPLY);
 			return;
 		}
 		break;
 
 	    default:
-#ifdef DEBUG
-		if (debug)
-		    printf("hpgps: unrecognized timecode format %c%c\n",
-			   tcodechar1, tcodechar2);
-#endif
+	        DPRINT(1, ("hpgps: unrecognized timecode format %c%c\n",
+			   tcodechar1, tcodechar2));
 		refclock_report(peer, CEVNT_BADREPLY);
 		return;
 	} /* end of tcodechar2 format switch */
-           
-	/* 
+
+	/*
 	 * Compute and verify the checksum.
 	 * Characters are summed starting at tcodechar1, ending at just
 	 * before the expected checksum.  Bail out if incorrect.
 	 */
 	tcodechksm = 0;
-	while (n-- > 0) tcodechksm += *tcp++;
+	while (n-- > 0) {
+		tcodechksm += *tcp++;
+	}
 	tcodechksm &= 0x00ff;
 
 	if (tcodechksm != expectedsm) {
-#ifdef DEBUG
-		if (debug)
-		    printf("hpgps: checksum %2hX doesn't match %2hX expected\n",
-			   tcodechksm, expectedsm);
-#endif
+	        DPRINT(1, ("hpgps: checksum %2hX doesn't match %2hX expected\n",
+			   tcodechksm, expectedsm));
 		refclock_report(peer, CEVNT_BADREPLY);
 		return;
 	}
 
-	/* 
+	/*
 	 * Compute the day of year from the yyyymmdd format.
 	 */
 	if (month < 1 || month > 12 || day < 1) {
@@ -465,13 +425,15 @@ hpgps_receive(
 		return;
 	}
 
-	if ( ! isleap_4(pp->year) ) {				/* Y2KFixes */
+	if ( ! is_leapyear(pp->year) ) {			/* Y2KFixes */
 		/* not a leap year */
 		if (day > day1tab[month - 1]) {
 			refclock_report(peer, CEVNT_BADTIME);
 			return;
 		}
-		for (i = 0; i < month - 1; i++) day += day1tab[i];
+		for (i = 0; i < month - 1; i++) {
+			day += day1tab[i];
+		}
 		lastday = 365;
 	} else {
 		/* a leap year */
@@ -479,7 +441,9 @@ hpgps_receive(
 			refclock_report(peer, CEVNT_BADTIME);
 			return;
 		}
-		for (i = 0; i < month - 1; i++) day += day2tab[i];
+		for (i = 0; i < month - 1; i++) {
+			day += day2tab[i];
+		}
 		lastday = 366;
 	}
 
@@ -505,7 +469,7 @@ hpgps_receive(
 		day--;
 		if (day < 1) {
 			pp->year--;
-			if ( isleap_4(pp->year) )		/* Y2KFixes */
+			if ( is_leapyear(pp->year) )		/* Y2KFixes */
 			    day = 366;
 			else
 			    day = 365;
@@ -526,7 +490,7 @@ hpgps_receive(
 	/*
 	 * Decode the MFLRV indicators.
 	 * NEED TO FIGURE OUT how to deal with the request for service,
-	 * time quality, and frequency quality indicators some day. 
+	 * time quality, and frequency quality indicators some day.
 	 */
 	if (syncchar != '0') {
 		pp->leap = LEAP_NOTINSYNC;
@@ -537,7 +501,7 @@ hpgps_receive(
 
 		    case '0':
 			break;
-                     
+
 		    /* See http://bugs.ntp.org/1090
 		     * Ignore leap announcements unless June or December.
 		     * Better would be to use :GPSTime? to find the month,
@@ -547,18 +511,15 @@ hpgps_receive(
 			if ((month==6) || (month==12))
 			    pp->leap = LEAP_ADDSECOND;
 			break;
-                     
+
 		    case '-':
 			if ((month==6) || (month==12))
 			    pp->leap = LEAP_DELSECOND;
 			break;
-                     
+
 		    default:
-#ifdef DEBUG
-			if (debug)
-			    printf("hpgps: unrecognized leap indicator: %c\n",
-				   leapchar);
-#endif
+			DPRINT(1, ("hpgps: unrecognized leap indicator: %c\n",
+				   leapchar));
 			refclock_report(peer, CEVNT_BADTIME);
 			return;
 		} /* end of leapchar switch */
@@ -583,7 +544,7 @@ hpgps_receive(
 	 * If CLK_FLAG4 is set, ask for the status screen response.
 	 */
 	if (pp->sloppyclockflag & CLK_FLAG4){
-		up->linecnt = 22; 
+		up->linecnt = 22;
 		if (write(pp->io.fd, ":SYSTEM:PRINT?\r", 15) != 15)
 		    refclock_report(peer, CEVNT_FAULT);
 	}
@@ -599,8 +560,10 @@ hpgps_poll(
 	struct peer *peer
 	)
 {
-	register struct hpgpsunit *up;
+	struct hpgpsunit *up;
 	struct refclockproc *pp;
+
+	UNUSED_ARG(unit);
 
 	/*
 	 * Time to poll the clock. The HP 58503A responds to a
@@ -610,10 +573,11 @@ hpgps_poll(
 	 */
 	pp = peer->procptr;
 	up = pp->unitptr;
-	if (up->pollcnt == 0)
-	    refclock_report(peer, CEVNT_TIMEOUT);
-	else
-	    up->pollcnt--;
+	if (up->pollcnt == 0) {
+		refclock_report(peer, CEVNT_TIMEOUT);
+	} else {
+		up->pollcnt--;
+	}
 	if (write(pp->io.fd, ":PTIME:TCODE?\r", 14) != 14) {
 		refclock_report(peer, CEVNT_FAULT);
 	}
@@ -621,6 +585,3 @@ hpgps_poll(
 	    pp->polls++;
 }
 
-#else
-int refclock_hpgps_bs;
-#endif /* REFCLOCK */

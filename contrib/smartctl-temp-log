@@ -1,0 +1,75 @@
+#! /usr/bin/env python
+# coding: utf-8
+"""\
+Usage: smartctl-temp-log [device]
+
+Reads 'smartctl -a device' for temperature data.  If a device is not
+specified on the commline line then /dev/sda is used.  Writes the
+temperature found to stdout.  Each line contains the Unix time in
+seconds since the epoch, the identifier, and the temperature in Celsius.
+
+Before you can use this utility smartctl must be installed and
+configured.  See their documentation for that procedure.
+
+Sample log from a typical hard disk.
+
+1471573103 SMART 37.000
+
+Field 1: Unix time in seconds since the star of the epoch
+Field 2: Log source (SMART)
+Field 3: temperature in degrees C
+
+Sample crontab usage:
+
+# take and log disk temp every 5 minutes
+*/5 * * * * /usr/local/sbin/smart-temp-log >> /var/log/ntpstats/temps
+
+Note, many distributions put smartctl in /usr/sbin, and do not
+put /usr/sbin in the PATH of programs executed by crontab.
+
+Not all hard drives support SMART.
+Not all of SMART drives are supported by smartctl.
+Not all smartctl compatible drives report temperature.
+Not all reported temperatures are valid.
+
+This file may only be useful as a template.  The way to read your disk
+temperatures will be hardware specific.
+
+"""
+
+
+import subprocess
+import sys
+import time
+
+# check for device on command line, otherwise use /dev/sda
+device = '/dev/sda'
+if 1 < len(sys.argv):
+    # process device
+    device = sys.argv[1]
+
+try:
+    # sadly subprocess.check_output() is not in Python 2.6
+    proc = subprocess.Popen(["smartctl", "-a", device],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            universal_newlines=True)
+    output = proc.communicate()[0]
+
+except subprocess.CalledProcessError as e:
+    sys.stderr.write("ERROR: 'smartctl -a %s' failed\n" % device)
+    sys.stderr.write(e.output)
+    sys.stderr.write("Return code: %s\n" % e.returncode)
+    raise SystemExit(2)
+except OSError as e:
+    sys.stderr.write("ERROR: Could not start smartctl: %s\n" % e.strerror)
+    raise SystemExit(2)
+
+lines = output.split('\n')
+
+line = ''
+for line in lines:
+    if line.startswith('194 '):
+        now = int(time.time())
+        temp = line.split()[9]
+        sys.stdout.write('%d %s %s\n' % (now, device, temp))

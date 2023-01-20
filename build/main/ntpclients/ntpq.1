@@ -1,0 +1,1444 @@
+'\" t
+.\"     Title: ntpq
+.\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 06/07/2021
+.\"    Manual: NTPsec
+.\"    Source: NTPsec 1.2.1+
+.\"  Language: English
+.\"
+.TH "NTPQ" "1" "06/07/2021" "NTPsec 1\&.2\&.1+" "NTPsec"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+ntpq \- standard NTP query program
+.SH "SYNOPSIS"
+.sp
+ntpq [\-46adhinpkwWu] [\-c \fIcommand\fR] [\fIhost\fR] [\&...]
+.SH "DESCRIPTION"
+.sp
+The ntpq utility program is used to monitor NTP daemon ntpd operations and determine performance\&. It uses the standard NTP mode 6 control message formats defined in Appendix B of the NTPv3 specification RFC 1305\&. The same formats are used in NTPv4, although some of the variable names have changed, and new ones added\&. The description on this page is for the NTPv4 variables\&.
+.sp
+The program can be run either in interactive mode or controlled using command line arguments\&. Requests to read and write arbitrary variables can be assembled, with raw and pretty\-printed output options being available\&. It can also obtain and print a list of peers in a common format by sending multiple queries to the server\&.
+.sp
+If one or more request options are included on the command line when ntpq is executed, each of the requests will be sent to the NTP servers running on each of the hosts given as command line arguments, or on localhost by default\&. If no request options are given, ntpq will attempt to read commands from the standard input and execute these on the NTP server running on the first host given on the command line, again defaulting to localhost when no other host is specified\&. ntpq will prompt for commands if the standard input is a terminal device\&.
+.sp
+ntpq uses NTP mode 6 packets to communicate with the NTP server, and hence can be used to query any compatible server on the network which permits it\&. Note that since NTP is a UDP protocol this communication will be somewhat unreliable, especially over large distances in terms of network topology\&. ntpq makes one attempt to retransmit requests and will time requests out if the remote host is not heard from within a suitable timeout time\&.
+.sp
+Note that in contexts where a host name is expected, a \-4 qualifier preceding the host name forces DNS resolution to the IPv4 namespace, while a \-6 qualifier forces DNS resolution to the IPv6 namespace\&.
+.sp
+For examples and usage, see the NTP Debugging Techniques page\&.
+.sp
+For a simpler near\-real\-time monitor, see ntpmon(1)\&.
+.SH "OPTIONS"
+.sp
+Command line options are described following\&. Specifying the command line options \-c or \-p will cause the specified query (queries) to be sent to the indicated host(s) immediately\&. Otherwise, ntpq will attempt to read interactive format commands from the standard input\&.
+.PP
+\-4, \-\-ipv4
+.RS 4
+Force DNS resolution of following host names on the command line to the IPv4 namespace\&.
+.RE
+.PP
+\-6, \-\-ipv6
+.RS 4
+Force DNS resolution of following host names on the command line to the IPv6 namespace\&.
+.RE
+.PP
+\-a num, \-\-authentication=num
+.RS 4
+Enable authentication with the numbered key\&.
+.RE
+.PP
+\-c cmd, \-\-command=cmd
+.RS 4
+The following argument is interpreted as an interactive format command and is added to the list of commands to be executed on the specified host(s)\&. Multiple
+\-c
+options may be given\&.
+.RE
+.PP
+\-d, \-\-debug
+.RS 4
+Increase debugging level by 1\&.
+.RE
+.PP
+\-D num, \-\-set\-debug\-level=num
+.RS 4
+The debug level is set to the following integer argument\&.
+.RE
+.PP
+\-l filename, \-\-logfile=filename
+.RS 4
+Log debugging output to the specified file\&.
+.RE
+.PP
+\-h, \-\-help
+.RS 4
+Print a usage message summarizing options end exit\&.
+.RE
+.PP
+\-n, \-\-numeric
+.RS 4
+Output all host addresses in numeric format rather than converting to the canonical host names\&. You may get hostnames anyway for peers in the initialization phase before DNS has resolved the peer name\&.
+.RE
+.PP
+\-s, \-\-srcname
+.RS 4
+Output host addresses by: Names passed to ntpd, then names reverse resolved from addresses and finally, IP addresses themselves
+.RE
+.PP
+\-S, \-\-srcnumber
+.RS 4
+Output host addresses by: Names passed to ntpd, then IP addresses themselves
+.RE
+.PP
+\-p, \-\-peers
+.RS 4
+Print a list of the peers known to the server as well as a summary of their state; this is equivalent to the
+peers
+interactive command\&. The refid field is as described under "Event Messages and Status Words" in the NTP documentation on the Web\&.
+.RE
+.PP
+\-k filename, \-\-keyfile=filename
+.RS 4
+Specify a keyfile\&. ntpq will look in this file for the key specified with \-a\&.
+.RE
+.PP
+\-V, \-\-version
+.RS 4
+Print the version string and exit\&.
+.RE
+.PP
+\-w, \-\-wide
+.RS 4
+Wide mode: if the host name or IP Address doesn\(cqt fit, write the full name/address and indent the next line, so columns line up\&. The default truncates the name or address\&.
+.RE
+.PP
+\-W num, \-\-width=num
+.RS 4
+Force the terminal width\&. Only relevant for composition of the peers display\&.
+.RE
+.PP
+\-u, \-\-units
+.RS 4
+Display timing information with units\&.
+.RE
+.SH "INTERNAL COMMANDS"
+.sp
+Interactive format commands consist of a keyword followed by zero to four arguments\&. Only enough characters of the full keyword to uniquely identify the command need be typed\&. The output of a command is normally sent to the standard output, but optionally the output of individual commands may be sent to a file by appending a >, followed by a file name, to the command line\&. Some interactive format commands are executed entirely within the ntpq program itself and do not result in NTP mode 6 requests being sent to a server\&. These are described as following\&.
+.PP
+? [\fIcommand_keyword\fR], help [\fIcommand_keyword\fR]
+.RS 4
+A
+?
+by itself will print a list of all the command keywords known to
+ntpq\&. A
+?
+followed by a command keyword will print function and usage information about the command\&.
+.RE
+.PP
+addvars \fIname\fR [ = value] [\&...]; rmvars \fIname\fR [\&...]; clearvars
+.RS 4
+The arguments to this command consist of a list of items of the form
+name = value, where the
+= value
+is ignored and can be omitted in read requests\&.
+ntpq
+maintains an internal list in which data to be included in control messages can be assembled and sent using the
+readlist
+and
+writelist
+commands described below\&. The
+addvars
+command allows variables and optional values to be added to the list\&. If more than one variable is to be added, the list should be comma\-separated and not contain white space\&. The
+rmvars
+command can be used to remove individual variables from the list, while the
+clearlist
+command removes all variables from the list\&.
+.RE
+.PP
+authenticate [yes | no]
+.RS 4
+Normally
+ntpq
+does not authenticate requests unless they are write requests\&. The command
+authenticate yes
+causes
+ntpq
+to send authentication with all requests it makes\&. Authenticated requests causes some servers to handle requests slightly differently\&. The command
+authenticate
+without arguments causes
+ntpq
+to display whether or not
+ntpq
+is currently authenticating requests\&.
+.RE
+.PP
+cooked
+.RS 4
+Display server messages in prettyprint format\&.
+.RE
+.PP
+debug more | less | off
+.RS 4
+Turns internal query program debugging on and off\&.
+.RE
+.PP
+noflake, +doflake \fIprobability\fR
+.RS 4
+Disables or enables the dropping of control packets by ntpq for testing\&. Probabilities 0 and 1 should be certainly accepted and discarded respectively\&. No default, but 0\&.1 should be a one in ten loss rate\&.
+.RE
+.PP
+logfile <stderr> | filename
+.RS 4
+Displays or sets the file for debug logging\&. <stderr> will send logs to standard error\&.
+.RE
+.PP
+delay \fImilliseconds\fR
+.RS 4
+Specify a time interval to be added to timestamps included in requests which require authentication; this is used to enable (unreliable) server reconfiguration over long delay network paths or between machines whose clocks are unsynchronized\&. The server does not now require timestamps in authenticated requests so that this command may be obsolete\&.
+.RE
+.PP
+exit
+.RS 4
+Exit
+ntpq\&.
+.RE
+.PP
+host \fIname\fR
+.RS 4
+Set the host to which future queries will be sent\&. The name may be either a DNS name or a numeric address\&.
+.RE
+.PP
+hostnames [yes | no]
+.RS 4
+If
+yes
+is specified, host names are printed in information displays\&. If
+no
+is specified, numeric addresses are printed instead\&. The default is
+yes
+unless modified using the command line
+\-n
+switch\&.
+.RE
+.PP
+keyid \fIkeyid\fR
+.RS 4
+This command specifies the key number to be used to authenticate configuration requests; this must correspond to a key ID configured with the
+controlkey
+command in the server\(cqs
+ntp\&.conf
+.RE
+.PP
+keytype
+.RS 4
+Specify the digest algorithm to use for authenticated requests, with default
+MD5\&. The keytype must match what the server is expecting for the specified key ID\&.
+.RE
+.PP
+ntpversion 1 | 2 | 3 | 4
+.RS 4
+Sets the NTP version number which
+ntpq
+claims in packets\&. Defaults to 2, Note that mode 6 control messages (and modes, for that matter) didn\(cqt exist in NTP version 1\&.
+.RE
+.PP
+passwd
+.RS 4
+This command prompts for a password to authenticate requests\&. The password must match what the server is expecting\&. Passwords longer than 20 bytes are assumed to be hex encoding\&.
+.RE
+.PP
+quit
+.RS 4
+Exit
+ntpq\&.
+.RE
+.PP
+raw
+.RS 4
+Display server messages as received and without reformatting\&. The only formatting/interpretation done on the data is to transform non\-ASCII data into a printable (but barely understandable) form\&.
+.RE
+.PP
+timeout \fImilliseconds\fR
+.RS 4
+Specify a timeout period for responses to server queries\&. The default is about 5000 milliseconds\&. Note that since
+ntpq
+retries each query once after a timeout, the total waiting time for a timeout will be twice the timeout value set\&.
+.RE
+.PP
+units
+.RS 4
+Toggle whether times in the peers display are shown with units\&.
+.RE
+.PP
+version
+.RS 4
+Print the version of the
+ntpq
+program\&.
+.RE
+.SH "CONTROL MESSAGE COMMANDS"
+.sp
+Association IDs are used to identify system, peer and clock variables\&. System variables are assigned an association ID of zero and system name space, while each association is assigned a nonzero association ID and peer namespace\&. Most control commands send a single mode 6 message to the server and expect a single response message\&. The exceptions are the peers command, which sends a series of messages, and the mreadlist and mreadvar commands, which iterate over a range of associations\&.
+.PP
+associations
+.RS 4
+Display a list of mobilized associations in the form
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+ind assid status conf reach auth condition last_event cnt
+.fi
+.if n \{\
+.RE
+.\}
+.TS
+allbox tab(:);
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt.
+T{
+Variable
+T}:T{
+Description
+T}
+T{
+ind
+T}:T{
+index on this list
+T}
+T{
+assid
+T}:T{
+association ID
+T}
+T{
+status
+T}:T{
+peer status word
+T}
+T{
+conf
+T}:T{
+yes: persistent,
+no: ephemeral
+T}
+T{
+reach
+T}:T{
+yes: reachable,
+no: unreachable
+T}
+T{
+auth
+T}:T{
+ok,
+yes,
+bad
+and
+none
+T}
+T{
+condition
+T}:T{
+selection status (see the
+select
+field of the
+peer status word)
+T}
+T{
+last_event
+T}:T{
+event report (see the
+event
+field of the
+peer status word)
+T}
+T{
+cnt
+T}:T{
+event count (see the
+count
+field of the
+peer status word)
+T}
+.TE
+.sp 1
+.RE
+.PP
+authinfo
+.RS 4
+Display the authentication statistics\&.
+.RE
+.PP
+clockvar \fIassocID\fR [\fIname\fR [ = \fIvalue\fR [\&...] ][\&...], cv \fIassocID\fR [\fIname\fR [ = \fIvalue\fR [\&...] ][\&...]
+.RS 4
+Display a list of
+clock variables
+for those associations supporting a reference clock\&.
+.RE
+.PP
+:config [\&...]
+.RS 4
+Send the remainder of the command line, including whitespace, to the server as a run\-time configuration command in the same format as the configuration file\&. This command is experimental until further notice and clarification\&. Authentication is of course required\&.
+.RE
+.PP
+config\-from\-file \fIfilename\fR
+.RS 4
+Send each line of
+\fIfilename\fR
+to the server as run\-time configuration commands in the same format as the configuration file\&. This command is experimental until further notice and clarification\&. Authentication is required\&.
+.RE
+.PP
+ifstats
+.RS 4
+Display statistics for each local network address\&. Authentication is required\&.
+.RE
+.PP
+iostats
+.RS 4
+Display network and reference clock I/O statistics\&.
+.RE
+.PP
+kerninfo
+.RS 4
+Display kernel loop and PPS statistics\&. As with other ntpq output, times are in milliseconds\&. The precision value displayed is in milliseconds as well, unlike the precision system variable\&.
+.RE
+.PP
+lassociations
+.RS 4
+Perform the same function as the associations command, except display mobilized and unmobilized associations\&.
+.RE
+.PP
+lpeers [\-4 | \-6]
+.RS 4
+Print a peer spreadsheet for the appropriate IP version(s)\&.
+\fIdstadr\fR
+(associated with any given IP version)\&.
+.RE
+.PP
+monstats
+.RS 4
+Display monitor facility statistics\&.
+.RE
+.PP
+direct
+.RS 4
+Normally, the mrulist command retrieves an entire MRU report (possibly consisting of more than one MRU span), sorts it, and presents the result\&. But attempting to fetch an entire MRU report may fail on a server so loaded that none of its MRU entries age out before they are shipped\&. With this option, each segment is reported as it arrives\&.
+.RE
+.sp
+mrulist [limited | kod | mincount=\fIcount\fR | mindrop=\fIdrop\fR | minscore=\fIscore\fR | maxlstint=\fIseconds\fR | minlstint=\fIseconds\fR | laddr=\fIlocaladdr\fR | sort=\fIsortorder\fR | resany=\fIhexmask\fR | resall=\fIhexmask\fR | limit=\fIlimit\fR | addr\&.\fInum\fR=\fIaddress\fR]:: Obtain and print traffic counts collected and maintained by the monitor facility\&. This is useful for tracking who \fIuses\fR or \fIabuses\fR your server\&.
+.sp
++ Except for sort=\fIsortorder\fR, the options filter the list returned by ntpd\&. The limited and kod options return only entries representing client addresses from which the last packet received triggered either discarding or a KoD response\&. the addr\&.\fInum\fR= option adds specific addresses to retrieve when limit=\fI1\fR\&. Values of 0 to 15 are supported for \fInum\fR\&. Also, used internally with last\&.\fInum\fR=\fIhextime\fR to select the starting point for retrieving continued response\&. the frags=\fIfrags\fR option limits the number of datagrams (fragments) in response\&. Used by newer ntpq versions instead of limit= when retrieving multiple entries\&. The limit= option limits the MRU entries returned per response\&. limit=1 is a special case: Instead of fetching beginning with the supplied starting points (provided by a last\&.x and addr\&.x where 0 ⇐ x ⇐ 15, default the beginning of time) newer neighbor, fetch the supplied entries\&. This enables fetching multiple entries from given IP addresses (provided by addr\&.x= entries where 0 ⇐ x ⇐ 15)\&. When limit is not one and frags= is provided, the fragment limit controls\&. NOTE: a single mrulist command may cause many query/response rounds allowing limits as low as 3 to potentially retrieve thousands of entries in responses\&. The mincount=\fIcount\fR option filters out entries that have received less than \fIcount\fR packets\&. The mindrop=\fIdrop\fR option filters out entries that have dropped less than \fIdrop\fR packets\&. The minscore=\fIscore\fR option filters out entries with a score less than \fIscore\fR\&. The maxlstint=\fIseconds\fR option filters out entries where no packets have arrived within \fIseconds\fR\&. The minlstint=\fIseconds\fR option filters out entries with a packet has arrived within \fIseconds\fR\&. The laddr=\fIlocaladdr\fR option filters out entries for packets received on any local address other than \fIlocaladdr\fR\&. resany=\fIhexmask\fR and resall=\fIhexmask\fR filter entries containing none or less than all, respectively, of the bits in \fIhexmask\fR, which must begin with 0x\&.
+.sp
++ The \fIsortorder\fR defaults to lstint and may be any of addr, count, avgint, lstint, score, drop or any of those preceded by a minus sign (hyphen) to reverse the sort order\&. The output columns are:
+.sp
++
+.TS
+allbox tab(:);
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt.
+T{
+.sp
+Column
+T}:T{
+.sp
+Description
+T}
+T{
+.sp
+lstint
+T}:T{
+.sp
+Interval in s between the receipt of the most recent packet from this address and the completion of the retrieval of the MRU list by ntpq\&.
+T}
+T{
+.sp
+avgint
+T}:T{
+.sp
+Average interval in s between packets from this address\&.
+T}
+T{
+.sp
+rstr
+T}:T{
+.sp
+Restriction flags associated with this address\&. Most are copied unchanged from the matching restrict command, however 0x400 (kod) and 0x20 (limited) flags are cleared unless the last packet from this address triggered a rate control response\&.
+T}
+T{
+.sp
+r
+T}:T{
+.sp
+Rate control indicator, either a period, L or K for no rate control response, rate limiting by discarding, or rate limiting with a KoD response, respectively\&.
+T}
+T{
+.sp
+m
+T}:T{
+.sp
+Packet mode\&.
+T}
+T{
+.sp
+v
+T}:T{
+.sp
+Packet version number\&.
+T}
+T{
+.sp
+count
+T}:T{
+.sp
+Packets received from this address\&.
+T}
+T{
+.sp
+score
+T}:T{
+.sp
+Packets per second (averaged with exponential decay)\&.
+T}
+T{
+.sp
+drop
+T}:T{
+.sp
+Packets dropped (or KoDed) from this address\&.
+T}
+T{
+.sp
+rport
+T}:T{
+.sp
+Source port of last packet from this address\&.
+T}
+T{
+.sp
+remote address
+T}:T{
+.sp
+DNS name, numeric address, or address followed by claimed DNS name which could not be verified in parentheses\&.
+T}
+.TE
+.sp 1
+.PP
+mreadvar \fIassocID\fR \fIassocID\fR [ \fIvariable_name\fR [ = \fIvalue\fR[ \&... ], mrv \fIassocID\fR \fIassocID\fR [ \fIvariable_name\fR [ = \fIvalue\fR[ \&... ]
+.RS 4
+Perform the same function as the
+readvar
+command, except for a range of association IDs\&. This range is determined from the association list cached by the most recent
+associations
+command\&.
+.RE
+.PP
+opeers
+.RS 4
+Obtain and print the old\-style list of all peers and clients showing
+\fIdstadr\fR
+(associated with any given IP version), rather than the
+\fIrefid\fR\&.
+.RE
+.PP
+passociations
+.RS 4
+Perform the same function as the
+associations command, except that it uses previously stored data rather than making a new query\&.
+.RE
+.PP
+peers
+.RS 4
+Display a list of peers in the form
+.sp
+tally remote refid st t when pool reach delay offset jitter
+.RE
+.TS
+allbox tab(:);
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt.
+T{
+.sp
+Variable
+T}:T{
+.sp
+Description
+T}
+T{
+.sp
+tally
+T}:T{
+.sp
+single\-character code indicating current value of the select field of the peer status word
+T}
+T{
+.sp
+remote
+T}:T{
+.sp
+host name (or IP number) of peer
+T}
+T{
+.sp
+refid
+T}:T{
+.sp
+association ID or kiss code
+T}
+T{
+.sp
+st
+T}:T{
+.sp
+stratum
+T}
+T{
+.sp
+t
+T}:T{
+.sp
+u: unicast or manycast client, l: local (reference clock), s: symmetric (peer), server, B: broadcast server, 1\-8 NTS unicast with this number of cookies stored\&.
+T}
+T{
+.sp
+when
+T}:T{
+.sp
+sec/min/hr since last received packet
+T}
+T{
+.sp
+poll
+T}:T{
+.sp
+poll interval (log2 s)
+T}
+T{
+.sp
+reach
+T}:T{
+.sp
+reach shift register (octal)
+T}
+T{
+.sp
+delay
+T}:T{
+.sp
+roundtrip delay
+T}
+T{
+.sp
+offset
+T}:T{
+.sp
+offset of server relative to this host
+T}
+T{
+.sp
+jitter
+T}:T{
+.sp
+jitter
+T}
+.TE
+.sp 1
+.sp
+The tally code is one of the following:
+.TS
+allbox tab(:);
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt.
+T{
+.sp
+Code
+T}:T{
+.sp
+Description
+T}
+T{
+.sp
+T}:T{
+.sp
+discarded as not valid
+T}
+T{
+.sp
+x
+T}:T{
+.sp
+discarded by intersection algorithm
+T}
+T{
+.sp
+\&.
+T}:T{
+.sp
+discarded by table overflow (not used)
+T}
+T{
+.sp
+\-
+T}:T{
+.sp
+discarded by the cluster algorithm
+T}
+T{
+.sp
++
+T}:T{
+.sp
+included by the combine algorithm
+T}
+T{
+.sp
+#
+T}:T{
+.sp
+backup (more than tos maxclock sources)
+T}
+T{
+.sp
+*
+T}:T{
+.sp
+system peer
+T}
+T{
+.sp
+o
+T}:T{
+.sp
+PPS peer (when the prefer peer is valid)
+T}
+.TE
+.sp 1
+.PP
+apeers
+.RS 4
+Display a list of peers in the form:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+[tally]remote refid assid st t when pool reach delay offset jitter
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+where the output is just like the
+peers
+command except that the
+refid
+is displayed in hex format and the association number is also displayed\&.
+.RE
+.PP
+rpeers
+.RS 4
+Display a list of peers in the form
+.sp
+st t when pool reach delay offset jitter refid tally remote
+.RE
+.PP
+pstats \fIassocID\fR
+.RS 4
+Show the statistics for the peer with the given
+\fIassocID\fR\&.
+.RE
+.PP
+readvar \fIassocID\fR [ \fIname\fR ] [,\&...], rv \fIassocID\fR [ \fIname\fR ] [,\&...]
+.RS 4
+Display the specified variables\&. If
+assocID
+is zero, the variables are from the
+system variables
+name space, otherwise they are from the
+peer variables
+name space\&. The
+assocID
+is required, as the same name can occur in both spaces\&. If no
+name
+is included, all operative variables in the name space are displayed\&. In this case only, if the
+assocID
+is omitted, it is assumed zero\&. Multiple names are specified with comma separators and without whitespace\&. Note that time values are represented in milliseconds and frequency values in parts\-per\-million (PPM)\&. Some NTP timestamps are represented in the format YYYYMMDDTTTT, where YYYY is the year, MM the month of the year, DD the day of the month and TTTT the time of day\&.
+.RE
+.PP
+reslist
+.RS 4
+Show the access control (restrict) list for
+ntpq\&.
+.RE
+.PP
+timerstats
+.RS 4
+Display interval timer counters\&.
+.RE
+.PP
+writelist \fIassocID\fR
+.RS 4
+Write the system or peer variables included in the variable list\&.
+.RE
+.PP
+writevar \fIassocID\fR \fIname\fR = \fIvalue\fR [,\&...]
+.RS 4
+Write the specified variables\&. If the
+assocID
+is zero, the variables are from the
+system variables
+name space, otherwise they are from the
+peer variables
+name space\&. The
+assocID
+is required, as the same name can occur in both spaces\&.
+.RE
+.PP
+sysinfo
+.RS 4
+Display operational summary\&.
+.RE
+.PP
+sysstats
+.RS 4
+Print statistics counters maintained in the protocol module\&. Note that the relationships among these counters can look unlikely because packets can get flagged for inclusion in exception statistics in more than one way, for example by having both a bad length and an old version\&.
+.RE
+.PP
+ntsinfo
+.RS 4
+Display a summary of the NTS state, including both the the NTS client and NTS server components\&. Note that the format of the output text may change as this feature is developed\&. This command is experimental until further notice and clarification\&.
+.RE
+.SH "AUTHENTICATION"
+.sp
+Four commands require authentication to the server: config\-from\-file, config, ifstats, and reslist\&. An authkey file must be in place and a control key declared in ntp\&.conf for these commands to work\&.
+.sp
+If you are running as root or otherwise have read access to the authkey and ntp\&.conf file, ntpq will mine the required credentials for you\&. Otherwise, you will be prompted to enter a key ID and password\&.
+.sp
+Credentials once entered, are retained and used for the duration of your ntpq session\&.
+.SH "STATUS WORDS AND KISS CODES"
+.sp
+The current state of the operating program is shown in a set of status words maintained by the system and each association separately\&. These words are displayed in the rv and as commands both in hexadecimal and decoded short tip strings\&. The codes, tips, and short explanations are on the Event Messages and Status Words page\&. The page also includes a list of system and peer messages, the code for the latest of which is included in the status word\&.
+.sp
+Information resulting from protocol machine state transitions is displayed using an informal set of ASCII strings called kiss codes\&. The original purpose was for kiss\-o\*(Aq\-death (KoD) packets sent by the server to advise the client of an unusual condition\&. They are now displayed, when appropriate, in the reference identifier field in various billboards\&.
+.SH "SYSTEM VARIABLES"
+.sp
+The following system variables appear in the rv billboard\&. Not all variables are displayed in some configurations\&.
+.TS
+allbox tab(:);
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt.
+T{
+.sp
+Variable
+T}:T{
+.sp
+Description
+T}
+T{
+.sp
+status
+T}:T{
+.sp
+system status word
+T}
+T{
+.sp
+version
+T}:T{
+.sp
+NTP software version and build time
+T}
+T{
+.sp
+processor
+T}:T{
+.sp
+hardware platform and version
+T}
+T{
+.sp
+system
+T}:T{
+.sp
+operating system and version
+T}
+T{
+.sp
+leap
+T}:T{
+.sp
+leap warning indicator (0\-3)
+T}
+T{
+.sp
+stratum
+T}:T{
+.sp
+stratum (1\-15)
+T}
+T{
+.sp
+precision
+T}:T{
+.sp
+precision (log2 s)
+T}
+T{
+.sp
+rootdelay
+T}:T{
+.sp
+total roundtrip delay to the primary reference clock
+T}
+T{
+.sp
+rootdisp
+T}:T{
+.sp
+total dispersion to the primary reference clock
+T}
+T{
+.sp
+peer
+T}:T{
+.sp
+system peer association ID
+T}
+T{
+.sp
+tc
+T}:T{
+.sp
+time constant and poll exponent (log2 s) (3\-17)
+T}
+T{
+.sp
+mintc
+T}:T{
+.sp
+minimum time constant (log2 s) (3\-10)
+T}
+T{
+.sp
+clock
+T}:T{
+.sp
+date and time of day
+T}
+T{
+.sp
+refid
+T}:T{
+.sp
+reference ID or kiss code
+T}
+T{
+.sp
+reftime
+T}:T{
+.sp
+reference time
+T}
+T{
+.sp
+offset
+T}:T{
+.sp
+combined offset of server relative to this host
+T}
+T{
+.sp
+sys_jitter
+T}:T{
+.sp
+combined system jitter
+T}
+T{
+.sp
+frequency
+T}:T{
+.sp
+frequency offset (PPM) relative to hardware clock
+T}
+T{
+.sp
+clk_wander
+T}:T{
+.sp
+clock frequency wander (PPM)
+T}
+T{
+.sp
+clk_jitter
+T}:T{
+.sp
+clock jitter
+T}
+T{
+.sp
+tai
+T}:T{
+.sp
+TAI\-UTC offset (s)
+T}
+T{
+.sp
+leapsec
+T}:T{
+.sp
+NTP seconds when the next leap second is/was inserted
+T}
+T{
+.sp
+expire
+T}:T{
+.sp
+NTP seconds when the NIST leapseconds file expires
+T}
+.TE
+.sp 1
+.sp
+The jitter and wander statistics are exponentially\-weighted RMS averages\&. The system jitter is defined in the NTPv4 specification; the clock jitter statistic is computed by the clock discipline module\&.
+.SH "PEER VARIABLES"
+.sp
+The following peer variables appear in the rv billboard for each association\&. Not all variables are displayed in some configurations\&.
+.TS
+allbox tab(:);
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt.
+T{
+.sp
+Variable
+T}:T{
+.sp
+Description
+T}
+T{
+.sp
+associd
+T}:T{
+.sp
+association ID
+T}
+T{
+.sp
+status
+T}:T{
+.sp
+peer status word
+T}
+T{
+.sp
+srcadr srcport
+T}:T{
+.sp
+source (remote) IP address and port
+T}
+T{
+.sp
+dstadr dstport
+T}:T{
+.sp
+destination (local) IP address and port
+T}
+T{
+.sp
+leap
+T}:T{
+.sp
+leap indicator (0\-3)
+T}
+T{
+.sp
+stratum
+T}:T{
+.sp
+stratum (0\-15)
+T}
+T{
+.sp
+precision
+T}:T{
+.sp
+precision (log2 s)
+T}
+T{
+.sp
+rootdelay
+T}:T{
+.sp
+total roundtrip delay to the primary reference clock
+T}
+T{
+.sp
+rootdisp
+T}:T{
+.sp
+total root dispersion to the primary reference clock
+T}
+T{
+.sp
+refid
+T}:T{
+.sp
+reference ID or kiss code
+T}
+T{
+.sp
+reftime
+T}:T{
+.sp
+reference time
+T}
+T{
+.sp
+reach
+T}:T{
+.sp
+reach register (octal)
+T}
+T{
+.sp
+unreach
+T}:T{
+.sp
+unreach counter
+T}
+T{
+.sp
+hmode
+T}:T{
+.sp
+host mode (1\-6)
+T}
+T{
+.sp
+pmode
+T}:T{
+.sp
+peer mode (1\-5)
+T}
+T{
+.sp
+hpoll
+T}:T{
+.sp
+host poll exponent (log2 s) (3\-17)
+T}
+T{
+.sp
+ppoll
+T}:T{
+.sp
+peer poll exponent (log2 s) (3\-17)
+T}
+T{
+.sp
+headway
+T}:T{
+.sp
+headway (see Rate Management and the Kiss\-o\*(Aq\-Death Packet)
+T}
+T{
+.sp
+flash
+T}:T{
+.sp
+flash status word
+T}
+T{
+.sp
+offset
+T}:T{
+.sp
+filter offset
+T}
+T{
+.sp
+delay
+T}:T{
+.sp
+filter delay
+T}
+T{
+.sp
+dispersion
+T}:T{
+.sp
+filter dispersion
+T}
+T{
+.sp
+jitter
+T}:T{
+.sp
+filter jitter
+T}
+T{
+.sp
+bias
+T}:T{
+.sp
+fudge for asymmetric links/paths
+T}
+.TE
+.sp 1
+.SH "CLOCK VARIABLES"
+.sp
+The following clock variables appear in the cv billboard for each association with a reference clock\&. Not all variables are displayed in some configurations\&.
+.TS
+allbox tab(:);
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt.
+T{
+.sp
+Variable
+T}:T{
+.sp
+Description
+T}
+T{
+.sp
+associd
+T}:T{
+.sp
+association ID
+T}
+T{
+.sp
+status
+T}:T{
+.sp
+clock status word
+T}
+T{
+.sp
+device
+T}:T{
+.sp
+device description
+T}
+T{
+.sp
+timecode
+T}:T{
+.sp
+ASCII time code string (specific to device)
+T}
+T{
+.sp
+poll
+T}:T{
+.sp
+poll messages sent
+T}
+T{
+.sp
+noreply
+T}:T{
+.sp
+no reply
+T}
+T{
+.sp
+badformat
+T}:T{
+.sp
+bad format
+T}
+T{
+.sp
+baddata
+T}:T{
+.sp
+bad date or time
+T}
+T{
+.sp
+fudgetime1
+T}:T{
+.sp
+fudge time 1
+T}
+T{
+.sp
+fudgetime2
+T}:T{
+.sp
+fudge time 2
+T}
+T{
+.sp
+stratum
+T}:T{
+.sp
+driver stratum
+T}
+T{
+.sp
+refid
+T}:T{
+.sp
+driver reference ID
+T}
+T{
+.sp
+flags
+T}:T{
+.sp
+driver flags
+T}
+.TE
+.sp 1
+.SH "COMPATIBILITY"
+.sp
+When listing refids, addresses of the form 127\&.127\&.x\&.x are no longer automatically interpreted as local refclocks as in older versions of ntpq\&. Instead, a clock\-format display is requested by the NTPsec daemon when appropriate (by setting the srcaddr peer variable)\&. This means that when used to query legacy versions of ntpd, which do not know how to request this, this program will do a slightly wrong thing\&.
+.sp
+In older versions, the \fItype\fR variable associated with a reference clock was a numeric driver type index\&. It has been replaced by \fIname\fR, a shortname for the driver type\&.
+.sp
+In older versions, no count of control packets was listed under sysstats\&.
+.sp
+The \-O (\-\-old\-rv) option of legacy versions has been retired\&.
+.SH "KNOWN LIMITATIONS"
+.sp
+It is possible for a ":config unpeer" command to fail silently, yielding "Config Succeeded", if it is given a peer identifier that looks like a driver type name or a hostname not present in the peer list\&. The error will, however, be reported in the system log\&.
+.sp
+The config command cannot be used to change a server\(cqs default restrictions\&.
+.sp
+Under some circumstances python 2 cannot emit unicode\&. When true, the display of units is downgraded to non\-unicode alternatives\&. One place a user is likely to encounter this is when diverting output through a pipe\&. Attempts have been made to force the use of UTF\-8, all of which break the command history feature\&.
+.sp
+When using the \-u option, very old xterms may fail to render μ correctly\&. If this happens, be sure your xterm is started with the \-u8 option, or the \fIutf8\fR resource\*(Aq, and that your console font contains the UTF\-8 μ character\&. Also confirm your LANG environment variable is set to a UTF\-8 language, like this: "export LANG=en_US\&.utf8"\&.
+.sp
+Timestamp interpretation in this program is likely to fail in flaky ways if the local system clock has not already been approximately synchronized to UTC\&. Querying a server based in a different NTP era than the current one is especially likely to fail\&.
+.sp
+This program will behave in apparently buggy and only semi\-predictable ways when fetching MRU lists from \fIany\fR server with sufficiently high traffic\&.
+.sp
+The problem is fundamental\&. The Mode 6 protocol can\(cqt ship (and your client cannot accept) MRU records as fast as the daemon accepts incoming traffic\&. Under these circumstances, the daemon will repeatedly fail to ship an entire report, leading to long hangs as your client repeatedly re\-sends the request\&. Eventually the Mode 6 client library will throw an error indicating that a maximum number of restarts has been exceeded\&.
+.sp
+To avoid this problem, avoid monitoring over links that don\(cqt have enough capacity to handle the monitored server\(cqs \fIentire\fR NTP load\&.
+.sp
+You may be able to retrieve partial data in very high\-traffic conditions by using the \fIdirect\fR option\&.
+.SH "EXIT STATUS"
+.sp
+One of the following exit values will be returned:
+.PP
+0 (EXIT_SUCCESS)
+.RS 4
+Successful program execution\&.
+.RE
+.PP
+1 (EXIT_FAILURE)
+.RS 4
+The operation failed or the command syntax was not valid\&.
+.RE

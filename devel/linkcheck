@@ -1,0 +1,97 @@
+#! /usr/bin/env python
+#
+# linkcheck - check link integrity in an asciidoc document tree
+#
+# Output is a list of unsatisfied references in the format of GCC
+# error messages, suitable for stepping through with Emacs compilation
+# mode.
+#
+# Optional argument is the root directory of the tree, otherwise it
+# is run from the current directory.
+#
+# SPDX-License-Identifier: BSD-2-Clause
+from __future__ import print_function, division
+
+import os
+import re
+import sys
+
+boxanchor_re = re.compile(r"\[\[([a-z0-9_-]*)\]\]")
+linkanchor_re = re.compile(r"anchor:([a-z0-9_-]*)\[\]")
+refanchor_re = re.compile(r"link:([^.]*).html#([a-z0-9_-]*)")
+
+if len(sys.argv) > 1:
+    prefix = sys.argv[1]
+else:
+    prefix = ""
+
+
+def tabulate(path):
+    iostack.append((0, open(path)))
+    linecount = 0
+    while True:
+        line = iostack[-1][1].readline()
+        linecount += 1
+        if line == "":
+            iostack[-1][1].close()
+            (linecount, _) = iostack.pop()
+            if not iostack:
+                return
+            else:
+                continue
+        if line.startswith("include::"):
+            filestem = line.strip()[9:][:-2]
+            dirname = ""
+            if iostack:
+                includer = iostack[-1][1].name
+                dirname = os.path.dirname(includer[len(prefix):])
+            newpath = os.path.join(prefix, dirname, filestem)
+            try:
+                iostack.append((linecount, open(newpath)))
+            except (IOError, OSError):
+                sys.stderr.write("linkcheck: Can't open %s\n" % newpath)
+                raise SystemExit(1)
+            continue
+        # Ordinary processing
+        # This is the tricky part. Because we're reference-checking the
+        # generated HTML, the file part of a stored anchor name needs to be
+        # the original path from the top of the include stack, not
+        # whatever inclusion we might be walking through now.
+        html = path[len(prefix):].replace(".adoc", ".html")
+        m = boxanchor_re.search(line)
+        if m:
+            anchor = "link:" + html + "#" + m.group(1)
+            anchors.add(anchor)
+        m = linkanchor_re.search(line)
+        if m:
+            anchor = "link:" + html + "#" + m.group(1)
+            anchors.add(anchor)
+        m = refanchor_re.search(line)
+        if m:
+            references[m.group(0)] = (iostack[-1][1].name, linecount)
+
+
+if __name__ == '__main__':
+    iostack = []
+    references = {}
+    anchors = set([])
+    for dirpath, dnames, fnames in os.walk(prefix):
+        for f in fnames:
+            fullpath = os.path.join(dirpath, f)
+            if fullpath.endswith(".adoc") and "includes" not in fullpath:
+                tabulate(fullpath)
+    # print("References: %s" % references)
+    # print("Anchors: %s" % anchors)
+    hanging = []
+    for ref in references:
+        if ref not in anchors:
+            hanging.append(ref)
+    print("%d anchors, %d references, %d references unsatisfied"
+          % (len(anchors), len(references), len(hanging)))
+    unsatisfied = list(hanging)
+    unsatisfied.sort()
+    for item in unsatisfied:
+        print('"%s", line %d: %s'
+              % (references[item][0], references[item][1], item))
+
+# end

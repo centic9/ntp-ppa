@@ -1,0 +1,7 @@
+
+:doctype: manpage
+:man source: NTPsec
+:man manual: NTPsec
+include::include.ad[]
+
+== NAME ==

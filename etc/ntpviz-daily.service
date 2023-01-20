@@ -1,0 +1,9 @@
+[Unit]
+Documentation=man:ntpviz(1)
+Description=Graph daily information for NTP
+Requisite=ntpd.service
+
+[Service]
+Type=simple
+IOSchedulingClass=idle
+ExecStart=@BINDIR@/ntpviz -w l -p 1 -o /var/www/localhost/htdocs/day

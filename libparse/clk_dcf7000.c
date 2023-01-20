@@ -1,58 +1,19 @@
 /*
- * /src/NTP/ntp4-dev/libparse/clk_dcf7000.c,v 4.10 2005/04/16 17:32:10 kardel RELEASE_20050508_A
- *
- * clk_dcf7000.c,v 4.10 2005/04/16 17:32:10 kardel RELEASE_20050508_A
- *
  * ELV DCF7000 module
  *
- * Copyright (c) 1995-2005 by Frank Kardel <kardel <AT> ntp.org>
- * Copyright (c) 1989-1994 by Frank Kardel, Friedrich-Alexander Universitaet Erlangen-Nuernberg, Germany
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the author nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
+ * Copyright Frank Kardel <kardel@ntp.org>
+ * Copyright the NTPsec project contributors
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
-#if defined(REFCLOCK) && defined(CLOCK_PARSE) && defined(CLOCK_DCF7000)
-
+#include "config.h"
 #include "ntp_fp.h"
-#include "ntp_unixtime.h"
 #include "ntp_calendar.h"
 
 #include "parse.h"
 
-#ifndef PARSESTREAM
 #include "ntp_stdlib.h"
 #include <stdio.h>
-#else
-#include "sys/parsestreams.h"
-extern int printf (const char *, ...);
-#endif
 
 static struct format dcf7000_fmt =
 {				/* ELV DCF7000 */
@@ -68,15 +29,14 @@ static struct format dcf7000_fmt =
 static parse_cvt_fnc_t cvt_dcf7000;
 static parse_inp_fnc_t inp_dcf7000;
 
-clockformat_t clock_dcf7000 =
-{
-  inp_dcf7000,			/* DCF7000 input handling */
-  cvt_dcf7000,			/* ELV DCF77 conversion */
-  0,				/* no direct PPS monitoring */
-  (void *)&dcf7000_fmt,		/* conversion configuration */
-  "ELV DCF7000",		/* ELV clock */
-  24,				/* string buffer */
-  0				/* no private data (complete packets) */
+clockformat_t clock_dcf7000 = {
+	inp_dcf7000,			/* DCF7000 input handling */
+	cvt_dcf7000,			/* ELV DCF77 conversion */
+	0,				/* no direct PPS monitoring */
+	(void *)&dcf7000_fmt,		/* conversion configuration */
+	"ELV DCF7000",		/* ELV clock */
+	24,				/* string buffer */
+	0				/* no private data (complete packets) */
 };
 
 /*
@@ -84,7 +44,7 @@ clockformat_t clock_dcf7000 =
  *
  * convert dcf7000 type format
  */
-static u_long
+static unsigned long
 cvt_dcf7000(
 	    unsigned char *buffer,
 	    int            size,
@@ -93,6 +53,9 @@ cvt_dcf7000(
 	    void          *local
 	    )
 {
+	UNUSED_ARG(size);
+	UNUSED_ARG(local);
+
 	if (!Strok(buffer, format->fixed_string))
 	{
 		return CVT_NONE;
@@ -128,16 +91,17 @@ cvt_dcf7000(
 			}
 			else
 			{
-				if (flags & 0x1)
-				    clock_time->utcoffset = -2*60*60;
-				else
-				    clock_time->utcoffset = -1*60*60;
-
-				if (flags & 0x2)
-				    clock_time->flags |= PARSEB_ANNOUNCE;
-
-				if (flags & 0x4)
-				    clock_time->flags |= PARSEB_NOSYNC;
+				if (flags & 0x1) {
+					clock_time->utcoffset = -2*60*60;
+				} else {
+					clock_time->utcoffset = -1*60*60;
+				}
+				if (flags & 0x2) {
+					clock_time->flags |= PARSEB_ANNOUNCE;
+				}
+				if (flags & 0x4) {
+					clock_time->flags |= PARSEB_NOSYNC;
+				}
 			}
 			return CVT_OK;
 		}
@@ -149,7 +113,7 @@ cvt_dcf7000(
  *
  * grab data from input stream
  */
-static u_long
+static unsigned long
 inp_dcf7000(
 	  parse_t      *parseio,
 	  char         ch,
@@ -158,7 +122,8 @@ inp_dcf7000(
 {
 	unsigned int rtc;
 
-	parseprintf(DD_PARSE, ("inp_dcf7000(0x%p, 0x%x, ...)\n", (void*)parseio, ch));
+	parseprintf(DD_PARSE, ("inp_dcf7000(0x%lx, 0x%x, ...)\n",
+                    (unsigned long)parseio, (unsigned)ch));
 
 	switch (ch)
 	{
@@ -174,10 +139,6 @@ inp_dcf7000(
 		return parse_addchar(parseio, ch);
 	}
 }
-
-#else /* not (REFCLOCK && CLOCK_PARSE && CLOCK_DCF7000) */
-int clk_dcf7000_bs;
-#endif /* not (REFCLOCK && CLOCK_PARSE && CLOCK_DCF7000) */
 
 /*
  * History:

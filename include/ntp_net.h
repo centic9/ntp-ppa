@@ -2,57 +2,51 @@
  * ntp_net.h - definitions for NTP network stuff
  */
 
-#ifndef NTP_NET_H
-#define NTP_NET_H
+#ifndef GUARD_NTP_NET_H
+#define GUARD_NTP_NET_H
 
 #include <sys/types.h>
-#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
-#endif
-#ifdef HAVE_NET_IF_H
 #include <net/if.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
-#endif
-#ifdef HAVE_NET_IF_VAR_H
-#include <net/if_var.h>
-#endif
-#ifdef HAVE_NETINET_IN_VAR_H
-#include <netinet/in_var.h>
-#endif
+#include <netdb.h>
+#include "isc_netaddr.h"
 
-#include "ntp_rfc2553.h"
 #include "ntp_malloc.h"
 
-typedef union {
-	struct sockaddr		sa;
-	struct sockaddr_in	sa4;
-	struct sockaddr_in6	sa6;
+typedef union {				/* On Linux, these come from: */
+	struct sockaddr		sa;	/* /usr/include/bits/socket.h */
+	struct sockaddr_in	sa4;	/* /usr/include/linux/in.h */
+	struct sockaddr_in6	sa6;	/* /usr/include/linux/in6.h */
 } sockaddr_u;
 
 /*
  * Utilities for manipulating sockaddr_u v4/v6 unions
  */
 #define SOCK_ADDR4(psau)	((psau)->sa4.sin_addr)
+#define SET_SOCK_ADDR4(psau, a)	((psau)->sa4.sin_addr = (a))
 #define SOCK_ADDR6(psau)	((psau)->sa6.sin6_addr)
+#define SET_SOCK_ADDR6(psau, a)	((psau)->sa6.sin6_addr = (a))
 
 #define PSOCK_ADDR4(psau)	(&SOCK_ADDR4(psau))
 #define PSOCK_ADDR6(psau)	(&SOCK_ADDR6(psau))
 
 #define AF(psau)		((psau)->sa.sa_family)
+#define SET_AF(psau, f)		((psau)->sa.sa_family = (f))
 
 #define IS_IPV4(psau)		(AF_INET == AF(psau))
 #define IS_IPV6(psau)		(AF_INET6 == AF(psau))
 
 /* sockaddr_u v4 address in network byte order */
 #define	NSRCADR(psau)		(SOCK_ADDR4(psau).s_addr)
+#define	SET_NSRCADR(psau, a)	(SOCK_ADDR4(psau).s_addr - (a))
 
 /* sockaddr_u v4 address in host byte order */
 #define	SRCADR(psau)		(ntohl(NSRCADR(psau)))
 
 /* sockaddr_u v6 address in network byte order */
 #define NSRCADR6(psau)		(SOCK_ADDR6(psau).s6_addr)
+#define SET_NSRCADR6(psau)	(SOCK_ADDR6(psau).s6_addr = (a))
 
 /* assign sockaddr_u v4 address from host byte order */
 #define	SET_ADDR4(psau, addr4)	(NSRCADR(psau) = htonl(addr4))
@@ -61,11 +55,11 @@ typedef union {
 #define SET_ADDR4N(psau, addr4n) (NSRCADR(psau) = (addr4n));
 
 /* assign sockaddr_u v6 address from network byte order */
-#define SET_ADDR6N(psau, s6_addr)				\
-	(SOCK_ADDR6(psau) = (s6_addr))
+#define SET_ADDR6N(psau, s6_addr)	(SOCK_ADDR6(psau) = (s6_addr))
 
 /* sockaddr_u v4/v6 port in network byte order */
 #define	NSRCPORT(psau)		((psau)->sa4.sin_port)
+#define	SET_NSRCPORT(psau, a)	((psau)->sa4.sin_port = (a))
 
 /* sockaddr_u v4/v6 port in host byte order */
 #define	SRCPORT(psau)		(ntohs(NSRCPORT(psau)))
@@ -76,7 +70,6 @@ typedef union {
 /* sockaddr_u v6 scope */
 #define SCOPE_VAR(psau)		((psau)->sa6.sin6_scope_id)
 
-#ifdef ISC_PLATFORM_HAVESCOPEID
 /* v4/v6 scope (always zero for v4) */
 # define SCOPE(psau)		(IS_IPV4(psau)			\
 				    ? 0				\
@@ -92,11 +85,6 @@ typedef union {
 		if (IS_IPV6(psau))				\
 			SCOPE_VAR(psau) = (s);			\
 	while (0)
-#else	/* ISC_PLATFORM_HAVESCOPEID not defined */
-# define SCOPE(psau)		(0)
-# define SCOPE_EQ(psau1, psau2)	(1)
-# define SET_SCOPE(psau, s)	do { } while (0)
-#endif	/* ISC_PLATFORM_HAVESCOPEID */
 
 /* v4/v6 is multicast address */
 #define IS_MCAST(psau)						\
@@ -147,7 +135,7 @@ typedef union {
 		SET_ONESMASK(psau);				\
 	} while (0)
 
-/* 
+/*
  * compare two in6_addr returning negative, 0, or positive.
  * ADDR6_CMP is negative if *pin6A is lower than *pin6B, zero if they
  * are equal, positive if *pin6A is higher than *pin6B.  IN6ADDR_ANY
@@ -158,13 +146,8 @@ typedef union {
 	       sizeof(pin6A)->s6_addr)
 
 /* compare two in6_addr for equality only */
-#if !defined(SYS_WINNT) || !defined(in_addr6)
 #define ADDR6_EQ(pin6A, pin6B)					\
 	(!ADDR6_CMP(pin6A, pin6B))
-#else
-#define ADDR6_EQ(pin6A, pin6B)					\
-	IN6_ADDR_EQUAL(pin6A, pin6B)
-#endif
 
 /* compare a in6_addr with socket address */
 #define	S_ADDR6_EQ(psau, pin6)					\
@@ -195,11 +178,11 @@ typedef union {
 #define SOCK_UNSPEC_S(psau)					\
 	(SOCK_UNSPEC(psau) && !SCOPE(psau))
 
-/* choose a default net interface (struct interface) for v4 or v6 */
-#define ANY_INTERFACE_BYFAM(family)				\
-	((AF_INET == family)					\
-	     ? any_interface					\
-	     : any6_interface)
+/* choose a default net interface (endpt) for v4 or v6 */
+#define ANY_INTERFACE_BYFAM(family) \
+	((AF_INET == family) \
+	     ? io_data.any_interface \
+	     : io_data.any6_interface)
 
 /* choose a default interface for addresses' protocol (addr family) */
 #define ANY_INTERFACE_CHOOSE(psau)				\
@@ -207,23 +190,9 @@ typedef union {
 
 
 /*
- * We tell reference clocks from real peers by giving the reference
- * clocks an address of the form 127.127.t.u, where t is the type and
- * u is the unit number.  We define some of this here since we will need
- * some sanity checks to make sure this address isn't interpretted as
- * that of a normal peer.
- */
-#define	REFCLOCK_ADDR	0x7f7f0000	/* 127.127.0.0 */
-#define	REFCLOCK_MASK	0xffff0000	/* 255.255.0.0 */
-
-#define	ISREFCLOCKADR(srcadr)					\
-	(IS_IPV4(srcadr) &&					\
-	 (SRCADR(srcadr) & REFCLOCK_MASK) == REFCLOCK_ADDR)
-
-/*
  * Macro for checking for invalid addresses.  This is really, really
  * gross, but is needed so no one configures a host on net 127 now that
- * we're encouraging it the the configuration file.
+ * we're encouraging it the configuration file.
  */
 #define	LOOPBACKADR	0x7f000001
 #define	LOOPNETMASK	0xff000000
@@ -235,4 +204,4 @@ typedef union {
 	 && SRCADR(srcadr) != LOOPBACKADR)
 
 
-#endif /* NTP_NET_H */
+#endif /* GUARD_NTP_NET_H */

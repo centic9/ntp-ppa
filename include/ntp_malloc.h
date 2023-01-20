@@ -1,16 +1,10 @@
 /*
  * Define malloc and friends.
  */
-#ifndef NTP_MALLOC_H
-#define NTP_MALLOC_H
+#ifndef GUARD_NTP_MALLOC_H
+#define GUARD_NTP_MALLOC_H
 
-#ifdef HAVE_STDLIB_H
-# include <stdlib.h>
-#else
-# ifdef HAVE_MALLOC_H
-#  include <malloc.h>
-# endif
-#endif
+#include <stdlib.h>
 
 /*
  * Deal with platform differences declaring alloca()
@@ -31,11 +25,6 @@
 # ifndef alloca
 #  define alloca __alloca
 # endif
-#elif defined _MSC_VER
-# include <malloc.h>
-# ifndef alloca
-#  define alloca _alloca
-# endif
 #else
 # include <stddef.h>
 void * alloca(size_t);
@@ -48,14 +37,8 @@ void * alloca(size_t);
 	 realloc(ptr, (newsz))
 #endif
 
-#ifdef HAVE_STRINGS_H
-# include <strings.h>
-# define zero_mem(p, s)		bzero(p, s)
-#endif
+#include <strings.h>
 
-#ifndef zero_mem
-# define zero_mem(p, s)		memset(p, 0, s)
-#endif
-#define ZERO(var)		zero_mem(&(var), sizeof(var))
+#define ZERO(var)		memset(&(var), '\0', sizeof(var))
 
-#endif	/* NTP_MALLOC_H */
+#endif	/* GUARD_NTP_MALLOC_H */

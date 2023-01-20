@@ -1,0 +1,107 @@
+= Automatic Server Discovery Schemes
+include::include-html.ad[]
+
+[cols="10%,90%",frame="none",grid="none",style="verse"]
+|==============================
+|image:pic/alice51.gif[]|
+{millshome}pictures.html[from 'Alice's Adventures in Wonderland', Lewis Carroll]
+
+Make sure who your friends are.
+
+|==============================
+
+== Related Links
+
+include::includes/hand.adoc[]
+
+== Table of Contents
+
+* link:#assoc[Association Management]
+* link:#pool[Server Pool Scheme]
+
+'''''
+
+[[modes]]
+== Introduction
+
+The NTPv4 *reference specification* supports three automatic server discovery
+schemes: broadcast, manycast, and server pool. However, NTPsec only supports
+the pool mechanism. For details on the reference specification,
+please see https://tools.ietf.org/html/rfc5905[RFC 5905].
+
+The pool scheme expands a single DNS name into multiple peer entries.
+This is intended for, but not limited to, the
+https://www.ntppool.org[NTP Pool], a worldwide set of servers
+volunteered for public use.
+
+The mechanism might be described as _grab-n'-prune._ Through one means or
+another, a number of associations are "grabbed" either directly or indirectly
+from the configuration file, and they are ordered from best to worst according
+to the NTP mitigation algorithms, and surplus associations are pruned.
+
+[[assoc]]
+== Association Management
+
+Pool discovery uses an iterated process to discover new preemptable client
+associations as long as the total number of client associations is less
+than the +maxclock+ option of the link:miscopt.html#tos[+tos+] command,
+which should typically be changed from the default.
+
+Pool discovery uses a stratum filter to select just those servers with
+strata considered useful. This can avoid large numbers of clients
+ganging up on a small number of low-stratum servers and avoids servers
+below or above specified stratum levels. By default, servers of all
+strata are acceptable; however, the +tos+ command can be used to
+restrict the acceptable range from the +floor+ option, inclusive, to the
++ceiling+ option, exclusive. Potential servers operating at the same
+stratum as the client will be avoided.  Additional filters can be
+supplied using the methods described on the
+link:authentic.html[Authentication Support] page.
+
+The pruning process uses a set of unreach counters, one for each
+association created by the configuration or discovery process. At each
+poll interval, the counter is increased by one. If an acceptable packet
+arrives for an association, the counter is set to zero. If the
+the counter reaches an arbitrary threshold of 10, the association
+becomes a candidate for pruning.
+
+The pruning algorithm is very simple. If an ephemeral or preemptable
+association becomes a candidate for pruning, it is immediately
+demobilized. If a persistent association becomes a candidate for
+pruning, it is not demobilized, but its poll interval is set at the
+maximum. The pruning algorithm design avoids needless discovery/prune
+cycles for associations that wander in and out of the survivor list, but
+otherwise have similar characteristics.
+
+Following is a description of the pool scheme. Note that
+reference to options applies to the commands described on the
+link:confopt.html[Configuration Options] page. See that page
+for applicability and defaults.
+
+[[pool]]
+== Pool Scheme
+
+The idea of targeting servers on a random basis to distribute and
+balance the load is not a new one; however, the
+https://www.ntppool.org/[NTP Pool Project] puts
+this on steroids. At present, several thousand operators around the
+globe have volunteered their servers for public access. In general,
+NTP is a lightweight service and servers used for other purposes don't
+mind an additional small load. The trick is to randomize over the
+population and minimize the load on any one server while retaining the
+advantages of multiple servers using the NTP mitigation algorithms.
+
+To support this service, custom DNS software is used by pool.ntp.org
+and its subdomains to discover a random selection of participating
+(in-country) servers in response to a DNS query. The client receiving
+this list mobilizes some or all of them, as described above.  Cryptographic
+authentication is not supported.
+
+The pool scheme is configured using one or more +pool+ commands with DNS
+names indicating the pool from which to draw. The +pool+ command can be
+used more than once; duplicate servers are detected and discarded.  For
+configuration examples, see link:quick.html#pool[Using the NTP Pool].
+
+'''''
+
+include::includes/footer.adoc[]

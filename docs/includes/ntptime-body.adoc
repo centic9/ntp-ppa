@@ -1,0 +1,55 @@
+// This is the body of the manual page for ntptime.
+// It's included in two places: once for the docs/ HTML
+// tree, and once to make an individual man page.
+
+== Synopsis
+[verse]
+ntptime [+-chr+] [+-e+ 'est_error'] [+-f+ 'frequency'] [-j]
+        [+-m+ 'max_error'] [+-o+ 'offset'] [+-s+ 'status']
+        [+-t+ 'time_constant']
+
+== Description
+
+Checks the kernel configuration for the NTP user interface
+syscalls +ntp_gettime()+ and +ntp_adjtime()+.  If present, the current
+timekeeping data are displayed.  If not, a disappointment is
+displayed.  See the kernel page file in the HTML documentation in
+distribution for further details.
+
+A similar display can be obtained using the +ntpq+ program
+and +kerninfo+ command.
+
+This program is useful only with kernels featuring the ntp_adjtime(2)
+system call or local equivalent, as described in the link:kern.html[A
+Kernel Model for Precision Timekeeping] page,
+
+== Options
+
++-c+::
+  Display the execution time of +ntptime+ itself.
++-e+ 'est_error'::
+  Specify estimated error, in microseconds.
++-f+ 'frequency'::
+  Specify frequency offset, in parts per million.
++-h+::
+  Display help information.
++-j+::
+  Report in JSON rather than plain text.
++-m+ 'max_error'::
+  Specify max possible errors, in microseconds.
++-o+ 'offset'::
+  Specify clock offset, in microseconds.
++-r+::
+  Display Unix and NTP times in raw format.
++-s+ 'status'::
+  Specify clock status. Better know what you are doing.
++-t+ 'time_constant'::
+  Specify time constant, an integer in the range 0-10.
++-V+::
+  Print the version string and exit.
+
+== Bugs
+
+The format for modes and status in the JSON report is less than ideal.
+
+//end

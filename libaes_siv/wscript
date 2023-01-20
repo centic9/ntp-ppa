@@ -1,0 +1,17 @@
+def build(ctx):
+    ctx(
+        target='aes_siv',
+        features='c cstlib',
+        includes=[ctx.bldnode.parent.abspath()],
+        source='aes_siv.c',
+        use='CRYPTO',
+        cflags=['-Wno-shadow',
+                # '-Wall', '-Wextra', '-Wstrict-prototypes',  # default
+                '-Wconversion',
+                '-O3',
+                '-fomit-frame-pointer',
+                '-funroll-loops',
+                '-ftree-vectorize',
+                '-Wno-inline',  # gcc 10 gives inline warnings?
+                ],
+    )

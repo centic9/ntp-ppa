@@ -1,0 +1,93 @@
+= The NTPsec distribution base directory =
+
+This directory and its subdirectories contain NTPSec, a
+security-hardened implementation of Network Time Protocol Version 4.
+You can browse a summary of differences from legacy NTP here:
+
+https://docs.ntpsec.org/latest/ntpsec.html
+
+The contents of the base directory are given in this file. The contents of
+subdirectories are usually given in the README files in each subdirectory.
+
+The base directory ./ contains the configuration files, source
+directories and related stuff:
+
+INSTALL.adoc::	Generic installation instructions.
+
+LICENSE.adoc::	Software licensing agreement.
+
+NEWS.adoc::	What's new in this release.
+
+README.adoc::	This file.
+
+VERSION::	The version stamp, to be used by scripts and programs.
+
+lgtm.template.yml:: Configuration file for LGTM code analysis
+
+attic/::	Directory containing source code that is *not* part of a
+		normal installation. Things can disappear from here at any
+		time.
+
+buildprep::	Executable script for fetching installation prerequisites.
+
+contrib/::	Directory containing contributed scripts, dragons dwell here.
+		Some of this might eventually move to being supported code.
+
+devel/::	Documentation and small tools aimed at developers.
+		Includes a hacking guide and a tour of the internals.
+
+docs/::		Directory containing a complete set of documentation on
+		building and configuring a NTP server or client. The files
+		are in asciidoc markup.  This replaces the 'html' directory
+		of previous versions, but html can be generated from it.
+
+etc/::		Directory containing a motley collection of configuration files
+		and launch scripts for various systems. For example
+		only.
+
+include/::	Directory containing include header files used by most
+		programs in the distribution.
+
+libjsmn/::	A minimal JSON library used by the GPSD-JSON driver.
+
+libntp/::	Directory containing library source code used by most
+		programs in the distribution.
+
+libparse/::	This directory contains the files making up the parser for
+		the parse refclock driver. For reasonably sane clocks
+		this refclock drivers allows a refclock implementation
+		by just providing a conversion routine and the
+		appropriate NTP parameters
+
+ntpclients/::   Directory containing sources for clients - utility programs
+		to query local and remote NTP installations for log status,
+		state variables, and other timekeeping information.  The term
+		"clients" is used quite loosely here; any tool that is not a
+		multi-file C program probably lives in this directory.
+
+ntpd/::		Sources for the main time-synchronization daemon.
+
+ntpfrob/::      The ntpfrob utility collects several small diagnostic
+		functions for reading and tweaking the local clock
+		hardware, including reading the clock tick rate,
+		precision, and jitter.
+
+ntptime/::	Directory containing a utility for reading and modifying
+		kernel parameters related to the local clock.
+
+packaging/::	Parts and guidance for distribution packagers.
+
+pylib/::	Installable Python helper modules for scripts.
+
+tests/::	Self-test code.
+
+waf::		A copy of the waf builder.  This is the engine used to configure
+		and build the codebase.
+
+wafhelpers/::	A library of Python procedures used by the waf build system.
+
+wscript::	NTP-specific waf rules.
+
+www/::		Sample ntpviz files
+
+// end

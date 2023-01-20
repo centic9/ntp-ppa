@@ -1,0 +1,43 @@
+= ntplogtemp - log system temperature data for use by ntpviz
+include::include-html.ad[]
+
+[cols="10%,90%",frame="none",grid="none",style="verse"]
+|==============================
+|image:pic/panda.gif[]|
+{millshome}pictures.html[from the DARPA Atlantic SATNET Program (1979)]
+
+P is for patching.
+
+// This is preserved in case we ever want the historical flavor again.
+// The baby panda was scanned at University College London and used as a
+// FAX test image for a demonstration of the DARPA Atlantic SATNET Program
+// and the first transatlantic Internet connection in 1978. The computing
+// system used for that demonstration was called the
+// {millshome}database/papers/fuzz.ps[Fuzzball]. As
+// it happened, this was also the first Internet multimedia presentation
+// and the first to use a predecessor of NTP in regular operation. The
+// image was widely copied and used for testing purpose throughout much of
+// the 1980s.
+
+|==============================
+
+== Manual Pages
+
+include::includes/manual.adoc[]
+
+== Table of Contents
+
+* link:#_synopsis[SYNOPSIS]
+* link:#_description[DESCRIPTION]
+* link:#_options[OPTIONS]
+* link:#_usage[USAGE]
+* link:#_exit_status[EXIT STATUS]
+* link:#_authors[AUTHORS]
+
+'''''
+
+include::includes/ntplogtemp-body.adoc[]
+
+'''''
+
+include::includes/footer.adoc[]

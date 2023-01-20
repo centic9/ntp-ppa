@@ -1,0 +1,106 @@
+import os
+
+import waflib
+from waflib import Errors, Options
+from waflib.Logs import pprint
+
+def build(ctx):
+
+    libntp_source = [
+        "authkeys.c",
+        "authreadkeys.c",
+        "clocktime.c",
+        "decodenetnum.c",
+        "dolfptoa.c",
+        "getopt.c",
+        "initnetwork.c",
+        "isc_interfaceiter.c",
+        "isc_net.c",
+        "macencrypt.c",
+        "ntp_endian.c",
+        "numtoa.c",
+        "refidsmear.c",
+        "socket.c",
+        "socktoa.c",
+        "ssl_init.c",
+        "syssignal.c",
+    ]
+
+    libntp_source_sharable = [
+        "assert.c",
+        "clockwork.c",
+        "emalloc.c",
+        "hextolfp.c",
+        "lib_strbuf.c",
+        "msyslog.c",
+        "ntp_calendar.c",
+        "ntp_random.c",
+        "prettydate.c",
+        "statestr.c",
+        "systime.c",
+        "timespecops.c",
+    ]
+
+    if not ctx.env.HAVE_STRLCAT or not ctx.env.HAVE_STRLCPY:
+        libntp_source_sharable += ["strl_obsd.c"]
+
+    # C library
+    ctx(
+        features="c cstlib",
+        includes=[ctx.bldnode.parent.abspath(), "../include"],
+        source=libntp_source + libntp_source_sharable,
+        target="ntp",
+        use="CRYPTO SSL",
+    )
+
+    if ctx.env['ntpc'] == 'ffi':
+        # Loadable FFI stub
+        ctx(
+            features="c cshlib",
+            includes=[ctx.bldnode.parent.abspath(), "../include"],
+            source=["ntp_c.c", "pymodule-mac.c"] + libntp_source_sharable,
+            target="../pylib/ntpc",  # Put the output in the pylib directory
+            use="M RT CRYPTO",
+            vnum=ctx.env['ntpcver'],
+        )
+        ctx.add_post_fun(post)
+    elif ctx.env['ntpc'] == 'ext':
+        # Loadable Python extension
+        ctx(
+            features="c cshlib pyext",
+            install_path='${PYTHONARCHDIR}/ntp',
+            includes=[ctx.bldnode.parent.abspath(), "../include"],
+            source=["pymodule.c", "pymodule-mac.c"] + libntp_source_sharable,
+            target="../pylib/ntpc",  # Put the output in the pylib directory
+            use="M RT CRYPTO",
+        )
+
+def post(ctx):
+    if not (ctx.cmd == 'install' and ctx.env.BIN_LDCONFIG):
+        return
+
+    destdir = Options.options.destdir
+    if destdir:
+        # When --destdir is set, we are by definition not installing to the
+        # real location, so running ldconfig is pointless.  It will need to
+        # be run manually by the user (or the package install process, if
+        # this is a package build).
+        pprint("YELLOW", "WARNING:")
+        pprint("YELLOW", "WARNING: Run ldconfig manually.")
+        pprint("YELLOW", "WARNING:")
+        return
+
+    # Try to run ldconfig.  It is not a fatal error here if it fails, as the
+    # install could be run by a non-root user.
+    ldconfig = ' '.join(ctx.env.BIN_LDCONFIG)
+    try:
+        out = ctx.cmd_and_log(
+            ctx.env.BIN_LDCONFIG, output=waflib.Context.STDOUT,
+            quiet=waflib.Context.BOTH)
+        pprint("GREEN", "running: %s  OK" % ldconfig)
+    except Errors.WafError as e:
+        pprint("RED", "running: %s  FAILED" % ldconfig)
+        if e.stdout:
+            pprint("RED", e.stdout)
+        if e.stderr:
+            pprint("RED", e.stderr)

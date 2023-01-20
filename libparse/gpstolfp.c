@@ -1,52 +1,85 @@
 /*
- * /src/NTP/ntp4-dev/libntp/gpstolfp.c,v 4.8 2005/04/16 17:32:10 kardel RELEASE_20050508_A
- *
- * gpstolfp.c,v 4.8 2005/04/16 17:32:10 kardel RELEASE_20050508_A
- *
- * $Created: Sun Jun 28 16:30:38 1998 $
- *
- * Copyright (c) 1998-2005 by Frank Kardel <kardel <AT> ntp.org>
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the author nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
+ * Copyright Frank Kardel <kardel@ntp.org>
+ * Copyright the NTPsec project contributors
+ * SPDX-License-Identifier: BSD-3-Clause
  */
-#include <config.h>
+#include "config.h"
 #include "ntp_fp.h"
 #include "ntp_calendar.h"
-#include "parse.h"
+#include "gpstolfp.h"
+
+#define GPSORIGIN       2524953600u  /* GPS origin - NTP origin in seconds */
 
 void
 gpstolfp(
-	 u_int weeks,
-	 u_int days,
+	 int weeks,
+	 int days,
 	 unsigned long  seconds,
 	 l_fp * lfp
 	 )
 {
-  lfp->l_ui = (uint32_t)(weeks * SECSPERWEEK + days * SECSPERDAY + seconds + GPSORIGIN); /* convert to NTP time */
-  lfp->l_uf = 0;
+	if (weeks < GPSWRAP)
+	{
+		weeks += GPSWEEKS;
+	}
+
+	/* convert to NTP time, note no fractional seconds */
+	*lfp = lfptouint((uint64_t)weeks * SECSPERWEEK
+			 + (uint64_t)days * SECSPERDAY
+			 + (uint64_t)seconds
+			 + GPSORIGIN);
+	setlfpfrac(*lfp, 0);
+}
+
+
+void
+gpsweekadj(
+	unsigned int * week,
+	unsigned int build_week
+	)
+{
+	/* adjust for rollover */
+	while (*week < build_week) {
+		*week += GPSWEEKS;
+	}
+}
+
+
+void
+gpstocal(
+	unsigned int week,
+	unsigned int TOW,
+	int UTC_offset,
+	struct calendar * out
+	)
+{
+	time64_t t;
+
+	t = (time64_t)((int64_t)GPSORIGIN - UTC_offset);
+	t += (time64_t)week * SECSPERWEEK;
+	t += TOW;
+
+	ntpcal_ntp64_to_date(out, t);
+}
+
+
+void
+caltogps(
+	const struct calendar * in,
+	int UTC_offset,
+	unsigned int * week,
+	unsigned int * TOW
+	)
+{
+	time64_t t;
+
+	t = ntpcal_dayjoin(ntpcal_date_to_rd(in) - DAY_NTP_STARTS,
+	                             ntpcal_date_to_daysec(in));
+	t -= (uint64_t)((int64_t)GPSORIGIN - UTC_offset);
+	*week = t / SECSPERWEEK;
+	if (NULL != TOW) {
+		*TOW = t % SECSPERWEEK;
+	}
 }
 
 /*
@@ -63,7 +96,7 @@ gpstolfp(
  * (GPSWRAP): update GPS rollover to 990 weeks
  *
  * Revision 4.2  1998/07/11 10:05:25  kardel
- * Release 4.0.73d reconcilation
+ * Release 4.0.73d reconciliation
  *
  * Revision 4.1  1998/06/28 16:47:15  kardel
  * added gpstolfp() function

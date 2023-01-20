@@ -1,0 +1,94 @@
+#! /usr/bin/env python
+#
+# drift of 104.8576 -> +1 tick.  Base  of 10000 ticks.
+#
+# 970306 HMS Deal with nanoseconds.  Fix sign of adjustments.
+#
+# Translated from a very old Perl script - the comment above is a clue
+# to how old.
+#
+'''
+calc_tickadj - Calculates "optimal" value for tick given ntp drift file.
+
+USAGE: calc_tickadj [-t tick] [-d drift-file]
+
+    -d, --drift-file=str         Ntp drift file to use
+    -t, --tick=num               Tick value of this host
+    -h, --help                   Display usage message and exit
+
+Options are specified by doubled hyphens and their name or by a single
+hyphen and the flag character.
+'''
+# SPDX-License-Identifier: BSD-2-Clause
+
+from __future__ import print_function, division
+
+import getopt
+import os
+import re
+import sys
+
+if __name__ == '__main__':
+    try:
+        (options, arguments) = getopt.getopt(
+            sys.argv[1:], "d:t:h", ["drift-file=", "tick=", "--help"])
+    except getopt.GetoptError as err:
+        sys.stderr.write(str(err) + "\n")
+        raise SystemExit(1)
+    tick = 0
+    drift_file = "/etc/ntp/drift"
+    for (switch, val) in options:
+        if switch == "-d" or switch == "--drift-file":
+            drift_file = val
+        elif switch == "-t" or switch == "--tick":
+            tick = int(val)
+        elif switch == "-h" or switch == "--help":
+            print(__doc__)
+            sys.exit(0)
+
+    if tick == 0:
+        try:
+            with os.popen("ntpfrob -A") as rp:
+                response = rp.read()
+                m = re.search("[0-9]+", response)
+                if m:
+                    tick = int(m.group(0))
+        except:
+            pass
+
+    if tick == 0:
+        sys.stderr.write("Could not get tick value, try manually with -t/--tick\n\n")
+        sys.exit(1)
+
+    # Drift file is in PPM where Million is actually 2**20
+    cvt = (2 ** 20) / tick
+    drift = 0.0
+
+    try:
+        with open(drift_file) as dp:
+            drift = dp.read()
+    except OSError:
+        sys.stderr.write("Could not open drift file: %s\n" % drift_file)
+        sys.exit(1)
+
+    m = re.match("[+-]?\d+\.?[0-9]+", drift)
+    if not m:
+        sys.stderr.write("Invalid drift file value '%s'\n" % drift)
+        sys.exit(1)
+    else:
+        drift = float(drift)
+
+    while drift < 0:
+        drift += cvt
+        tick -= 1
+
+    while drift > cvt:
+        drift -= cvt
+        tick += 1
+
+    print("%.3f (drift)" % drift)
+    print("%d usec; %d nsec" % (tick, (tick + (drift/cvt)) * 1000))
+
+    sys.exit(0)
+
+# end

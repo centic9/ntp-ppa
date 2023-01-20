@@ -1,39 +1,26 @@
-#ifndef NTP_CONFIG_H
-#define NTP_CONFIG_H
+#ifndef GUARD_NTP_CONFIG_H
+#define GUARD_NTP_CONFIG_H
 
-#ifdef HAVE_SYS_RESOURCE_H
-# include <sys/resource.h>
-#endif /* HAVE_SYS_RESOURCE_H */
+#include <sys/resource.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <math.h>
 
+#include "ntp_syslog.h"
+#include "ntp_fp.h"
+#include "ntp.h"
+#include "ntp_malloc.h"
+#include "ntp_refclock.h"
+#include "ntp_stdlib.h"
 #include "ntp_machine.h"
-#include "ntp_psl.h"
-#include "ntpsim.h"
-
 
 /*
  * Configuration file name
  */
 #ifndef CONFIG_FILE
-# ifndef SYS_WINNT
 #  define	CONFIG_FILE "/etc/ntp.conf"
-# else /* SYS_WINNT */
-#  define	CONFIG_FILE	"%windir%\\system32\\drivers\\etc\\ntp.conf"
-#  define	ALT_CONFIG_FILE "%windir%\\ntp.conf"
-#  define	NTP_KEYSDIR	"%windir%\\system32\\drivers\\etc"
-# endif /* SYS_WINNT */
 #endif /* not CONFIG_FILE */
-
-
-/*
- * We keep config trees around for possible saveconfig use.  When
- * built with configure --disable-saveconfig, and when built with
- * debugging enabled, include the free_config_*() routines.  In the
- * DEBUG case, they are used in an atexit() cleanup routine to make
- * postmortem leak check reports more interesting.
- */
-#if !defined(FREE_CFG_T) && (!defined(SAVECONFIG) || defined(DEBUG))
-#define FREE_CFG_T
-#endif
+#define CONFIG_DIR	"ntp.d"
 
 /* Limits */
 #define MAXLINE 1024
@@ -43,39 +30,30 @@
 #define CONF_SOURCE_FILE		0
 #define CONF_SOURCE_NTPQ		1
 
+/* count of parsing errors - for log file */
+extern	int	parsing_errors;
+
 /* list of servers from command line for config_peers() */
 extern	int	cmdline_server_count;
 extern	char **	cmdline_servers;
-
-/* set to zero if we're not locking memory */
-extern	int	cur_memlock;
 
 typedef struct int_range_tag {
 	int	first;
 	int	last;
 } int_range;
 
-/* generic list node */
-typedef struct any_node_tag any_node;
-struct any_node_tag {
-	any_node *	link;
-};
-
-typedef DECL_FIFO_ANCHOR(any_node) any_node_fifo;
-
-/* Structure for storing an attribute-value pair */
+/* Structure for storing an attribute-value pair  */
 typedef struct attr_val_tag attr_val;
 struct attr_val_tag {
 	attr_val *	link;
 	int		attr;
 	int		type;	/* T_String, T_Integer, ... */
-	int		flag;	/* auxiliary flags */
 	union val {
-		double		d;	/* T_Double */
-		int		i;	/* T_Integer */
-		int_range	r;	/* T_Intrange */
-		char *		s;	/* T_String */
-		u_int		u;	/* T_U_int */
+		int		i;
+		unsigned int	u;
+		int_range	r;
+		double		d;
+		char *		s;
 	} value;
 };
 
@@ -86,7 +64,7 @@ typedef struct address_node_tag address_node;
 struct address_node_tag {
 	address_node *	link;
 	char *		address;
-	u_short		type;	/* family, AF_UNSPEC (0), AF_INET[6] */
+	unsigned short	type;	/* family, AF_UNSPEC (0), AF_INET[6] */
 };
 
 typedef DECL_FIFO_ANCHOR(address_node) address_fifo;
@@ -110,12 +88,11 @@ typedef DECL_FIFO_ANCHOR(string_node) string_fifo;
 typedef struct restrict_node_tag restrict_node;
 struct restrict_node_tag {
 	restrict_node *	link;
+	int		mode;	/* restrict or unrestrict? */
 	address_node *	addr;
 	address_node *	mask;
-	attr_val_fifo *	flag_tok_fifo;
+	int_fifo *	flags;
 	int		line_no;
-	short		ippeerlimit;
-	short		srvfuzrft;
 };
 
 typedef DECL_FIFO_ANCHOR(restrict_node) restrict_fifo;
@@ -123,14 +100,10 @@ typedef DECL_FIFO_ANCHOR(restrict_node) restrict_fifo;
 typedef struct peer_node_tag peer_node;
 struct peer_node_tag {
 	peer_node *	link;
-	int		host_mode;
 	address_node *	addr;
-	attr_val_fifo *	peerflags;
-	u_char		minpoll;
-	u_char		maxpoll;
-	u_int32		ttl;
-	u_char		peerversion;
-	keyid_t		peerkey;
+	int		host_mode;
+	struct peer_ctl	ctl;
+	struct refclockstat clock_stat;
 	char *		group;
 };
 
@@ -148,12 +121,7 @@ typedef DECL_FIFO_ANCHOR(unpeer_node) unpeer_fifo;
 typedef struct auth_node_tag auth_node;
 struct auth_node_tag {
 	int		control_key;
-	int		cryptosw;
-	attr_val_fifo *	crypto_cmd_list;
 	char *		keys;
-	char *		keysdir;
-	int		request_key;
-	int		revoke;
 	attr_val_fifo *	trusted_key_list;
 	char *		ntp_signd_socket;
 };
@@ -200,7 +168,6 @@ typedef struct sim_node_tag sim_node;
 struct sim_node_tag {
 	sim_node *		link;
 	attr_val_fifo *		init_opts;
-	server_info_fifo *	servers;
 };
 
 typedef DECL_FIFO_ANCHOR(sim_node) sim_fifo;
@@ -217,10 +184,6 @@ struct config_tree_tag {
 	unpeer_fifo *	unpeers;
 
 	/* Other Modes */
-	int		broadcastclient;
-	address_fifo *	manycastserver;
-	address_fifo *	multicastclient;
-
 	attr_val_fifo *	orphan_cmds;	/* s/b renamed tos_options */
 
 	/* Monitoring Configuration */
@@ -229,13 +192,14 @@ struct config_tree_tag {
 	filegen_fifo *	filegen_opts;
 
 	/* Access Control Configuration */
-	attr_val_fifo *	discard_opts;
+	attr_val_fifo *	limit_opts;
 	attr_val_fifo *	mru_opts;
 	restrict_fifo *	restrict_opts;
 
 	addr_opts_fifo *fudge;
 	attr_val_fifo *	rlimit;
 	attr_val_fifo *	tinker;
+	attr_val_fifo *	nts;
 	attr_val_fifo *	enable_opts;
 	attr_val_fifo *	disable_opts;
 
@@ -244,16 +208,17 @@ struct config_tree_tag {
 	attr_val_fifo *	logconfig;
 	string_fifo *	phone;
 	setvar_fifo *	setvar;
-	int_fifo *	ttl;
-	addr_opts_fifo *trap;
 	attr_val_fifo *	vars;
 	nic_rule_fifo *	nic_rules;
 	int_fifo *	reset_counters;
-	attr_val_fifo *	pollskewlist;
 
 	sim_fifo *	sim_details;
 	int		mdnstries;
 };
+extern void init_readconfig(void);
+extern void set_keys_file(char*);
+extern void set_trustedkey(keyid_t);
+extern int mdnstries;
 
 
 /* Structure for holding a remote configuration command */
@@ -266,33 +231,12 @@ struct REMOTE_CONFIG_INFO {
 };
 
 
-/*
- * context for trap_name_resolved() to call ctlsettrap() once the 
- * name->address resolution completes.
- */
-typedef struct settrap_parms_tag {
-	sockaddr_u	ifaddr;
-	int		ifaddr_nonnull;
-} settrap_parms;
-
-
-/*
-** Data Minimization Items
-*/
-
-/* Serverresponse fuzz reftime: stored in 'restrict' fifos */
-
-
 /* get text from T_ tokens */
 const char * token_name(int token);
 
 /* generic fifo routines for structs linked by 1st member */
-typedef void (*fifo_deleter)(void*);
-void *	destroy_gen_fifo(void *fifo, fifo_deleter func);
-void *	append_gen_fifo(void *fifo, void *entry);
+void*	append_gen_fifo(void *fifo, void *entry);
 void *	concat_gen_fifos(void *first, void *second);
-#define DESTROY_G_FIFO(pf, func)	\
-	((pf) = destroy_gen_fifo((pf), (fifo_deleter)(func)))
 #define APPEND_G_FIFO(pf, pe)		\
 	((pf) = append_gen_fifo((pf), (pe)))
 #define CONCAT_G_FIFOS(first, second)	\
@@ -302,6 +246,7 @@ void *	concat_gen_fifos(void *first, void *second);
 	      ? HEAD_FIFO(*(pf))	\
 	      : NULL)
 
+address_node *addr_from_typeunit(char *type, int unit);
 peer_node *create_peer_node(int hmode, address_node *addr,
 			    attr_val_fifo *options);
 unpeer_node *create_unpeer_node(address_node *addr);
@@ -309,41 +254,29 @@ address_node *create_address_node(char *addr, int type);
 void destroy_address_node(address_node *my_node);
 attr_val *create_attr_dval(int attr, double value);
 attr_val *create_attr_ival(int attr, int value);
-attr_val *create_attr_rval(int attr, int first, int last);
+attr_val *create_attr_uval(int attr, unsigned int value);
+attr_val *create_attr_rangeval(int attr, int first, int last);
 attr_val *create_attr_sval(int attr, const char *s);
-attr_val *create_attr_uval(int attr, u_int value);
-void	  destroy_attr_val(attr_val *node);
 filegen_node *create_filegen_node(int filegen_token,
 				  attr_val_fifo *options);
 string_node *create_string_node(char *str);
-restrict_node *create_restrict_node(address_node *addr,
+restrict_node *create_restrict_node(int mode, address_node *addr,
 				    address_node *mask,
-				    short ippeerlimit,
-				    attr_val_fifo *flags, int line_no);
+				    int_fifo *flags, int line_no);
 int_node *create_int_node(int val);
 addr_opts_node *create_addr_opts_node(address_node *addr,
 				      attr_val_fifo *options);
-sim_node *create_sim_node(attr_val_fifo *init_opts,
-			  server_info_fifo *servers);
 setvar_node *create_setvar_node(char *var, char *val, int isdefault);
 nic_rule_node *create_nic_rule_node(int match_class, char *if_name,
 				    int action);
 
-script_info *create_sim_script_info(double duration,
-				    attr_val_fifo *script_queue);
-server_info *create_sim_server(address_node *addr, double server_offset,
-			       script_info_fifo *script);
-
 extern struct REMOTE_CONFIG_INFO remote_config;
 void config_remotely(sockaddr_u *);
 
-#ifdef SAVECONFIG
-int dump_config_tree(config_tree *ptree, FILE *df, int comment);
-int dump_all_config_trees(FILE *df, int comment);
-#endif
+extern bool have_interface_option;
+extern char *stats_drift_file;	/* name of the driftfile */
 
-#if defined(HAVE_SETRLIMIT)
+
 void ntp_rlimit(int, rlim_t, int, const char *);
-#endif
 
-#endif	/* !defined(NTP_CONFIG_H) */
+#endif	/* GUARD_NTP_CONFIG_H */

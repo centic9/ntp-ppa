@@ -1,21 +1,28 @@
-//#include "ntpdtest.h"
+#include <stdarg.h>
+
 #include "config.h"
 
+#include "unity.h"
+#include "unity_fixture.h"
+#include "caltime.h"
 
 #include "ntp.h"
+#include "ntpd.h"
 #include "ntp_calendar.h"
-#include "ntp_stdlib.h"
 #include "ntp_leapsec.h"
-#include "lib_strbuf.h"
 
-#include "unity.h"
 
-#include <string.h>
+TEST_GROUP(leapsec);
 
-extern	void	setUp(void);
-extern	void	tearDown(void);
+static time_t fixedpivot;
 
-#include "test-libntp.h"
+TEST_SETUP(leapsec) {
+	fixedpivot = settime(1970, 1, 1, 0, 0, 0);
+	leapsec_ut_pristine();
+}
+
+TEST_TEAR_DOWN(leapsec) {
+}
 
 static const char leap1 [] =
     "#\n"
@@ -77,7 +84,7 @@ static const char leap2 [] =
     "2950473600	28	# 1 Jul 1993\n"
     "#\n";
 
-// Faked table with a leap second removal at 2009 
+// Faked table with a leap second removal at 2009
 static const char leap3 [] =
     "#\n"
     "#@ 	3610569600\n"
@@ -230,158 +237,111 @@ static const char leap_gthash [] = {
     "#h	1151a8f e85a5069 9000fcdb 3d5e5365 1d505b37"
 };
 
-static const uint32_t lsec2006 = 3345062400u; // +33, 1 Jan 2006, 00:00:00 utc
-static const uint32_t lsec2009 = 3439756800u; // +34, 1 Jan 2009, 00:00:00 utc
-static const uint32_t lsec2012 = 3550089600u; // +35, 1 Jul 2012, 00:00:00 utc
-static const uint32_t lsec2015 = 3644697600u; // +36, 1 Jul 2015, 00:00:00 utc
+static time_t lsec2009 = 3439756800U - JAN_1970; // 1 Jan 2009, 00:00:00 utc
+static time_t lsec2012 = 3550089600U - JAN_1970; // 1 Jul 2012, 00:00:00 utc
 
 static int stringreader(void* farg)
 {
 	const char ** cpp = (const char**)farg;
-
-	if (**cpp)
+	if (**cpp) {
 		return *(*cpp)++;
-	else
-		return EOF;
+	} else {
+	    return EOF;
+	}
 }
 
-static int/*BOOL*/
+static bool
 setup_load_table(
-	const char * cp,
-	int          blim)
+	const char * cp)
 {
-	int            rc;
+	bool            rc;
 	leap_table_t * pt = leapsec_get_table(0);
-
-	rc = (pt != NULL) && leapsec_load(pt, stringreader, &cp, blim);
+	rc = (pt != NULL) && leapsec_load(pt, stringreader, &cp);
 	rc = rc && leapsec_set_table(pt);
 	return rc;
 }
 
-static int/*BOOL*/
+static bool
 setup_clear_table(void)
 {
-	int            rc;
+	bool            rc;
 	leap_table_t * pt = leapsec_get_table(0);
-
 	if (pt)
 		leapsec_clear(pt);
 	rc = leapsec_set_table(pt);
 	return rc;
 }
 
-#if 0 /* formatting & compare currently not used... */
-static const char *
-CalendarToString(const struct calendar cal)
-{
-	char * str;
 
-	LIB_GETBUF(str);
-	snprintf(str, LIB_BUFLENGTH,
-		 "%04hu-%02hhu-%02hhu (%hu) %02hhu:%02hhu:%02hhu",
-		 cal.year, cal.month, cal.monthday, cal.yearday,
-		 cal.hour, cal.minute, cal.second);
-	return str;
+/*
+std::string CalendarToString(const calendar &cal) {
+	std::ostringstream ss;
+	ss << cal.year << "-" << (unsigned int)cal.month << "-" << (unsigned int)cal.monthday
+	   << " (" << cal.yearday << ") " << (unsigned int)cal.hour << ":"
+	   << (unsigned int)cal.minute << ":" << (unsigned int)cal.second;
+	return ss.str();
 }
-
-static int
-IsEqual(const struct calendar expected, const struct calendar actual)
-{
-
-	if (   expected.year == actual.year
-	    && (   expected.yearday == actual.yearday
-		|| (   expected.month == actual.month
-		    && expected.monthday == actual.monthday))
-	    && expected.hour == actual.hour
-	    && expected.minute == actual.minute
-	    && expected.second == actual.second) {
-		return TRUE;
+bool IsEqual(const calendar &expected, const calendar &actual) {
+	if (expected.year == actual.year &&
+		(expected.yearday == actual.yearday ||
+		 (expected.month == actual.month &&
+		  expected.monthday == actual.monthday)) &&
+		expected.hour == actual.hour &&
+		expected.minute == actual.minute &&
+		expected.second == actual.second) {
+		return true;
 	} else {
-		const char *p_exp = CalendarToString(expected);
-		const char *p_act = CalendarToString(actual);
-		printf("expected: %s but was %s", p_exp, p_act);
-		return FALSE;
+		return false
+			<< "expected: " << CalendarToString(expected) << " but was "
+			<< CalendarToString(actual);
 	}
 }
-#endif /*0*/
+*/
 
-//-------------------------
-
-void
-setUp(void)
-{
-    ntpcal_set_timefunc(timefunc);
-    settime(1970, 1, 1, 0, 0, 0);
-    leapsec_ut_pristine();
-}
-
-void
-tearDown(void)
-{
-    ntpcal_set_timefunc(NULL);
-}
 
 // =====================================================================
 // VALIDATION TESTS
 // =====================================================================
 
 // ----------------------------------------------------------------------
-extern void test_ValidateGood(void);
-void test_ValidateGood(void)
-{
+TEST(leapsec, ValidateGood) {
 	const char *cp = leap_ghash;
 	int         rc = leapsec_validate(stringreader, &cp);
-
 	TEST_ASSERT_EQUAL(LSVALID_GOODHASH, rc);
 }
 
 // ----------------------------------------------------------------------
-extern void test_ValidateNoHash(void);
-void test_ValidateNoHash(void)
-{
+TEST(leapsec, ValidateNoHash) {
 	const char *cp = leap2;
 	int         rc = leapsec_validate(stringreader, &cp);
-
 	TEST_ASSERT_EQUAL(LSVALID_NOHASH, rc);
 }
 
 // ----------------------------------------------------------------------
-extern void test_ValidateBad(void);
-void test_ValidateBad(void)
-{
+TEST(leapsec, ValidateBad) {
 	const char *cp = leap_bhash;
 	int         rc = leapsec_validate(stringreader, &cp);
-
 	TEST_ASSERT_EQUAL(LSVALID_BADHASH, rc);
 }
 
 // ----------------------------------------------------------------------
-extern void test_ValidateMalformed(void);
-void test_ValidateMalformed(void)
-{
+TEST(leapsec, ValidateMalformed) {
 	const char *cp = leap_mhash;
 	int         rc = leapsec_validate(stringreader, &cp);
-
 	TEST_ASSERT_EQUAL(LSVALID_BADFORMAT, rc);
 }
 
 // ----------------------------------------------------------------------
-extern void test_ValidateMalformedShort(void);
-void test_ValidateMalformedShort(void)
-{
+TEST(leapsec, ValidateMalformedShort) {
 	const char *cp = leap_shash;
 	int         rc = leapsec_validate(stringreader, &cp);
-
 	TEST_ASSERT_EQUAL(LSVALID_BADFORMAT, rc);
 }
 
 // ----------------------------------------------------------------------
-extern void test_ValidateNoLeadZero(void);
-void test_ValidateNoLeadZero(void)
-{
+TEST(leapsec, ValidateNoLeadZero) {
 	const char *cp = leap_gthash;
 	int         rc = leapsec_validate(stringreader, &cp);
-
 	TEST_ASSERT_EQUAL(LSVALID_GOODHASH, rc);
 }
 
@@ -391,18 +351,16 @@ void test_ValidateNoLeadZero(void)
 
 // ----------------------------------------------------------------------
 // test table selection
-extern void test_tableSelect(void);
-void test_tableSelect(void)
-{
-    leap_table_t *pt1, *pt2, *pt3;
+TEST(leapsec, tableSelect) {
+	leap_table_t *pt1, *pt2, *pt3;
 
 	pt1 = leapsec_get_table(0);
 	pt2 = leapsec_get_table(0);
-	TEST_ASSERT_EQUAL_MESSAGE(pt1, pt2,"first");
+	TEST_ASSERT_POINTERS_EQUAL(pt1, pt2);
 
 	pt1 = leapsec_get_table(1);
 	pt2 = leapsec_get_table(1);
-	TEST_ASSERT_EQUAL_MESSAGE(pt1, pt2,"second");
+	TEST_ASSERT_POINTERS_EQUAL(pt1, pt2);
 
 	pt1 = leapsec_get_table(1);
 	pt2 = leapsec_get_table(0);
@@ -415,96 +373,105 @@ void test_tableSelect(void)
 	leapsec_set_table(pt1);
 	pt2 = leapsec_get_table(0);
 	pt3 = leapsec_get_table(1);
-	TEST_ASSERT_EQUAL(pt1, pt2);
+	TEST_ASSERT_POINTERS_EQUAL(pt1, pt2);
 	TEST_ASSERT_NOT_EQUAL(pt2, pt3);
 
 	pt1 = pt3;
 	leapsec_set_table(pt1);
 	pt2 = leapsec_get_table(0);
 	pt3 = leapsec_get_table(1);
-	TEST_ASSERT_EQUAL(pt1, pt2);
+	TEST_ASSERT_POINTERS_EQUAL(pt1, pt2);
 	TEST_ASSERT_NOT_EQUAL(pt2, pt3);
 }
 
 // ----------------------------------------------------------------------
 // load file & check expiration
-extern void test_loadFileExpire(void);
-void test_loadFileExpire(void)
-{
+TEST(leapsec, loadFileExpire) {
 	const char *cp = leap1;
 	int rc;
 	leap_table_t * pt = leapsec_get_table(0);
 
-	rc =   leapsec_load(pt, stringreader, &cp, FALSE)
+	rc =   leapsec_load(pt, stringreader, &cp)
 	    && leapsec_set_table(pt);
-	TEST_ASSERT_EQUAL_MESSAGE(1, rc,"first");
-	rc = leapsec_expired(3439756800u, NULL);
+	TEST_ASSERT_EQUAL(1, rc);
+	rc = leapsec_expired(3439756800U - JAN_1970);
 	TEST_ASSERT_EQUAL(0, rc);
-	rc = leapsec_expired(3610569601u, NULL);
+	rc = leapsec_expired(3610569601U - JAN_1970);
 	TEST_ASSERT_EQUAL(1, rc);
 }
 
 // ----------------------------------------------------------------------
 // load file & check time-to-live
-extern void test_loadFileTTL(void);
-void test_loadFileTTL(void)
-{
-	const char     *cp = leap1;
-	int		rc;
-	leap_table_t  * pt = leapsec_get_table(0);
-	time_t		pivot = 0x70000000u;
-	const uint32_t	limit = 3610569600u;
+TEST(leapsec, loadFileTTL) {
+	const char *cp = leap1;
+	int rc;
+	leap_table_t * pt = leapsec_get_table(0);
 
-	rc =   leapsec_load(pt, stringreader, &cp, FALSE)
+	const time_t limit = 3610569600U - JAN_1970;
+
+	rc =   leapsec_load(pt, stringreader, &cp)
 	    && leapsec_set_table(pt);
-	TEST_ASSERT_EQUAL(1, rc); //
+	TEST_ASSERT_EQUAL(1, rc);
 
 	// exactly 1 day to live
-	rc = leapsec_daystolive(limit - 86400, &pivot);
+	rc = leapsec_daystolive(limit - 86400);
 	TEST_ASSERT_EQUAL( 1, rc);
 	// less than 1 day to live
-	rc = leapsec_daystolive(limit - 86399, &pivot);
+	rc = leapsec_daystolive(limit - 86399);
 	TEST_ASSERT_EQUAL( 0, rc);
 	// hit expiration exactly
-	rc = leapsec_daystolive(limit, &pivot);
+	rc = leapsec_daystolive(limit);
 	TEST_ASSERT_EQUAL( 0, rc);
 	// expired since 1 sec
-	rc = leapsec_daystolive(limit + 1, &pivot);
+	rc = leapsec_daystolive(limit + 1);
 	TEST_ASSERT_EQUAL(-1, rc);
 }
 
-// =====================================================================
-// RANDOM QUERY TESTS
-// =====================================================================
+
+// Hack to avoid compiler warnings from gcc 8.0
+// We should be able to cast fprintf, but that gets:
+// ../../tests/ntpd/leapsec.c: In function ‘TEST_leapsec_lsQueryPristineState_’:
+// ../../tests/ntpd/leapsec.c:434:19: warning: cast between incompatible function types from ‘int (*)(FILE * restrict,  const char * restrict,  ...)’ {aka ‘int (*)(struct _IO_FILE * restrict,  const char * restrict,  ...)’} to ‘void (*)(void *, const char *, ...)’ [-Wcast-function-type]
+//   leapsec_dump(pt, (leapsec_dumper)fprintf, stdout);
+static void
+my_fprintf(FILE *stream, const char *fmt, ...) {
+	va_list  ap;
+
+	va_start(ap, fmt);
+	vfprintf(stream, fmt, ap);
+	va_end(ap);
+
+}
+
 
 // ----------------------------------------------------------------------
-// test query in pristine state (bug#2745 misbehaviour)
-extern void test_lsQueryPristineState(void);
-void test_lsQueryPristineState(void)
-{
+// test query in pristine state (bug#2745 misbehavior)
+TEST(leapsec, lsQueryPristineState) {
 	int            rc;
 	leap_result_t  qr;
 
-	rc = leapsec_query(&qr, lsec2012, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	leap_table_t * pt = leapsec_get_table(0);
+	leapsec_dump(pt, (leapsec_dumper)my_fprintf, stdout);
+
+	rc = leapsec_query(&qr, lsec2012);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,             qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 }
 
+
 // ----------------------------------------------------------------------
 // ad-hoc jump: leap second at 2009.01.01 -60days
-extern void test_ls2009faraway(void);
-void test_ls2009faraway(void)
-{
-	int            rc;
+TEST(leapsec, ls2009faraway) {
+  	bool           rc;
 	leap_result_t  qr;
 
-	rc = setup_load_table(leap1,FALSE);
+	rc = setup_load_table(leap1);
 	TEST_ASSERT_EQUAL(1, rc);
 
 	// test 60 days before leap. Nothing scheduled or indicated.
-	rc = leapsec_query(&qr, lsec2009 - 60*SECSPERDAY, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - 60*SECSPERDAY);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(33, qr.tai_offs);
 	TEST_ASSERT_EQUAL(0,  qr.tai_diff);
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
@@ -512,18 +479,16 @@ void test_ls2009faraway(void)
 
 // ----------------------------------------------------------------------
 // ad-hoc jump: leap second at 2009.01.01 -1week
-extern void test_ls2009weekaway(void);
-void test_ls2009weekaway(void)
-{
-	int            rc;
+TEST(leapsec, ls2009weekaway) {
+	bool           rc;
 	leap_result_t  qr;
 
-	rc = setup_load_table(leap1,FALSE);
+	rc = setup_load_table(leap1);
 	TEST_ASSERT_EQUAL(1, rc);
 
 	// test 7 days before leap. Leap scheduled, but not yet indicated.
-	rc = leapsec_query(&qr, lsec2009 - 7*SECSPERDAY, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - 7*SECSPERDAY);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(33, qr.tai_offs);
 	TEST_ASSERT_EQUAL(1,  qr.tai_diff);
 	TEST_ASSERT_EQUAL(LSPROX_SCHEDULE, qr.proximity);
@@ -531,18 +496,16 @@ void test_ls2009weekaway(void)
 
 // ----------------------------------------------------------------------
 // ad-hoc jump: leap second at 2009.01.01 -1hr
-extern void test_ls2009houraway(void);
-void test_ls2009houraway(void)
-{
-	int            rc;
+TEST(leapsec, ls2009houraway) {
+	bool           rc;
 	leap_result_t  qr;
 
-	rc = setup_load_table(leap1,FALSE);
+	rc = setup_load_table(leap1);
 	TEST_ASSERT_EQUAL(1, rc);
 
 	// test 1 hour before leap. 61 true seconds to go.
-	rc = leapsec_query(&qr, lsec2009 - SECSPERHR, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - SECSPERHR);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(33, qr.tai_offs);
 	TEST_ASSERT_EQUAL(1,  qr.tai_diff);
 	TEST_ASSERT_EQUAL(LSPROX_ANNOUNCE, qr.proximity);
@@ -550,18 +513,16 @@ void test_ls2009houraway(void)
 
 // ----------------------------------------------------------------------
 // ad-hoc jump: leap second at 2009.01.01 -1sec
-extern void test_ls2009secaway(void);
-void test_ls2009secaway(void)
-{
-	int            rc;
+TEST(leapsec, ls2009secaway) {
+	bool           rc;
 	leap_result_t  qr;
 
-	rc = setup_load_table(leap1,FALSE);
-	TEST_ASSERT_EQUAL(1, rc);
+	rc = setup_load_table(leap1);
+	TEST_ASSERT_TRUE(rc);
 
 	// test 1 second before leap (last boundary...) 2 true seconds to go.
-	rc = leapsec_query(&qr, lsec2009 - 1, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - 1);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(33, qr.tai_offs);
 	TEST_ASSERT_EQUAL(1,  qr.tai_diff);
 	TEST_ASSERT_EQUAL(LSPROX_ALERT, qr.proximity);
@@ -569,18 +530,16 @@ void test_ls2009secaway(void)
 
 // ----------------------------------------------------------------------
 // ad-hoc jump to leap second at 2009.01.01
-extern void test_ls2009onspot(void);
-void test_ls2009onspot(void)
-{
-	int            rc;
+TEST(leapsec, ls2009onspot) {
+	bool           rc;
 	leap_result_t  qr;
 
-	rc = setup_load_table(leap1,FALSE);
-	TEST_ASSERT_EQUAL(1, rc);
+	rc = setup_load_table(leap1);
+	TEST_ASSERT_TRUE(rc);
 
 	// test on-spot: treat leap second as already gone.
-	rc = leapsec_query(&qr, lsec2009, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(34, qr.tai_offs);
 	TEST_ASSERT_EQUAL(0,  qr.tai_diff);
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
@@ -588,18 +547,16 @@ void test_ls2009onspot(void)
 
 // ----------------------------------------------------------------------
 // test handling of the leap second at 2009.01.01 without table
-extern void test_ls2009nodata(void);
-void test_ls2009nodata(void)
-{
-	int            rc;
+TEST(leapsec, ls2009nodata) {
+	bool           rc;
 	leap_result_t  qr;
 
 	rc = setup_clear_table();
-	TEST_ASSERT_EQUAL(1, rc);
+	TEST_ASSERT_TRUE(rc);
 
 	// test on-spot with empty table
-	rc = leapsec_query(&qr, lsec2009, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,  qr.tai_offs);
 	TEST_ASSERT_EQUAL(0,  qr.tai_diff);
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
@@ -607,359 +564,126 @@ void test_ls2009nodata(void)
 
 // ----------------------------------------------------------------------
 // test handling of the leap second at 2009.01.01 with culled data
-extern void test_ls2009limdata(void);
-void test_ls2009limdata(void)
-{
-	int            rc;
+TEST(leapsec, ls2009limdata) {
+	leap_table_t * pt;
+	bool           rc;
 	leap_result_t  qr;
 
-	rc = setup_load_table(leap1, TRUE);
-	TEST_ASSERT_EQUAL(1, rc);
+	rc = setup_load_table(leap1);
+	pt = leapsec_get_table(0);
+	leapsec_dump(pt, (leapsec_dumper)my_fprintf, stdout);
 
-	// test on-spot with limited table - this is tricky.
-	// The table used ends 2012; depending on the build date, the 2009 entry
-	// might be included or culled. The resulting TAI offset must be either
-	// 34 or 35 seconds, depending on the build date of the test. 
-	rc = leapsec_query(&qr, lsec2009, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
-	TEST_ASSERT_TRUE(34 <= qr.tai_offs);
-	TEST_ASSERT_TRUE(35 >= qr.tai_offs);
+	// FIXME
+	// This used to check against build date
+	// That updated the header but didn't add slots.
+	// So the last slot was the only answer it could return.
+
+	TEST_ASSERT_TRUE(rc);
+
+	// test on-spot with limited table
+	rc = leapsec_query(&qr, lsec2009+10);
+	TEST_ASSERT_FALSE(rc);
+	TEST_ASSERT_EQUAL(34, qr.tai_offs);
+	// TEST_ASSERT_EQUAL(35, qr.tai_offs);
 	TEST_ASSERT_EQUAL(0,  qr.tai_diff);
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 }
 
 // ----------------------------------------------------------------------
-// Far-distance forward jump into a transiton window.
-extern void test_qryJumpFarAhead(void);
-void test_qryJumpFarAhead(void)
-{
-	int		rc;
-	leap_result_t	qr;
-	int		mode;
-
-	for (mode=0; mode < 2; ++mode) {
-		leapsec_ut_pristine();
-		rc = setup_load_table(leap1, FALSE);
-		TEST_ASSERT_EQUAL(1, rc);
-		leapsec_electric(mode);
-
-		rc = leapsec_query(&qr, lsec2006, NULL);
-		TEST_ASSERT_EQUAL(FALSE, rc);
-
-		rc = leapsec_query(&qr, lsec2012, NULL);
-		TEST_ASSERT_EQUAL(FALSE, rc);
-	}
-}
-
-// ----------------------------------------------------------------------
-// Forward jump into the next transition window
-extern void test_qryJumpAheadToTransition(void);
-void test_qryJumpAheadToTransition(void)
-{
-	int		rc;
-	leap_result_t	qr;
-	int		mode;
-
-	for (mode=0; mode < 2; ++mode) {
-		leapsec_ut_pristine();
-		rc = setup_load_table(leap1, FALSE);
-		TEST_ASSERT_EQUAL(1, rc);
-		leapsec_electric(mode);
-
-		rc = leapsec_query(&qr, lsec2009-SECSPERDAY, NULL);
-		TEST_ASSERT_EQUAL(FALSE, rc);
-
-		rc = leapsec_query(&qr, lsec2009+1, NULL);
-		TEST_ASSERT_EQUAL(TRUE, rc);
-	}
-}
-
-// ----------------------------------------------------------------------
-// Forward jump over the next transition window
-extern void test_qryJumpAheadOverTransition(void);
-void test_qryJumpAheadOverTransition(void)
-{
-	int		rc;
-	leap_result_t	qr;
-	int		mode;
-
-	for (mode=0; mode < 2; ++mode) {
-		leapsec_ut_pristine();
-		rc = setup_load_table(leap1, FALSE);
-		TEST_ASSERT_EQUAL(1, rc);
-		leapsec_electric(mode);
-
-		rc = leapsec_query(&qr, lsec2009-SECSPERDAY, NULL);
-		TEST_ASSERT_EQUAL(FALSE, rc);
-
-		rc = leapsec_query(&qr, lsec2009+5, NULL);
-		TEST_ASSERT_EQUAL(FALSE, rc);
-	}
-}
-
-// =====================================================================
-// TABLE MODIFICATION AT RUNTIME
-// =====================================================================
-
-// ----------------------------------------------------------------------
 // add dynamic leap second (like from peer/clock)
-extern void test_addDynamic(void);
-void test_addDynamic(void)
-{
-	int            rc;
+TEST(leapsec, addDynamic) {
+	leap_table_t * pt;
+	bool           rc;
+	int            idx;
 
-	static const uint32_t insns[] = {
-		2982009600u,	//	29	# 1 Jul 1994
-		3029443200u,	//	30	# 1 Jan 1996
-		3076704000u,	//	31	# 1 Jul 1997
-		3124137600u,	//	32	# 1 Jan 1999
-		3345062400u,	//	33	# 1 Jan 2006
-		3439756800u,	//	34	# 1 Jan 2009
-		3550089600u,	//	35	# 1 Jul 2012
+	/* Explicit (time_t) cast avoids warnings
+	 * 32 bit FreeBSD 11.1, Nov 2017
+	 * FreeBSD clang version 4.0.0
+../../tests/ntpd/leapsec.c:582:3: warning: implicit conversion from 'long long' to 'time_t' (aka 'int') changes value from 2982009600 to -1312957696 [-Wconstant-conversion]
+                2982009600,     //      29      # 1 Jul 1994
+                ^~~~~~~~~~
+*/
+	static const time_t insns[] = {
+		(time_t)2982009600,	//	29	# 1 Jul 1994
+		(time_t)3029443200,	//	30	# 1 Jan 1996
+		(time_t)3076704000,	//	31	# 1 Jul 1997
+		(time_t)3124137600,	//	32	# 1 Jan 1999
+		(time_t)3345062400,	//	33	# 1 Jan 2006
+		(time_t)3439756800,	//	34	# 1 Jan 2009
+		(time_t)3550089600,	//	35	# 1 Jul 2012
 		0 // sentinel
 	};
 
-	rc = setup_load_table(leap2, FALSE);
-	TEST_ASSERT_EQUAL(1, rc);
-
-	int		idx;
+	rc = setup_load_table(leap2);
+	TEST_ASSERT_TRUE(rc);
 
 	for (idx=1; insns[idx]; ++idx) {
-		rc = leapsec_add_dyn(TRUE, insns[idx] - 20*SECSPERDAY - 100, NULL);
-		TEST_ASSERT_EQUAL(TRUE, rc);
+	    rc = leapsec_add_dyn(true,
+                                 insns[idx] - (time_t)JAN_1970 -
+                                 20*SECSPERDAY - 100);
+	    TEST_ASSERT_TRUE(rc);
 	}
 	// try to slip in a previous entry
-	rc = leapsec_add_dyn(TRUE, insns[0] - 20*SECSPERDAY - 100, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
-	//leap_table_t  * pt = leapsec_get_table(0);
-	//leapsec_dump(pt, (leapsec_dumper)fprintf, stdout);
+	rc = leapsec_add_dyn(true, insns[0] - (time_t)JAN_1970 -
+                             20*SECSPERDAY - 100);
+	TEST_ASSERT_FALSE(rc);
+	//leapsec_dump(pt, (leapsec_dumper)my_fprintf, stdout);
+	pt = leapsec_get_table(0);
+	leapsec_dump(pt, (leapsec_dumper)my_fprintf, stdout);
 }
 
 // ----------------------------------------------------------------------
 // add fixed leap seconds (like from network packet)
-#if 0 /* currently unused -- possibly revived later */
-extern void no_test_addFixed(void);
-void no_test_addFixed(void)
-{
-	int            rc;
-	leap_result_t  qr;
+TEST(leapsec, addFixed) {
+	bool           rc;
+	int            idx;
 
-	static const struct { uint32_t tt; int of; } insns[] = {
-		{2982009600u, 29},//	# 1 Jul 1994
-		{3029443200u, 30},//	# 1 Jan 1996
-		{3076704000u, 31},//	# 1 Jul 1997
-		{3124137600u, 32},//	# 1 Jan 1999
-		{3345062400u, 33},//	# 1 Jan 2006
-		{3439756800u, 34},//	# 1 Jan 2009
-		{3550089600u, 35},//	# 1 Jul 2012
+	static const struct { time_t tt; int of; } insns[] = {
+		{2982009600-JAN_1970, 29},//	# 1 Jul 1994
+		{3029443200-JAN_1970, 30},//	# 1 Jan 1996
+		{3076704000-JAN_1970, 31},//	# 1 Jul 1997
+		{3124137600-JAN_1970, 32},//	# 1 Jan 1999
+		{3345062400-JAN_1970, 33},//	# 1 Jan 2006
+		{3439756800-JAN_1970, 34},//	# 1 Jan 2009
+		{3550089600-JAN_1970, 35},//	# 1 Jul 2012
 		{0,0} // sentinel
 	};
 
-	rc = setup_load_table(leap2, FALSE);
-	TEST_ASSERT_EQUAL(1, rc);
+	rc = setup_load_table(leap2);
+	TEST_ASSERT_TRUE(rc);
 
-	int idx;
 	// try to get in BAD time stamps...
 	for (idx=0; insns[idx].tt; ++idx) {
 	    rc = leapsec_add_fix(
 		insns[idx].of,
 		insns[idx].tt - 20*SECSPERDAY - 100,
-		insns[idx].tt + SECSPERDAY,
-		NULL);
-		TEST_ASSERT_EQUAL(FALSE, rc);
+		insns[idx].tt + SECSPERDAY);
+#ifdef ENABLE_LEAP_TESTING
+		TEST_ASSERT_TRUE(rc);
+#else
+		TEST_ASSERT_FALSE(rc);
+#endif
 	}
-	// now do it right
+	// no do it right
 	for (idx=0; insns[idx].tt; ++idx) {
 		rc = leapsec_add_fix(
 		    insns[idx].of,
 		    insns[idx].tt,
-		    insns[idx].tt + SECSPERDAY,
-		    NULL);
-		TEST_ASSERT_EQUAL(TRUE, rc);
+		    insns[idx].tt + SECSPERDAY);
+#ifdef ENABLE_LEAP_TESTING
+		TEST_ASSERT_FALSE(rc);
+#else
+		TEST_ASSERT_TRUE(rc);
+#endif
 	}
 	// try to slip in a previous entry
 	rc = leapsec_add_fix(
 	    insns[0].of,
 	    insns[0].tt,
-	    insns[0].tt + SECSPERDAY,
-	    NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
-	//leap_table_t * pt = leapsec_get_table(0);
-	//leapsec_dump(pt, (leapsec_dumper)fprintf, stdout);
+	    insns[0].tt + SECSPERDAY);
+	TEST_ASSERT_FALSE(rc);
+	//leapsec_dump(pt, (leapsec_dumper)my_fprintf, stdout);
 }
-#endif
-
-// ----------------------------------------------------------------------
-// add fixed leap seconds (like from network packet)
-#if 0 /* currently unused -- possibly revived later */
-extern void no_test_addFixedExtend(void);
-void no_test_addFixedExtend(void)
-{
-	int            rc;
-	leap_result_t  qr;
-	int            last, idx;
-
-	static const struct { uint32_t tt; int of; } insns[] = {
-		{2982009600u, 29},//	# 1 Jul 1994
-		{3029443200u, 30},//	# 1 Jan 1996
-		{0,0} // sentinel
-	};
-
-	rc = setup_load_table(leap2, FALSE);
-	TEST_ASSERT_EQUAL(1, rc);
-
-	for (last=idx=0; insns[idx].tt; ++idx) {
-		last = idx;
-		rc = leapsec_add_fix(
-		    insns[idx].of,
-		    insns[idx].tt,
-		    insns[idx].tt + SECSPERDAY,
-		    NULL);
-		TEST_ASSERT_EQUAL(TRUE, rc);
-	}
-
-	// try to extend the expiration of the last entry
-	rc = leapsec_add_fix(
-	    insns[last].of,
-	    insns[last].tt,
-	    insns[last].tt + 128*SECSPERDAY,
-	    NULL);
-	TEST_ASSERT_EQUAL(TRUE, rc);
-
-	// try to extend the expiration of the last entry with wrong offset
-	rc = leapsec_add_fix(
-	    insns[last].of+1,
-	    insns[last].tt,
-	    insns[last].tt + 129*SECSPERDAY,
-	    NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
-	//leap_table_t * pt = leapsec_get_table(FALSE);
-	//leapsec_dump(pt, (leapsec_dumper)fprintf, stdout);
-}
-#endif
-
-// ----------------------------------------------------------------------
-// add fixed leap seconds (like from network packet) in an otherwise
-// empty table and test queries before / between /after the tabulated
-// values.
-#if 0 /* currently unused -- possibly revived later */
-extern void no_test_setFixedExtend(void);
-void no_test_setFixedExtend(void)
-{
-	int            rc;
-	leap_result_t  qr;
-	int            last, idx;
-
-	static const struct { uint32_t tt; int of; } insns[] = {
-		{2982009600u, 29},//	# 1 Jul 1994
-		{3029443200u, 30},//	# 1 Jan 1996
-		{0,0} // sentinel
-	};
-
-	for (last=idx=0; insns[idx].tt; ++idx) {
-		last = idx;
-		rc = leapsec_add_fix(
-		    insns[idx].of,
-		    insns[idx].tt,
-		    insns[idx].tt + 128*SECSPERDAY,
-		    NULL);
-		TEST_ASSERT_EQUAL(TRUE, rc);
-	}
-
-	rc = leapsec_query(&qr, insns[0].tt - 86400, NULL);
-	TEST_ASSERT_EQUAL(28, qr.tai_offs);
-
-	rc = leapsec_query(&qr, insns[0].tt + 86400, NULL);
-	TEST_ASSERT_EQUAL(29, qr.tai_offs);
-
-	rc = leapsec_query(&qr, insns[1].tt - 86400, NULL);
-	TEST_ASSERT_EQUAL(29, qr.tai_offs);
-
-	rc = leapsec_query(&qr, insns[1].tt + 86400, NULL);
-	TEST_ASSERT_EQUAL(30, qr.tai_offs);
-
-	//leap_table_t * pt = leapsec_get_table(0);
-	//leapsec_dump(pt, (leapsec_dumper)fprintf, stdout);
-}
-#endif
-
-// =====================================================================
-// AUTOKEY LEAP TRANSFER TESTS
-// =====================================================================
-
-// ----------------------------------------------------------------------
-// Check if the offset can be applied to an empty table ONCE
-extern void test_taiEmptyTable(void);
-void test_taiEmptyTable(void)
-{
-	int rc;
-
-	rc = leapsec_autokey_tai(35, lsec2015-30*86400, NULL);
-	TEST_ASSERT_EQUAL(TRUE, rc);
-
-	rc = leapsec_autokey_tai(35, lsec2015-29*86400, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
-}
-
-// ----------------------------------------------------------------------
-// Check that with fixed entries the operation fails
-extern void test_taiTableFixed(void);
-void test_taiTableFixed(void)
-{
-	int rc;
-
-	rc = setup_load_table(leap1, FALSE);
-	TEST_ASSERT_EQUAL(1, rc);
-
-	rc = leapsec_autokey_tai(35, lsec2015-30*86400, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
-}
-
-// ----------------------------------------------------------------------
-// test adjustment with a dynamic entry already there
-extern void test_taiTableDynamic(void);
-void test_taiTableDynamic(void)
-{
-	int        rc;
-	leap_era_t era;
-
-	rc = leapsec_add_dyn(TRUE, lsec2015-20*SECSPERDAY, NULL);
-	TEST_ASSERT_EQUAL(TRUE, rc);
-
-	leapsec_query_era(&era, lsec2015-10, NULL);
-	TEST_ASSERT_EQUAL(0, era.taiof);
-	leapsec_query_era(&era, lsec2015+10, NULL);
-	TEST_ASSERT_EQUAL(1, era.taiof);
-
-	rc = leapsec_autokey_tai(35, lsec2015-19*86400, NULL);
-	TEST_ASSERT_EQUAL(TRUE, rc);
-
-	rc = leapsec_autokey_tai(35, lsec2015-19*86400, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
-
-	leapsec_query_era(&era, lsec2015-10, NULL);
-	TEST_ASSERT_EQUAL(35, era.taiof);
-	leapsec_query_era(&era, lsec2015+10, NULL);
-	TEST_ASSERT_EQUAL(36, era.taiof);
-}
-
-// ----------------------------------------------------------------------
-// test adjustment with a dynamic entry already there in dead zone
-extern void test_taiTableDynamicDeadZone(void);
-void test_taiTableDynamicDeadZone(void)
-{
-	int rc;
-
-	rc = leapsec_add_dyn(TRUE, lsec2015-20*SECSPERDAY, NULL);
-	TEST_ASSERT_EQUAL(TRUE, rc);
-
-	rc = leapsec_autokey_tai(35, lsec2015-5, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
-
-	rc = leapsec_autokey_tai(35, lsec2015+5, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
-}
-
 
 // =====================================================================
 // SEQUENCE TESTS
@@ -967,301 +691,286 @@ void test_taiTableDynamicDeadZone(void)
 
 // ----------------------------------------------------------------------
 // leap second insert at 2009.01.01, electric mode
-extern void test_ls2009seqInsElectric(void);
-void test_ls2009seqInsElectric(void)
-{
-	int            rc;
+TEST(leapsec, ls2009seqInsElectric) {
+	bool           rc;
 	leap_result_t  qr;
 
-	rc = setup_load_table(leap1,FALSE);
-	TEST_ASSERT_EQUAL(1, rc);
+	rc = setup_load_table(leap1);
+	TEST_ASSERT_TRUE(rc);
 	leapsec_electric(1);
-	TEST_ASSERT_EQUAL(1, leapsec_electric(-1));
+	TEST_ASSERT_TRUE(leapsec_electric(-1));
 
-	rc = leapsec_query(&qr, lsec2009 - 60*SECSPERDAY, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - 60*SECSPERDAY);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,             qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2009 - 7*SECSPERDAY, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - 7*SECSPERDAY);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_SCHEDULE, qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2009 - SECSPERHR, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - SECSPERHR);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_ANNOUNCE, qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2009 - 1, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - 1);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_ALERT,    qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2009, NULL);
-	TEST_ASSERT_EQUAL(TRUE, rc);
+	rc = leapsec_query(&qr, lsec2009);
+	TEST_ASSERT_TRUE(rc);
 	TEST_ASSERT_EQUAL(0,             qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 
 	// second call, same time frame: no trigger!
-	rc = leapsec_query(&qr, lsec2009, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,             qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 }
 
 // ----------------------------------------------------------------------
 // leap second insert at 2009.01.01, dumb mode
-extern void test_ls2009seqInsDumb(void);
-void test_ls2009seqInsDumb(void)
-{
-	int            rc;
+TEST(leapsec, ls2009seqInsDumb) {
+	bool           rc;
 	leap_result_t  qr;
 
-	rc = setup_load_table(leap1,FALSE);
-	TEST_ASSERT_EQUAL(1, rc);
-	TEST_ASSERT_EQUAL(0, leapsec_electric(-1));
+	rc = setup_load_table(leap1);
+	TEST_ASSERT_TRUE(rc);
+	TEST_ASSERT_FALSE(leapsec_electric(-1));
 
-	rc = leapsec_query(&qr, lsec2009 - 60*SECSPERDAY, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - 60*SECSPERDAY);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,             qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2009 - 7*SECSPERDAY, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - 7*SECSPERDAY);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_SCHEDULE, qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2009 - SECSPERHR, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - SECSPERHR);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_ANNOUNCE, qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2009 - 1, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - 1);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_ALERT,    qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2009, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_ALERT,    qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2009+1, NULL);
-	TEST_ASSERT_EQUAL(TRUE, rc);
+	rc = leapsec_query(&qr, lsec2009+1);
+	TEST_ASSERT_TRUE(rc);
 	TEST_ASSERT_EQUAL(-1,             qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 
 	// second call, same time frame: no trigger!
-	rc = leapsec_query(&qr, lsec2009, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,             qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 }
 
+
 // ----------------------------------------------------------------------
 // fake leap second remove at 2009.01.01, electric mode
-extern void test_ls2009seqDelElectric(void);
-void test_ls2009seqDelElectric(void)
-{
-	int            rc;
+TEST(leapsec, ls2009seqDelElectric) {
+	bool           rc;
 	leap_result_t  qr;
 
-	rc = setup_load_table(leap3,FALSE);
-	TEST_ASSERT_EQUAL(1, rc);
+	rc = setup_load_table(leap3);
+	TEST_ASSERT_TRUE(rc);
 	leapsec_electric(1);
-	TEST_ASSERT_EQUAL(1, leapsec_electric(-1));
+	TEST_ASSERT_TRUE(leapsec_electric(-1));
 
-	rc = leapsec_query(&qr, lsec2009 - 60*SECSPERDAY, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - 60*SECSPERDAY);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,             qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2009 - 7*SECSPERDAY, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - 7*SECSPERDAY);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_SCHEDULE, qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2009 - SECSPERHR, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - SECSPERHR);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_ANNOUNCE, qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2009 - 1, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - 1);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_ALERT,    qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2009, NULL);
-	TEST_ASSERT_EQUAL(TRUE, rc);
+	rc = leapsec_query(&qr, lsec2009);
+	TEST_ASSERT_TRUE(rc);
 	TEST_ASSERT_EQUAL(0,             qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 
 	// second call, same time frame: no trigger!
-	rc = leapsec_query(&qr, lsec2009, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,             qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 }
 
 // ----------------------------------------------------------------------
 // fake leap second remove at 2009.01.01. dumb mode
-extern void test_ls2009seqDelDumb(void);
-void test_ls2009seqDelDumb(void)
-{
-	int            rc;
+TEST(leapsec, ls2009seqDelDumb) {
+	bool           rc;
 	leap_result_t  qr;
 
-	rc = setup_load_table(leap3,FALSE);
-	TEST_ASSERT_EQUAL(1, rc);
-	TEST_ASSERT_EQUAL(0, leapsec_electric(-1));
+	rc = setup_load_table(leap3);
+	TEST_ASSERT_TRUE(rc);
+	TEST_ASSERT_FALSE(leapsec_electric(-1));
 
-	rc = leapsec_query(&qr, lsec2009 - 60*SECSPERDAY, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - 60*SECSPERDAY);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,             qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2009 - 7*SECSPERDAY, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - 7*SECSPERDAY);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_SCHEDULE, qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2009 - SECSPERHR, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - SECSPERHR);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_ANNOUNCE, qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2009 - 2, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009 - 2);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_ALERT,    qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2009 - 1, NULL);
-	TEST_ASSERT_EQUAL(TRUE, rc);
-	TEST_ASSERT_EQUAL(1,             qr.warped   );
+	rc = leapsec_query(&qr, lsec2009 - 1);
+	TEST_ASSERT_TRUE(rc);
+	TEST_ASSERT_EQUAL(1,              qr.warped);
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 
 	// second call, same time frame: no trigger!
-	rc = leapsec_query(&qr, lsec2009, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2009);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,             qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 }
 
 // ----------------------------------------------------------------------
 // leap second insert at 2012.07.01, electric mode
-extern void test_ls2012seqInsElectric(void);
-void test_ls2012seqInsElectric(void)
-{
-	int            rc;
+TEST(leapsec, ls2012seqInsElectric) {
+	bool           rc;
 	leap_result_t  qr;
 
-	rc = setup_load_table(leap1,FALSE);
-	TEST_ASSERT_EQUAL(1, rc);
+	rc = setup_load_table(leap1);
+	TEST_ASSERT_TRUE(rc);
 	leapsec_electric(1);
-	TEST_ASSERT_EQUAL(1, leapsec_electric(-1));
+	TEST_ASSERT_TRUE(leapsec_electric(-1));
 
-	rc = leapsec_query(&qr, lsec2012 - 60*SECSPERDAY, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2012 - 60*SECSPERDAY);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,             qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2012 - 7*SECSPERDAY, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2012 - 7*SECSPERDAY);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_SCHEDULE, qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2012 - SECSPERHR, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2012 - SECSPERHR);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_ANNOUNCE, qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2012 - 1, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2012 - 1);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_ALERT,    qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2012, NULL);
-	TEST_ASSERT_EQUAL(TRUE, rc);
+	rc = leapsec_query(&qr, lsec2012);
+	TEST_ASSERT_TRUE(rc);
 	TEST_ASSERT_EQUAL(0,            qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 
 	// second call, same time frame: no trigger!
-	rc = leapsec_query(&qr, lsec2012, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2012);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,             qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 }
 
 // ----------------------------------------------------------------------
 // leap second insert at 2012.07.01, dumb mode
-extern void test_ls2012seqInsDumb(void);
-void test_ls2012seqInsDumb(void)
-{
-	int            rc;
+TEST(leapsec, ls2012seqInsDumb) {
+	bool           rc;
 	leap_result_t  qr;
 
-	rc = setup_load_table(leap1,FALSE);
-	TEST_ASSERT_EQUAL(1, rc);
-	TEST_ASSERT_EQUAL(0, leapsec_electric(-1));
+	rc = setup_load_table(leap1);
+	TEST_ASSERT_TRUE(rc);
+	TEST_ASSERT_FALSE(leapsec_electric(-1));
 
-	rc = leapsec_query(&qr, lsec2012 - 60*SECSPERDAY, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2012 - 60*SECSPERDAY);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,             qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2012 - 7*SECSPERDAY, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2012 - 7*SECSPERDAY);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_SCHEDULE, qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2012 - SECSPERHR, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2012 - SECSPERHR);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_ANNOUNCE, qr.proximity);
 
-	rc = leapsec_query(&qr, lsec2012 - 1, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2012 - 1);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,               qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_ALERT,    qr.proximity);
 
 	// This is just 1 sec before transition!
-	rc = leapsec_query(&qr, lsec2012, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2012);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,            qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_ALERT, qr.proximity);
 
-	// NOW the insert/backwarp must happen
-	rc = leapsec_query(&qr, lsec2012+1, NULL);
-	TEST_ASSERT_EQUAL(TRUE, rc);
+	// NOW the insert/delete must happen
+	rc = leapsec_query(&qr, lsec2012+1);
+	TEST_ASSERT_TRUE(rc);
 	TEST_ASSERT_EQUAL(-1,            qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 
 	// second call with transition time: no trigger!
-	rc = leapsec_query(&qr, lsec2012, NULL);
-	TEST_ASSERT_EQUAL(FALSE, rc);
+	rc = leapsec_query(&qr, lsec2012);
+	TEST_ASSERT_FALSE(rc);
 	TEST_ASSERT_EQUAL(0,             qr.warped   );
 	TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 }
 
 // ----------------------------------------------------------------------
 // test repeated query on empty table in dumb mode
-extern void test_lsEmptyTableDumb(void);
-void test_lsEmptyTableDumb(void)
-{
-	int            rc;
+TEST(leapsec, lsEmptyTableDumb) {
+	bool           rc;
 	leap_result_t  qr;
+	time_t       t;
+	const time_t t0   = lsec2012 - 10;
+	const time_t tE   = lsec2012 + 10;
 
-	const time_t   pivot = lsec2012;
-	const uint32_t t0 = lsec2012 - 10;
-	const uint32_t tE = lsec2012 + 10;
+	TEST_ASSERT_FALSE(leapsec_electric(-1));
 
-	TEST_ASSERT_EQUAL(0, leapsec_electric(-1));
-
-	uint32_t t;
 	for (t = t0; t != tE; ++t) {
-		rc = leapsec_query(&qr, t, &pivot);
-		TEST_ASSERT_EQUAL(FALSE, rc);
+		rc = leapsec_query(&qr, t);
+		TEST_ASSERT_FALSE(rc);
 		TEST_ASSERT_EQUAL(0,             qr.warped   );
 		TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 	}
@@ -1269,24 +978,51 @@ void test_lsEmptyTableDumb(void)
 
 // ----------------------------------------------------------------------
 // test repeated query on empty table in electric mode
-extern void test_lsEmptyTableElectric(void);
-void test_lsEmptyTableElectric(void)
-{
-	int            rc;
+TEST(leapsec, lsEmptyTableElectric) {
+	bool           rc;
 	leap_result_t  qr;
+	time_t       t;
 
-	leapsec_electric(1);
-	TEST_ASSERT_EQUAL(1, leapsec_electric(-1));
+	leapsec_electric(electric_on);
+	TEST_ASSERT(electric_on == leapsec_electric(electric_query));
 
-	const time_t   pivot = lsec2012;
-	const uint32_t t0 = lsec2012 - 10;
-	const uint32_t tE = lsec2012 + 10;
+	const time_t   t0 = lsec2012 - 10;
+	const time_t   tE = lsec2012 + 10;
 
-	time_t t;
 	for (t = t0; t != tE; ++t) {
-		rc = leapsec_query(&qr, t, &pivot);
-		TEST_ASSERT_EQUAL(FALSE, rc);
+		rc = leapsec_query(&qr, t);
+		TEST_ASSERT_FALSE(rc);
 		TEST_ASSERT_EQUAL(0,             qr.warped   );
 		TEST_ASSERT_EQUAL(LSPROX_NOWARN, qr.proximity);
 	}
+}
+
+TEST_GROUP_RUNNER(leapsec) {
+	RUN_TEST_CASE(leapsec, ValidateGood);
+	RUN_TEST_CASE(leapsec, ValidateNoHash);
+	RUN_TEST_CASE(leapsec, ValidateBad);
+	RUN_TEST_CASE(leapsec, ValidateMalformed);
+	RUN_TEST_CASE(leapsec, ValidateMalformedShort);
+	RUN_TEST_CASE(leapsec, ValidateNoLeadZero);
+	RUN_TEST_CASE(leapsec, tableSelect);
+	RUN_TEST_CASE(leapsec, loadFileExpire);
+	RUN_TEST_CASE(leapsec, loadFileTTL);
+	RUN_TEST_CASE(leapsec, lsQueryPristineState);
+	RUN_TEST_CASE(leapsec, ls2009faraway);
+	RUN_TEST_CASE(leapsec, ls2009weekaway);
+	RUN_TEST_CASE(leapsec, ls2009houraway);
+	RUN_TEST_CASE(leapsec, ls2009secaway);
+	RUN_TEST_CASE(leapsec, ls2009onspot);
+	RUN_TEST_CASE(leapsec, ls2009nodata);
+	RUN_TEST_CASE(leapsec, ls2009limdata);
+	RUN_TEST_CASE(leapsec, addDynamic);
+	RUN_TEST_CASE(leapsec, addFixed);
+	RUN_TEST_CASE(leapsec, ls2009seqInsElectric);
+	RUN_TEST_CASE(leapsec, ls2009seqInsDumb);
+	RUN_TEST_CASE(leapsec, ls2009seqDelElectric);
+	RUN_TEST_CASE(leapsec, ls2009seqDelDumb);
+	RUN_TEST_CASE(leapsec, ls2012seqInsElectric);
+	RUN_TEST_CASE(leapsec, ls2012seqInsDumb);
+	RUN_TEST_CASE(leapsec, lsEmptyTableDumb);
+	RUN_TEST_CASE(leapsec, lsEmptyTableElectric);
 }

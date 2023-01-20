@@ -1,0 +1,13 @@
+= ntpsnmpd(8)
+:man version: @NTPSEC_VERSION@
+include::../docs/include-man.ad[]
+
+ntpsnmpd - NTP Simple Network Management Protocol sub-agent
+
+include::../docs/includes/ntpsnmpd-body.adoc[]
+
+== EXIT STATUS
+
+Always returns 0.
+
+// end

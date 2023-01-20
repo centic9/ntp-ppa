@@ -1,0 +1,103 @@
+'\" t
+.\"     Title: ntpwait
+.\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 06/07/2021
+.\"    Manual: NTPsec
+.\"    Source: NTPsec 1.2.1+
+.\"  Language: English
+.\"
+.TH "NTPWAIT" "8" "06/07/2021" "NTPsec 1\&.2\&.1+" "NTPsec"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+ntpwait \- wait for ntpd to stabilize the system clock
+.SH "SYNOPSIS"
+.sp
+ntpwait [\-vV] [\-n \fInumber\fR] [\-s \fIsecs\fR]
+.SH "DESCRIPTION"
+.sp
+The ntpwait program blocks until ntpd is in synchronized state\&. This can be useful at boot time, to delay the boot sequence until after "ntpd \-g" has set the time\&.
+.sp
+ntpwait will send at most \fInumber\fR queries to ntpd(8), sleeping for \fIsecs\fR seconds after each status return that says ntpd(8) has not yet produced a synchronized and stable system clock\&.
+.sp
+ntpwait will do this quietly, unless the \-v flag is provided\&.
+.SH "OPTIONS"
+.PP
+\-n \fInumber\fR, \-\-tries=\fInumber\fR
+.RS 4
+Number of times to check ntpd\&. This option takes an integer number as its argument\&. The default
+\fInumber\fR
+for this option is: 100\&.
+.sp
+The maximum number of times we will check
+\fIntpd\fR
+to see if it has been able to synchronize and stabilize the system clock\&.
+.RE
+.PP
+\-s \fIsecs\-between\-tries\fR, \-\-sleep=\fIsecs\-between\-tries\fR
+.RS 4
+How long to sleep between tries\&. This option takes an integer number as its argument\&. The default
+\fIsecs\-between\-tries\fR
+for this option is: 6\&.
+.sp
+We will sleep for
+\fIsecs\-between\-tries\fR
+after each query of
+\fIntpd\fR
+that returns "the time is not yet stable"\&.
+.RE
+.PP
+\-v, \-\-verbose
+.RS 4
+Be verbose\&.
+.sp
+By default,
+ntpwait
+is silent\&. With this option,
+ntpwait
+will provide status information, including time to synchronization in seconds\&.
+.RE
+.PP
+\-V, \-\-version
+.RS 4
+Print the version string and exit\&.
+.RE
+.SH "BUGS"
+.sp
+If you are running Python at a version older than 3\&.3, the report on time to synchronization may be thrown off by NTP clock stepping\&.
+.SH "EXIT STATUS"
+.sp
+One of the following exit values will be returned:
+.PP
+0
+.RS 4
+Successful program execution\&.
+.RE
+.PP
+1
+.RS 4
+The operation failed or the command syntax was not valid\&.
+.RE
+.PP
+2
+.RS 4
+Operation was interrupted by signal\&.
+.RE

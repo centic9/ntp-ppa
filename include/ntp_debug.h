@@ -1,27 +1,29 @@
 /*
- * $Header$
- *
- * $Created: Sat Aug 20 14:23:01 2005 $
- *
- * Copyright (C) 2005 by Frank Kardel
+ * Copyright Frank Kardel
+ * Copyright the NTPsec project contributors
+ * SPDX-License-Identifier: BSD-2-Clause
  */
-#ifndef NTP_DEBUG_H
-#define NTP_DEBUG_H
+#ifndef GUARD_NTP_DEBUG_H
+#define GUARD_NTP_DEBUG_H
 
 /*
  * macro for debugging output - cut down on #ifdef pollution.
  *
- * TRACE() is similar to ntpd's DPRINTF() for utilities and libntp.
- * Uses mprintf() and so supports %m, replaced by strerror(errno).
+ * DPRINT() is the new one debug logger to rule them all.
  *
  * The calling convention is not attractive:
- *     TRACE(debuglevel, (fmt, ...));
- *     TRACE(2, ("this will appear on stdout if debug >= %d\n", 2));
+ *     DPRINT(debuglevel, (fmt, ...));
+ *     DPRINT(2, ("this will appear on stdout if debug >= %d\n", 2));
  */
-#define TRACE(lvl, arg)					\
+#ifdef DEBUG
+extern int debug;
+#define DPRINT(lvl, arg)					\
 	do { 						\
 		if (debug >= (lvl))			\
-			mprintf arg;			\
+			printf arg;			\
 	} while (0)
+#else
+#define DPRINT(lvl, arg)	do {} while (0)
+#endif  /* DEBUG */
 
-#endif	/* NTP_DEBUG_H */
+#endif	/* GUARD_NTP_DEBUG_H */

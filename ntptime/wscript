@@ -1,0 +1,14 @@
+def build(ctx):
+    if ctx.env.HEADER_SYS_TIMEX_H:
+        ctx(
+            target="ntptime",
+            features="c cprogram",
+            includes=[ctx.bldnode.parent.abspath(), "../include"],
+            source=["ntptime.c"],
+            use="ntp M RT",
+            install_path='${BINDIR}',
+        )
+
+    ctx.manpage(8, "ntptime-man.adoc")
+
+# end

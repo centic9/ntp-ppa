@@ -4,102 +4,30 @@
 #include "ntp_fp.h"
 
 #include "unity.h"
+#include "unity_fixture.h"
 
 #include <float.h>
 #include <math.h>
 
+static double eps(double);
 
-/*
-   replaced:	TEST_ASSERT_EQUAL_MEMORY(&a, &b, sizeof(a))
-   with:	TEST_ASSERT_EQUAL_l_fp(a, b).
-   It's safer this way, because structs can be compared even if they
-   aren't initiated with memset (due to padding bytes).
-*/
-#define TEST_ASSERT_EQUAL_l_fp(a, b) {					\
-	TEST_ASSERT_EQUAL_MESSAGE(a.l_i, b.l_i, "Field l_i");		\
-	TEST_ASSERT_EQUAL_UINT_MESSAGE(a.l_uf, b.l_uf, "Field l_uf");	\
-}
+TEST_GROUP(lfpfunc);
 
+TEST_SETUP(lfpfunc) {}
 
-typedef struct  {
-	uint32_t h, l;
-} lfp_hl;
-
-
-int	l_fp_scmp(const l_fp first, const l_fp second);
-int	l_fp_ucmp(const l_fp first, l_fp second);
-l_fp	l_fp_init(int32 i, u_int32 f);
-l_fp	l_fp_add(const l_fp first, const l_fp second);
-l_fp	l_fp_subtract(const l_fp first, const l_fp second);
-l_fp	l_fp_negate(const l_fp first);
-l_fp	l_fp_abs(const l_fp first);
-int	l_fp_signum(const l_fp first);
-double	l_fp_convert_to_double(const l_fp first);
-l_fp	l_fp_init_from_double( double rhs);
-void	l_fp_swap(l_fp * first, l_fp *second);
-bool	l_isgt(const l_fp first, const l_fp second);
-bool	l_isgtu(const l_fp first, const l_fp second);
-bool	l_ishis(const l_fp first, const l_fp second);
-bool	l_isgeq(const l_fp first, const l_fp second);
-bool	l_isequ(const l_fp first, const l_fp second);
-double	eps(double d);
-
-
-void test_AdditionLR(void);
-void test_AdditionRL(void);
-void test_SubtractionLR(void);
-void test_SubtractionRL(void);
-void test_Negation(void);
-void test_Absolute(void);
-void test_FDF_RoundTrip(void);
-void test_SignedRelOps(void);
-void test_UnsignedRelOps(void);
-
-
-static int cmp_work(u_int32 a[3], u_int32 b[3]);
+TEST_TEAR_DOWN(lfpfunc) {}
 
 //----------------------------------------------------------------------
-// reference comparision
-// This is implementad as a full signed MP-subtract in 3 limbs, where
+// reference comparison
+// This is implemented as a full signed MP-subtract in 3 limbs, where
 // the operands are zero or sign extended before the subtraction is
 // executed.
 //----------------------------------------------------------------------
 
-int
-l_fp_scmp(const l_fp first, const l_fp second)
-{
-	u_int32 a[3], b[3];
-
-	const l_fp op1 = first;
-	const l_fp op2 = second;
-
-	a[0] = op1.l_uf; a[1] = op1.l_ui; a[2] = 0;
-	b[0] = op2.l_uf; b[1] = op2.l_ui; b[2] = 0;
-
-	a[2] -= (op1.l_i < 0);
-	b[2] -= (op2.l_i < 0);
-
-	return cmp_work(a,b);
-}
-
-int
-l_fp_ucmp(const l_fp first, l_fp second)
-{
-	u_int32 a[3], b[3];
-	const l_fp op1 = first; 
-	const l_fp op2 = second;
-
-	a[0] = op1.l_uf; a[1] = op1.l_ui; a[2] = 0;
-	b[0] = op2.l_uf; b[1] = op2.l_ui; b[2] = 0;
-
-	return cmp_work(a,b);
-}
-
 // maybe rename it to lf_cmp_work
-int
-cmp_work(u_int32 a[3], u_int32 b[3])
+static int cmp_work(uint32_t a[3], uint32_t b[3])
 {
-	u_int32 cy, idx, tmp;
+	uint32_t cy, idx, tmp;
 	for (cy = idx = 0; idx < 3; ++idx) {
 		tmp = a[idx]; cy  = (a[idx] -=   cy  ) > tmp;
 		tmp = a[idx]; cy |= (a[idx] -= b[idx]) > tmp;
@@ -109,91 +37,60 @@ cmp_work(u_int32 a[3], u_int32 b[3])
 	return a[0] || a[1];
 }
 
+static int l_fp_scmp(const l_fp first, const l_fp second)
+{
+	uint32_t a[3], b[3];
+
+	const l_fp op1 = first;
+	const l_fp op2 = second;
+
+	a[0] = lfpfrac(op1); a[1] = lfpuint(op1); a[2] = 0;
+	b[0] = lfpfrac(op2); b[1] = lfpuint(op2); b[2] = 0;
+
+	a[2] -= (lfpsint(op1) < 0);
+	b[2] -= (lfpsint(op2) < 0);
+
+	return cmp_work(a,b);
+}
+
+static int l_fp_ucmp(const l_fp first, l_fp second)
+{
+	uint32_t a[3], b[3];
+	const l_fp op1 = first;
+	const l_fp op2 = second;
+
+	a[0] = lfpfrac(op1); a[1] = lfpuint(op1); a[2] = 0;
+	b[0] = lfpfrac(op2); b[1] = lfpuint(op2); b[2] = 0;
+
+	return cmp_work(a,b);
+}
 
 //----------------------------------------------------------------------
-// imlementation of the LFP stuff
+// implementation of the LFP stuff
 // This should be easy enough...
 //----------------------------------------------------------------------
 
-l_fp
-l_fp_init(int32 i, u_int32 f)
-{
-	l_fp temp;
-	temp.l_i  = i;
-	temp.l_uf = f;
-
-	return temp;
-}
-
-l_fp
-l_fp_add(const l_fp first, const l_fp second)
+static l_fp l_fp_negate(const l_fp first)
 {
 	l_fp temp = first;
-	L_ADD(&temp, &second);
+	L_NEG(temp);
 
 	return temp;
 }
 
-l_fp
-l_fp_subtract(const l_fp first, const l_fp second)
+static l_fp l_fp_abs(const l_fp first)
 {
 	l_fp temp = first;
-	L_SUB(&temp, &second);
-
+	if (L_ISNEG(temp))
+		L_NEG(temp);
 	return temp;
 }
 
-l_fp
-l_fp_negate(const l_fp first)
+static int l_fp_signum(const l_fp first)
 {
-	l_fp temp = first;
-	L_NEG(&temp);
-
-	return temp;
-}
-
-l_fp
-l_fp_abs(const l_fp first)
-{
-	l_fp temp = first;
-	if (L_ISNEG(&temp))
-		L_NEG(&temp);
-	return temp;
-}
-
-int
-l_fp_signum(const l_fp first)
-{
-	if (first.l_ui & 0x80000000u)
+	if (lfpuint(first) & 0x80000000U)
 		return -1;
-	return (first.l_ui || first.l_uf);
-}
-
-double
-l_fp_convert_to_double(const l_fp first)
-{
-	double res;
-	LFPTOD(&first, res);
-	return res;
-}
-
-l_fp
-l_fp_init_from_double( double rhs)
-{
-	l_fp temp;
-	DTOLFP(rhs, &temp);
-	return temp;
-}
-
-void
-l_fp_swap(l_fp * first, l_fp *second)
-{
-	l_fp temp = *second;
-
-	*second = *first;
-	*first = temp;
-
-	return;
+	return (lfpuint(first) || lfpfrac(first));
 }
 
 //----------------------------------------------------------------------
@@ -203,52 +100,26 @@ l_fp_swap(l_fp * first, l_fp *second)
 //----------------------------------------------------------------------
 
 
-bool
-l_isgt (const l_fp first, const l_fp second)
+static bool l_isgt (const l_fp first, const l_fp second)
 {
-
-	return L_ISGT(&first, &second);
+	return L_ISGT(first, second);
 }
 
-bool
-l_isgtu(const l_fp first, const l_fp second)
+static bool l_isgtu(const l_fp first, const l_fp second)
 {
-
-	return L_ISGTU(&first, &second);
+	return L_ISGTU(first, second);
 }
-
-bool
-l_ishis(const l_fp first, const l_fp second)
-{
-
-	return L_ISHIS(&first, &second);
-}
-
-bool
-l_isgeq(const l_fp first, const l_fp second)
-{
-
-	return L_ISGEQ(&first, &second);
-}
-
-bool
-l_isequ(const l_fp first, const l_fp second)
-{
-
-	return L_ISEQU(&first, &second);
-}
-
 
 //----------------------------------------------------------------------
 // test data table for add/sub and compare
 //----------------------------------------------------------------------
 
 
-static const lfp_hl addsub_tab[][3] = {
-	// trivial idendity:
+static const l_fp_w addsub_tab[][3] = {
+	// trivial identity:
 	{{0 ,0         }, { 0,0         }, { 0,0}},
 	// with carry from fraction and sign change:
-	{{-1,0x80000000}, { 0,0x80000000}, { 0,0}},
+	{{(uint32_t)-1,0x80000000}, { 0,0x80000000}, { 0,0}},
 	// without carry from fraction
 	{{ 1,0x40000000}, { 1,0x40000000}, { 2,0x80000000}},
 	// with carry from fraction:
@@ -273,7 +144,7 @@ static const size_t addsub_tot = (sizeof(addsub_tab)/sizeof(addsub_tab[0][0]));
 //  * The 'l_fp' fixed point fraction has 32 bits precision, so we allow
 //    for the LSB to toggle by clamping the epsilon to be at least 2^(-31)
 //
-//  * The double mantissa has a precsion 54 bits, so the other minimum is
+//  * The double mantissa has a precision 54 bits, so the other minimum is
 //    dval * (2^(-53))
 //
 //  The maximum of those two boundaries is used for the check.
@@ -282,101 +153,43 @@ static const size_t addsub_tot = (sizeof(addsub_tab)/sizeof(addsub_tab[0][0]));
 // '1'-bit of the l_fp value, the roundtrip *will* create truncation
 // errors. This is an inherent property caused by the 54-bit mantissa of
 // the 'double' type.
-double
+static double
 eps(double d)
 {
-
 	return fmax(ldexp(1.0, -31), ldexp(fabs(d), -53));
 }
 
 //----------------------------------------------------------------------
-// test addition
+// test extractor functions
 //----------------------------------------------------------------------
-void
-test_AdditionLR(void)
-{
-	size_t idx = 0;
 
-	for (idx = 0; idx < addsub_cnt; ++idx) {
-		l_fp op1 = l_fp_init(addsub_tab[idx][0].h, addsub_tab[idx][0].l);
-		l_fp op2 = l_fp_init(addsub_tab[idx][1].h, addsub_tab[idx][1].l);
-		l_fp e_res = l_fp_init(addsub_tab[idx][2].h, addsub_tab[idx][2].l);
-		l_fp res = l_fp_add(op1, op2);
-
-		TEST_ASSERT_EQUAL_l_fp(e_res, res);
-	}
-	return;
-}
-
-void
-test_AdditionRL(void)
-{
-	size_t idx = 0;
-
-	for (idx = 0; idx < addsub_cnt; ++idx) {
-		l_fp op2 = l_fp_init(addsub_tab[idx][0].h, addsub_tab[idx][0].l);
-		l_fp op1 = l_fp_init(addsub_tab[idx][1].h, addsub_tab[idx][1].l);
-		l_fp e_res = l_fp_init(addsub_tab[idx][2].h, addsub_tab[idx][2].l);
-		l_fp res = l_fp_add(op1, op2);
-
-		TEST_ASSERT_EQUAL_l_fp(e_res, res);
-	}
-	return;
-}
-
-
-//----------------------------------------------------------------------
-// test subtraction
-//----------------------------------------------------------------------
-void
-test_SubtractionLR(void)
-{
-	size_t idx = 0;
-
-	for (idx = 0; idx < addsub_cnt; ++idx) {
-		l_fp op2 = l_fp_init(addsub_tab[idx][0].h, addsub_tab[idx][0].l);
-		l_fp e_res = l_fp_init(addsub_tab[idx][1].h, addsub_tab[idx][1].l);
-		l_fp op1 = l_fp_init(addsub_tab[idx][2].h, addsub_tab[idx][2].l);
-		l_fp res = l_fp_subtract(op1, op2);
-
-		TEST_ASSERT_EQUAL_l_fp(e_res, res);
-	}
-	return;
-}
-
-void
-test_SubtractionRL(void)
-{
-	size_t idx = 0;
-
-	for (idx = 0; idx < addsub_cnt; ++idx) {
-		l_fp e_res = l_fp_init(addsub_tab[idx][0].h, addsub_tab[idx][0].l);
-		l_fp op2 = l_fp_init(addsub_tab[idx][1].h, addsub_tab[idx][1].l);
-		l_fp op1 = l_fp_init(addsub_tab[idx][2].h, addsub_tab[idx][2].l);
-		l_fp res = l_fp_subtract(op1, op2);
-
-		TEST_ASSERT_EQUAL_l_fp(e_res, res);
-	}
-	return;
+TEST(lfpfunc, Extraction) {
+    const uint32_t hi = 0xFFEEDDBB;
+    const uint32_t lo = 0x66554433;
+    l_fp lfp = lfpinit_u(hi, lo);
+    TEST_ASSERT_EQUAL(lfpuint(lfp), hi);
+    TEST_ASSERT_EQUAL(lfpfrac(lfp), lo);
+    TEST_ASSERT_EQUAL(lfpsint(lfp), -1122885);
+    l_fp bumpable = lfpinit(333, 444);
+    bumplfpuint(bumpable, 1);
+    TEST_ASSERT_EQUAL(lfpuint(bumpable), 334);
+    TEST_ASSERT_EQUAL(lfpfrac(bumpable), 444);
 }
 
 //----------------------------------------------------------------------
 // test negation
 //----------------------------------------------------------------------
 
-void
-test_Negation(void)
-{
+TEST(lfpfunc, Negation) {
 	size_t idx = 0;
 
 	for (idx = 0; idx < addsub_cnt; ++idx) {
-		l_fp op1 = l_fp_init(addsub_tab[idx][0].h, addsub_tab[idx][0].l);
+		l_fp op1 = lfpinit_u(addsub_tab[idx][0].l_ui,
+                                     addsub_tab[idx][0].l_uf);
 		l_fp op2 = l_fp_negate(op1);
-		l_fp sum = l_fp_add(op1, op2);
+		l_fp sum = op1 + op2;
 
-		l_fp zero = l_fp_init(0, 0);
-
-		TEST_ASSERT_EQUAL_l_fp(zero, sum);
+		TEST_ASSERT_EQUAL(0, sum);
 	}
 	return;
 }
@@ -386,63 +199,76 @@ test_Negation(void)
 //----------------------------------------------------------------------
 // test absolute value
 //----------------------------------------------------------------------
-void
-test_Absolute(void)
-{
+TEST(lfpfunc, Absolute) {
 	size_t idx = 0;
 
 	for (idx = 0; idx < addsub_cnt; ++idx) {
-		l_fp op1 = l_fp_init(addsub_tab[idx][0].h, addsub_tab[idx][0].l);
+		l_fp op1 = lfpinit_u(addsub_tab[idx][0].l_ui,
+                                     addsub_tab[idx][0].l_uf);
 		l_fp op2 = l_fp_abs(op1);
 
 		TEST_ASSERT_TRUE(l_fp_signum(op2) >= 0);
 
 		if (l_fp_signum(op1) >= 0)
-			op1 = l_fp_subtract(op1, op2);
+			op1 = op1 - op2;
 		else
-			op1 = l_fp_add(op1, op2);
+			op1 = op1 + op2;
 
-		l_fp zero = l_fp_init(0, 0);
-
-		TEST_ASSERT_EQUAL_l_fp(zero, op1);
+		TEST_ASSERT_EQUAL(0, op1);
 	}
 
 	// There is one special case we have to check: the minimum
 	// value cannot be negated, or, to be more precise, the
 	// negation reproduces the original pattern.
-	l_fp minVal = l_fp_init(0x80000000, 0x00000000);
+	l_fp minVal = lfpinit_u(0x80000000, 0x00000000);
 	l_fp minAbs = l_fp_abs(minVal);
 	TEST_ASSERT_EQUAL(-1, l_fp_signum(minVal));
 
-	TEST_ASSERT_EQUAL_l_fp(minVal, minAbs);
+	TEST_ASSERT_EQUAL(minVal, minAbs);
 
 	return;
 }
 
+static const l_fp roundtab[] = {
+	0,
+	0x140000000,
+	0x1c0000000,
+	0xffffffff80000000,
+	0x7fffffff7fffffff,
+	0x7fffffffffffffff,
+	0x55555555aaaaaaaa,
+	0x5555555555555555,
+	0x8000000000000001
+};
+static const size_t round_cnt = (sizeof(roundtab)/sizeof(roundtab[0]));
+
 
 //----------------------------------------------------------------------
-// fp -> double -> fp rountrip test
+// fp -> double -> fp roundtrip test
 //----------------------------------------------------------------------
-void
-test_FDF_RoundTrip(void)
-{
+TEST(lfpfunc, FDF_RoundTrip) {
 	size_t idx = 0;
+        char msg[512];
 
-	// since a l_fp has 64 bits in it's mantissa and a double has
+	// since a l_fp has 64 bits in its mantissa and a double has
 	// only 54 bits available (including the hidden '1') we have to
 	// make a few concessions on the roundtrip precision. The 'eps()'
-	// function makes an educated guess about the avilable precision
+	// function makes an educated guess about the available precision
 	// and checks the difference in the two 'l_fp' values against
 	// that limit.
 
-	for (idx = 0; idx < addsub_cnt; ++idx) {
-		l_fp op1 = l_fp_init(addsub_tab[idx][0].h, addsub_tab[idx][0].l);
-		double op2 = l_fp_convert_to_double(op1);
-		l_fp op3 = l_fp_init_from_double(op2); 
+	for (idx = 0; idx < round_cnt; ++idx) {
+		l_fp op1 = roundtab[idx];
+		double op2 = lfptod(op1);
+		l_fp op3 = dtolfp(op2);
 
-		l_fp temp = l_fp_subtract(op1, op3);
-		double d = l_fp_convert_to_double(temp);
-		TEST_ASSERT_DOUBLE_WITHIN(eps(op2), 0.0, fabs(d));
+		l_fp temp = op1 - op3;
+		double d = lfptod(temp);
+
+                snprintf(msg, sizeof(msg),
+                         "\nop2: %f op3: %s diff %f not within %e",
+                         op2, mfptoa(op3, 8), d, eps(op2));
+		TEST_ASSERT_DOUBLE_WITHIN_MESSAGE(eps(op2), 0.0, fabs(d), msg);
 	}
 
 	return;
@@ -455,79 +281,58 @@ test_FDF_RoundTrip(void)
 // This uses the local compare and checks if the operations using the
 // macros in 'ntp_fp.h' produce mathing results.
 // ----------------------------------------------------------------------
-void
-test_SignedRelOps(void)
-{
-	const lfp_hl * tv = (&addsub_tab[0][0]);
+TEST(lfpfunc, SignedRelOps) {
+	const l_fp_w * tv = (&addsub_tab[0][0]);
 	size_t lc ;
 
 	for (lc = addsub_tot - 1; lc; --lc, ++tv) {
-		l_fp op1 = l_fp_init(tv[0].h, tv[0].l);
-		l_fp op2 = l_fp_init(tv[1].h, tv[1].l);
+		l_fp op1 = lfpinit_u(tv[0].l_ui, tv[0].l_uf);
+		l_fp op2 = lfpinit_u(tv[1].l_ui, tv[1].l_uf);
 		int cmp = l_fp_scmp(op1, op2);
 
 		switch (cmp) {
 		case -1:
-			//printf("op1:%d %d, op2:%d %d\n",op1.l_uf,op1.l_ui,op2.l_uf,op2.l_ui);
-			l_fp_swap(&op1, &op2);
-			//printf("op1:%d %d, op2:%d %d\n",op1.l_uf,op1.l_ui,op2.l_uf,op2.l_ui);
+			TEST_ASSERT_TRUE (l_isgt(op2, op1));
+			TEST_ASSERT_FALSE(l_isgt(op1, op2));
+			break;
 		case 1:
 			TEST_ASSERT_TRUE (l_isgt(op1, op2));
 			TEST_ASSERT_FALSE(l_isgt(op2, op1));
-
-			TEST_ASSERT_TRUE (l_isgeq(op1, op2));
-			TEST_ASSERT_FALSE(l_isgeq(op2, op1));
-
-			TEST_ASSERT_FALSE(l_isequ(op1, op2));
-			TEST_ASSERT_FALSE(l_isequ(op2, op1));
 			break;
 		case 0:
 			TEST_ASSERT_FALSE(l_isgt(op1, op2));
 			TEST_ASSERT_FALSE(l_isgt(op2, op1));
-
-			TEST_ASSERT_TRUE (l_isgeq(op1, op2));
-			TEST_ASSERT_TRUE (l_isgeq(op2, op1));
-
-			TEST_ASSERT_TRUE (l_isequ(op1, op2));
-			TEST_ASSERT_TRUE (l_isequ(op2, op1));
 			break;
 		default:
 			TEST_FAIL_MESSAGE("unexpected UCMP result: ");
+			break;
 		}
 	}
 
 	return;
 }
 
-void
-test_UnsignedRelOps(void)
-{
-	const lfp_hl * tv =(&addsub_tab[0][0]);
+TEST(lfpfunc, UnsignedRelOps) {
+	const l_fp_w *tv = (&addsub_tab[0][0]);
 	size_t lc;
 
 	for (lc = addsub_tot - 1; lc; --lc, ++tv) {
-		l_fp op1 = l_fp_init(tv[0].h, tv[0].l);
-		l_fp op2 = l_fp_init(tv[1].h, tv[1].l);
+		l_fp op1 = lfpinit_u(tv[0].l_ui, tv[0].l_uf);
+		l_fp op2 = lfpinit_u(tv[1].l_ui, tv[1].l_uf);
 		int cmp = l_fp_ucmp(op1, op2);
 
 		switch (cmp) {
 		case -1:
-			//printf("op1:%d %d, op2:%d %d\n",op1.l_uf,op1.l_ui,op2.l_uf,op2.l_ui);
-			l_fp_swap(&op1, &op2);
-			//printf("op1:%d %d, op2:%d %d\n",op1.l_uf,op1.l_ui,op2.l_uf,op2.l_ui);
+			TEST_ASSERT_TRUE (l_isgtu(op2, op1));
+			TEST_ASSERT_FALSE(l_isgtu(op1, op2));
+			break;
 		case 1:
 			TEST_ASSERT_TRUE (l_isgtu(op1, op2));
 			TEST_ASSERT_FALSE(l_isgtu(op2, op1));
-
-			TEST_ASSERT_TRUE (l_ishis(op1, op2));
-			TEST_ASSERT_FALSE(l_ishis(op2, op1));
 			break;
 		case 0:
 			TEST_ASSERT_FALSE(l_isgtu(op1, op2));
 			TEST_ASSERT_FALSE(l_isgtu(op2, op1));
-
-			TEST_ASSERT_TRUE (l_ishis(op1, op2));
-			TEST_ASSERT_TRUE (l_ishis(op2, op1));
 			break;
 		default:
 			TEST_FAIL_MESSAGE("unexpected UCMP result: ");
@@ -543,3 +348,12 @@ test_UnsignedRelOps(void)
 //----------------------------------------------------------------------
 // that's all folks... but feel free to add things!
 //----------------------------------------------------------------------
+
+TEST_GROUP_RUNNER(lfpfunc) {
+	RUN_TEST_CASE(lfpfunc, Extraction);
+	RUN_TEST_CASE(lfpfunc, Negation);
+	RUN_TEST_CASE(lfpfunc, Absolute);
+	RUN_TEST_CASE(lfpfunc, FDF_RoundTrip);
+	RUN_TEST_CASE(lfpfunc, SignedRelOps);
+	RUN_TEST_CASE(lfpfunc, UnsignedRelOps);
+}

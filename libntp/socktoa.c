@@ -2,23 +2,15 @@
  * socktoa.c	socktoa(), sockporttoa(), and sock_hash()
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include "config.h"
 
 #include <sys/types.h>
-#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
-#endif
-#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
-#endif
 
 #include <stdio.h>
 #include <arpa/inet.h>
-#include <isc/result.h>
-#include <isc/netaddr.h>
-#include <isc/sockaddr.h>
+#include "isc_netaddr.h"
 
 #include "ntp_fp.h"
 #include "lib_strbuf.h"
@@ -33,47 +25,52 @@ socktoa(
 	const sockaddr_u *sock
 	)
 {
-	int		saved_errno;
-	char *		res;
-	char *		addr;
-	u_long		scope;
+	char *buf = lib_getbuf();
+	socktoa_r(sock, buf, LIB_BUFLENGTH);
+	return buf;
+}
 
-	saved_errno = socket_errno();
-	LIB_GETBUF(res);
+const char *
+socktoa_r(
+	const sockaddr_u *sock, char *buf, size_t buflen
+	)
+{
+	int		saved_errno;
+	unsigned long	scope;
+
+	saved_errno = errno;
 
 	if (NULL == sock) {
-		strlcpy(res, "(null)", LIB_BUFLENGTH);
+		strlcpy(buf, "(null)", buflen);
 	} else {
 		switch(AF(sock)) {
 
 		case AF_INET:
 		case AF_UNSPEC:
-			inet_ntop(AF_INET, PSOCK_ADDR4(sock), res,
-				  LIB_BUFLENGTH);
+			inet_ntop(AF_INET, PSOCK_ADDR4(sock), buf, buflen);
 			break;
 
 		case AF_INET6:
-			inet_ntop(AF_INET6, PSOCK_ADDR6(sock), res,
-				  LIB_BUFLENGTH);
+			inet_ntop(AF_INET6, PSOCK_ADDR6(sock), buf, buflen);
 			scope = SCOPE_VAR(sock);
-			if (0 != scope && !strchr(res, '%')) {
-				addr = res;
-				LIB_GETBUF(res);
-				snprintf(res, LIB_BUFLENGTH, "%s%%%lu",
-					 addr, scope);
-				res[LIB_BUFLENGTH - 1] = '\0';
+			if (0 != scope && !strchr(buf, '%')) {
+				char buf2[LIB_BUFLENGTH];
+				snprintf(buf2, sizeof(buf2), "%s%%%lu",
+					 buf, scope);
+				buf2[LIB_BUFLENGTH - 1] = '\0';
+				strlcpy(buf, buf2, buflen);
 			}
 			break;
 
 		default:
-			snprintf(res, LIB_BUFLENGTH, 
-				 "(socktoa unknown family %d)", 
+			snprintf(buf, buflen,
+				 "(socktoa unknown family %d)",
 				 AF(sock));
 		}
 	}
 	errno = saved_errno;
 
-	return res;
+	return buf;
 }
 
 
@@ -82,18 +79,26 @@ sockporttoa(
 	const sockaddr_u *sock
 	)
 {
-	int		saved_errno;
-	const char *	atext;
-	char *		buf;
+	char *buf = lib_getbuf();
+	sockporttoa_r(sock, buf, LIB_BUFLENGTH);
+	return buf;
+}
 
-	saved_errno = socket_errno();
-	atext = socktoa(sock);
-	LIB_GETBUF(buf);
-	snprintf(buf, LIB_BUFLENGTH,
+const char *
+sockporttoa_r(
+	const sockaddr_u *sock, char *buf, size_t buflen
+	)
+{
+	int saved_errno;
+        char buf2[LIB_BUFLENGTH];
+
+	saved_errno = errno;
+	socktoa_r(sock, buf2, sizeof(buf2));
+	snprintf(buf, buflen,
 		 (IS_IPV6(sock))
 		     ? "[%s]:%hu"
 		     : "%s:%hu",
-		 atext, SRCPORT(sock));
+		 buf2, SRCPORT(sock));
 	errno = saved_errno;
 
 	return buf;
@@ -103,15 +108,14 @@ sockporttoa(
 /*
  * sock_hash - hash a sockaddr_u structure
  */
-u_short
+unsigned int
 sock_hash(
 	const sockaddr_u *addr
 	)
 {
-	u_int hashVal;
-	u_int j;
+	unsigned int hashVal;
 	size_t len;
-	const u_char *pch;
+	const uint8_t *pch;
 
 	hashVal = 0;
 	len = 0;
@@ -137,34 +141,14 @@ sock_hash(
 		pch = (const void *)&SOCK_ADDR6(addr);
 		len = sizeof(SOCK_ADDR6(addr));
 		break;
+        default:
+                /* huh? */
+                break;
 	}
 
-	for (j = 0; j < len ; j++)
+	for (unsigned int j = 0; j < len ; j++) {
 		hashVal = 37 * hashVal + pch[j];
+	}
 
-	return (u_short)(hashVal & USHRT_MAX);
-}
-
-
-int
-sockaddr_masktoprefixlen(
-	const sockaddr_u *	psa
-	)
-{
-	isc_netaddr_t	isc_na;
-	isc_sockaddr_t	isc_sa;
-	u_int		pfxlen;
-	isc_result_t	result;
-	int		rc;
-
-	ZERO(isc_sa);
-	memcpy(&isc_sa.type, psa,
-	       min(sizeof(isc_sa.type), sizeof(*psa)));
-	isc_netaddr_fromsockaddr(&isc_na, &isc_sa);
-	result = isc_netaddr_masktoprefixlen(&isc_na, &pfxlen);
-	rc = (ISC_R_SUCCESS == result)
-		 ? (int)pfxlen
-		 : -1;
-
-	return rc;
+	return hashVal;
 }

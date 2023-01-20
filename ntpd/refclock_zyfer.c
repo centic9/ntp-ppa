@@ -4,30 +4,17 @@
  * Harlan Stenn, Jan 2002
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
-#if defined(REFCLOCK) && defined(CLOCK_ZYFER)
-
+#include "config.h"
+#include "ntp.h"
 #include "ntpd.h"
 #include "ntp_io.h"
 #include "ntp_refclock.h"
 #include "ntp_stdlib.h"
-#include "ntp_unixtime.h"
-#include "ntp_calgps.h"
 
 #include <stdio.h>
 #include <ctype.h>
 
-#if defined(HAVE_TERMIOS_H)
-# include <termios.h>
-#elif defined(HAVE_SYS_TERMIOS_H)
-# include <sys/termios.h>
-#endif
-#ifdef HAVE_SYS_PPSCLOCK_H
-# include <sys/ppsclock.h>
-#endif
+#include <termios.h>
 
 /*
  * This driver provides support for the TOD serial port of a Zyfer GPStarplus.
@@ -82,6 +69,7 @@
 #define	SPEED232	B9600	/* uart speed (9600 baud) */
 #define	PRECISION	(-20)	/* precision assumed (about 1 us) */
 #define	REFID		"GPS\0"	/* reference ID */
+#define	NAME		"ZYFER"	/* shortname */
 #define	DESCRIPTION	"Zyfer GPStarplus" /* WRU */
 
 #define	LENZYFER	29	/* timecode length */
@@ -90,18 +78,16 @@
  * Unit control structure
  */
 struct zyferunit {
-	u_char	Rcvbuf[LENZYFER + 1];
-	u_char	polled;		/* poll message flag */
+	uint8_t	Rcvbuf[LENZYFER + 1];
+	uint8_t	polled;		/* poll message flag */
 	int	pollcnt;
-	l_fp    tstamp;         /* timestamp of last poll */
 	int	Rcvptr;
 };
 
 /*
  * Function prototypes
  */
-static	int	zyfer_start	(int, struct peer *);
-static	void	zyfer_shutdown	(int, struct peer *);
+static	bool	zyfer_start	(int, struct peer *);
 static	void	zyfer_receive	(struct recvbuf *);
 static	void	zyfer_poll	(int, struct peer *);
 
@@ -109,26 +95,26 @@ static	void	zyfer_poll	(int, struct peer *);
  * Transfer vector
  */
 struct	refclock refclock_zyfer = {
+	NAME,			/* basename of driver */
 	zyfer_start,		/* start up driver */
-	zyfer_shutdown,		/* shut down driver */
+	NULL,			/* shut down driver in the standard way */
 	zyfer_poll,		/* transmit poll message */
-	noentry,		/* not used (old zyfer_control) */
-	noentry,		/* initialize driver (not used) */
-	noentry,		/* not used (old zyfer_buginfo) */
-	NOFLAGS			/* not used */
+	NULL,			/* not used (old zyfer_control) */
+	NULL,			/* initialize driver (not used) */
+	NULL			/* timer - not used */
 };
 
 
 /*
  * zyfer_start - open the devices and initialize data for processing
  */
-static int
+static bool
 zyfer_start(
 	int unit,
 	struct peer *peer
 	)
 {
-	register struct zyferunit *up;
+	struct zyferunit *up;
 	struct refclockproc *pp;
 	int fd;
 	char device[20];
@@ -138,17 +124,19 @@ zyfer_start(
 	 * Something like LDISC_ACTS that looked for ! would be nice...
 	 */
 	snprintf(device, sizeof(device), DEVICE, unit);
-	fd = refclock_open(device, SPEED232, LDISC_RAW);
+	fd = refclock_open(peer->cfg.path ? peer->cfg.path : device,
+			   peer->cfg.baud ? peer->cfg.baud : SPEED232,
+			   LDISC_RAW);
 	if (fd <= 0)
-		return (0);
+		/* coverity[leaked_handle] */
+		return false;
 
-	msyslog(LOG_NOTICE, "zyfer(%d) fd: %d dev <%s>", unit, fd, device);
+	msyslog(LOG_NOTICE, "REFCLOCK: zyfer(%d) fd: %d", unit, fd);
 
 	/*
 	 * Allocate and initialize unit structure
 	 */
-	up = emalloc(sizeof(struct zyferunit));
-	memset(up, 0, sizeof(struct zyferunit));
+	up = emalloc_zero(sizeof(struct zyferunit));
 	pp = peer->procptr;
 	pp->io.clock_recv = zyfer_receive;
 	pp->io.srcclock = peer;
@@ -158,7 +146,7 @@ zyfer_start(
 		close(fd);
 		pp->io.fd = -1;
 		free(up);
-		return (0);
+		return false;
 	}
 	pp->unitptr = up;
 
@@ -166,33 +154,14 @@ zyfer_start(
 	 * Initialize miscellaneous variables
 	 */
 	peer->precision = PRECISION;
+	pp->clockname = NAME;
 	pp->clockdesc = DESCRIPTION;
-	memcpy((char *)&pp->refid, REFID, 4);
+	memcpy((char *)&pp->refid, REFID, REFIDLEN);
+	peer->sstclktype = CTL_SST_TS_UHF;
 	up->pollcnt = 2;
 	up->polled = 0;		/* May not be needed... */
 
-	return (1);
-}
-
-
-/*
- * zyfer_shutdown - shut down the clock
- */
-static void
-zyfer_shutdown(
-	int unit,
-	struct peer *peer
-	)
-{
-	register struct zyferunit *up;
-	struct refclockproc *pp;
-
-	pp = peer->procptr;
-	up = pp->unitptr;
-	if (pp->io.fd != -1)
-		io_closeclock(&pp->io);
-	if (up != NULL)
-		free(up);
+	return true;
 }
 
 
@@ -204,25 +173,21 @@ zyfer_receive(
 	struct recvbuf *rbufp
 	)
 {
-	register struct zyferunit *up;
+	struct zyferunit *up;
 	struct refclockproc *pp;
 	struct peer *peer;
 	int tmode;		/* Time mode */
 	int tfom;		/* Time Figure Of Merit */
 	int omode;		/* Operation mode */
-	u_char *p;
+	uint8_t *p;
 
-	TCivilDate	tsdoy;
-	TNtpDatum	tsntp;
-	l_fp		tfrac;
-	
 	peer = rbufp->recv_peer;
 	pp = peer->procptr;
 	up = pp->unitptr;
-	p = (u_char *) &rbufp->recv_space;
+	p = (uint8_t *) &rbufp->recv_buffer;
 	/*
 	 * If lencode is 0:
-	 * - if *rbufp->recv_space is !
+	 * - if *rbufp->recv_buffer is !
 	 * - - call refclock_gtlin to get things going
 	 * - else flush
 	 * else stuff it on the end of lastcode
@@ -246,14 +211,14 @@ zyfer_receive(
 			return;
 	} else {
 		memcpy(pp->a_lastcode + pp->lencode, p, rbufp->recv_length);
-		pp->lencode += rbufp->recv_length;
+		pp->lencode += (int)rbufp->recv_length;
 		pp->a_lastcode[pp->lencode] = '\0';
 	}
 
 	if (pp->lencode < LENZYFER)
 		return;
 
-	record_clock_stats(&peer->srcadr, pp->a_lastcode);
+	record_clock_stats(peer, pp->a_lastcode);
 
 	/*
 	 * We get down to business, check the timecode format and decode
@@ -288,22 +253,10 @@ zyfer_receive(
 		return;
 	}
 
-	/* treat GPS input as subject to era warps */
-	ZERO(tsdoy);
-	ZERO(tfrac);
-
-	tsdoy.year    = pp->year;
-	tsdoy.yearday = pp->day;
-	tsdoy.hour    = pp->hour;
-	tsdoy.minute  = pp->minute;
-	tsdoy.second  = pp->second;
-	
-	/* note: We kept 'month' and 'monthday' zero above. That forces
-	 * day-of-year based calculation now:
-	 */
-	tsntp = gpsntp_from_calendar(&tsdoy, tfrac);
-	tfrac = ntpfp_from_ntpdatum(&tsntp);
-	refclock_process_offset(pp, tfrac, pp->lastrec, pp->fudgetime1);
+	if (!refclock_process(pp)) {
+		refclock_report(peer, CEVNT_BADTIME);
+		return;
+        }
 
 	/*
 	 * Good place for record_clock_stats()
@@ -326,8 +279,10 @@ zyfer_poll(
 	struct peer *peer
 	)
 {
-	register struct zyferunit *up;
+	struct zyferunit *up;
 	struct refclockproc *pp;
+
+	UNUSED_ARG(unit);
 
 	/*
 	 * We don't really do anything here, except arm the receiving
@@ -335,14 +290,12 @@ zyfer_poll(
 	 */
 	pp = peer->procptr;
 	up = pp->unitptr;
-	if (!up->pollcnt)
+	if (!up->pollcnt) {
 		refclock_report(peer, CEVNT_TIMEOUT);
-	else
+	} else {
 		up->pollcnt--;
+	}
 	pp->polls++;
 	up->polled = 1;
 }
 
-#else
-int refclock_zyfer_bs;
-#endif /* REFCLOCK */

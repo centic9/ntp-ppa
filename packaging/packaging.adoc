@@ -1,0 +1,103 @@
+= Guidance for package builders
+
+== Package parts
+
+Some useful components for package building can be found in the etc/
+subdirectory, including init boot time scripts, systemd unit files,
+and boilerplate for default ntpd configuration.
+
+== ntp.conf installation
+
+Installation from source (waf install) does not attempt to put an ntp.conf
+or ntp.d in place. Your installable package should do this.
+
+The reason this is so is that NTPsec does not yet have an authorized
+pool group of its own. This may change in the future.
+
+== Platforms without Python
+
+Many tools (actually, almost everything except the core daemon itself)
+have been moved from C to Python. This is an important step for
+improving maintainability and reducing the attack surface.  However,
+we know that some platforms cannot support Python or choose not
+to include it in their core configuration.
+
+For these platforms, we recommend using cx_Freeze to render the NTPsec
+Python programs, and all their imported modules, into standalone files.
+These files can then be copied to a host that does not have Python
+installed and executed just as if Python was installed.
+
+cx_Freeze documentation lives
+http://cx-freeze.readthedocs.io/en/latest/index.html[here].
+
+Your OS package manager may have a package for cx_Freeze.  If not you
+can install it with pip like this:
+
+```
+pip install cx_Freeze
+```
+
+You may find that you also need to install the package 'patchelf'.
+
+Change to the root directory of the NTPsec source distribution and
+run the following command:
+
+```
+waf cxfreeze
+```
+
+Binary executables corresponding to every Python script will now be in
+the directory named dist along with the other files required for them
+to run.
+
+You can copy the dist directory, and its contents, to a host that does
+not have Python installed and execute the programs there.
+
+There appears to be no speed advantage, or disadvantage, to running the
+binaries created by cx_freeze.
+
+== Hacking Python shebangs
+
+The shebang lines in our Python scripts point to the value of
+--pyshebang (default "python"). Part of our standard development tests
+check that you can change that to "python3" without breaking anything.
+
+We are aware that the Python 3 transition is well advanced.  We are also
+aware that PEP394 strongly urges all distributors to point 'python' at
+Python 2.
+
+== Cross-era interoperability in modular calendar arithmetic
+
+The protocol necessarily uses time/date stamps of finite length
+to fit into fixed-size fields; they happen to have a 136-year cycle, but
+the problems this produces aren't dependent on the specific cycle
+length.  Thus, each instance of ntpd speaks time based on a specific
+epoch (cycle start date).  The epoch of era 0 was at the beginning of
+1900; the epoch of era 1 will be in 2036.
+
+Two instances talking to each other have no way to know that they're
+based in the same era. To mitigate this problem, each instance has a
+pivot date and resolves incoming timestamps to the era that minimizes
+the distance between now and the timestamp.  This procedure is part of the
+core protocol specification.
+
+An instance's pivot time is constructed from a hardcoded timestamp
+in the source code. This is also used to disambiguate the current
+GPS era. This number should be updated every nine years or so (approx
+512w). This should make the binaries reproducible.
+
+More information on reproducible builds is at:
+https://reproducible-builds.org/[https://reproducible-builds.org/]
+
+== Disambiguation of NMEA dates
+
+Due to the bad design of NMEA0183, the reporting protocol used by many GPS
+sensors, the NMEA driver in NTPsec sometimes has to assume
+what century it is.  Choice of a base-century hits the same
+issues, so here the year derived from a hardcoded timestamp. The
+alternative - trusting the system clock to report the right century -
+could produce very bad behavior near century boundaries, and also on
+cold-start of systems without an RTC.
+
+// end
+

@@ -1,0 +1,6 @@
+.lock-waf*
+.waf*
+*.pyc
+build
+attic/clock
+.DS_Store

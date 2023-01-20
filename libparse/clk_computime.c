@@ -1,61 +1,25 @@
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
-#if defined(REFCLOCK) && defined(CLOCK_PARSE) && defined(CLOCK_COMPUTIME)
 /*
- * /src/NTP/ntp4-dev/libparse/clk_computime.c,v 4.10 2005/04/16 17:32:10 kardel RELEASE_20050508_A
- *
- * clk_computime.c,v 4.10 2005/04/16 17:32:10 kardel RELEASE_20050508_A
- *
  * Supports Diem's Computime Radio Clock
  *
  * Used the Meinberg clock as a template for Diem's Computime Radio Clock
  *
  * adapted by Alois Camenzind <alois.camenzind@ubs.ch>
  *
- * Copyright (c) 1995-2005 by Frank Kardel <kardel <AT> ntp.org>
- * Copyright (c) 1989-1994 by Frank Kardel, Friedrich-Alexander Universitaet Erlangen-Nuernberg, Germany
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the author nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- *
+ * Copyright Frank Kardel <kardel <AT> ntp.org>
+ * Copyright Alois Camenzind <alois.camenzind@ubs.ch>
+ * Copyright the NTPsec project contributors
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "config.h"
+
 #include "ntp_fp.h"
-#include "ntp_unixtime.h"
 #include "ntp_calendar.h"
 #include "ntp_stdlib.h"
 
 #include "parse.h"
 
-#ifndef PARSESTREAM
 #include <stdio.h>
-#else
-#include "sys/parsestreams.h"
-extern int printf (const char *, ...);
-#endif
 
 /*
  * The Computime receiver sends a datagram in the following format every minute
@@ -66,7 +30,8 @@ extern int printf (const char *, ...);
  * Parse        T:  :  :  :  :  :  :  rn
  *
  * T	Startcharacter "T" specifies start of the timestamp
- * YY	Year MM	Month 1-12
+ * YY	Year
+ * MM	Month 1-12
  * MD	Day of the month
  * WD	Day of week
  * HH	Hour
@@ -107,7 +72,7 @@ clockformat_t clock_computime =
  *
  * convert simple type format
  */
-static u_long
+static unsigned long
 cvt_computime(
 	unsigned char *buffer,
 	int            size,
@@ -116,6 +81,8 @@ cvt_computime(
 	void          *local
 	)
 {
+	UNUSED_ARG(size);
+	UNUSED_ARG(local);
 
 	if (!Strok(buffer, format->fixed_string)) {
 		return CVT_NONE;
@@ -148,7 +115,7 @@ cvt_computime(
  *
  * grab data from input stream
  */
-static u_long
+static unsigned long
 inp_computime(
 	      parse_t      *parseio,
 	      char         ch,
@@ -157,7 +124,8 @@ inp_computime(
 {
 	unsigned int rtc;
 
-	parseprintf(DD_PARSE, ("inp_computime(0x%p, 0x%x, ...)\n", (void*)parseio, ch));
+	parseprintf(DD_PARSE, ("inp_computime(0x%lx, 0x%x, ...)\n",
+                    (long unsigned)parseio, (unsigned int)ch));
 
 	switch (ch)
 	{
@@ -180,10 +148,6 @@ inp_computime(
 		return parse_addchar(parseio, ch);
 	}
 }
-
-#else /* not (REFCLOCK && CLOCK_PARSE && CLOCK_COMPUTIME) */
-int clk_computime_bs;
-#endif /* not (REFCLOCK && CLOCK_PARSE && CLOCK_COMPUTIME) */
 
 /*
  * clk_computime.c,v

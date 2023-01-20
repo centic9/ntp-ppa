@@ -1,8 +1,4 @@
 /*
- * /src/NTP/ntp4-dev/libparse/clk_hopf6021.c,v 4.10 2004/11/14 15:29:41 kardel RELEASE_20050508_A
- *
- * clk_hopf6021.c,v 4.10 2004/11/14 15:29:41 kardel RELEASE_20050508_A
- *
  * Radiocode Clocks HOPF Funkuhr 6021 mit serieller Schnittstelle
  * base code version from 24th Nov 1995 - history at end
  *
@@ -16,26 +12,15 @@
  *
  */
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
-#if defined(REFCLOCK) && defined(CLOCK_PARSE) && defined(CLOCK_HOPF6021)
-
+#include "config.h"
 #include "ntp_fp.h"
-#include "ntp_unixtime.h"
 #include "ntp_calendar.h"
 #include "ascii.h"
 
 #include "parse.h"
 
-#ifndef PARSESTREAM
 #include "ntp_stdlib.h"
 #include <stdio.h>
-#else
-#include "sys/parsestreams.h"
-extern int printf (const char *, ...);
-#endif
 
 /*
  * hopf Funkuhr 6021
@@ -97,7 +82,7 @@ extern int printf (const char *, ...);
 #define  HOPF_RADIOHP	0x0C	/* high precision radio clock */
 
 #define HOPF_UTC	0x08	/* time code in UTC */
-#define HOPF_WMASK	0x07	/* mask for weekday code */
+/* #define HOPF_WMASK	0x07	* mask for weekday code UNUSED */
 
 static struct format hopf6021_fmt =
 {
@@ -113,10 +98,13 @@ static struct format hopf6021_fmt =
 
 #define OFFS(x) format->field_offsets[(x)].offset
 #define STOI(x, y) Stoi(&buffer[OFFS(x)], y, format->field_offsets[(x)].length)
+#define hexval(x) (('0' <= (x) && (x) <= '9') ? (x) - '0' : \
+		   ('a' <= (x) && (x) <= 'f') ? (x) - 'a' + 10 : \
+		   ('A' <= (x) && (x) <= 'F') ? (x) - 'A' + 10 : \
+		   -1)
 
 static parse_cvt_fnc_t cvt_hopf6021;
 static parse_inp_fnc_t inp_hopf6021;
-static unsigned char   hexval(unsigned char);
 
 clockformat_t clock_hopf6021 =
 {
@@ -130,7 +118,7 @@ clockformat_t clock_hopf6021 =
 };
 
 /* parse_cvt_fnc_t cvt_hopf6021 */
-static u_long
+static unsigned long
 cvt_hopf6021(
 	     unsigned char *buffer,
 	     int            size,
@@ -140,6 +128,9 @@ cvt_hopf6021(
 	     )
 {
 	unsigned char status,weekday;
+
+	UNUSED_ARG(size);
+	UNUSED_ARG(local);
 
 	if (!Strok(buffer, format->fixed_string))
 	{
@@ -157,40 +148,40 @@ cvt_hopf6021(
 		return CVT_FAIL|CVT_BADFMT;
 	}
 
-	clock_time->usecond = 0;
-	clock_time->flags   = 0;
+	clock_time->usecond   = 0;
+	clock_time->utcoffset = 0;
 
-	status  = hexval(buffer[OFFS(O_FLAGS)]);
-	weekday = hexval(buffer[OFFS(O_WDAY)]);
+	status = (uint8_t) hexval(buffer[OFFS(O_FLAGS)]);
+	weekday= (uint8_t) hexval(buffer[OFFS(O_WDAY)]);
 
 	if ((status == 0xFF) || (weekday == 0xFF))
 	{
 		return CVT_FAIL|CVT_BADFMT;
 	}
 
+	clock_time->flags  = 0;
+
 	if (weekday & HOPF_UTC)
 	{
-		clock_time->flags     |= PARSEB_UTC;
-		clock_time->utcoffset  = 0;
-	}
-	else if (status & HOPF_DST)
-	{
-		clock_time->flags     |= PARSEB_DST;
-		clock_time->utcoffset  = -2*60*60; /* MET DST */
+		clock_time->flags |= PARSEB_UTC;
 	}
 	else
 	{
-		clock_time->utcoffset  = -1*60*60; /* MET */
+		if (status & HOPF_DST)
+		{
+			clock_time->flags     |= PARSEB_DST;
+			clock_time->utcoffset  = -2*60*60; /* MET DST */
+		}
+		else
+		{
+			clock_time->utcoffset  = -1*60*60; /* MET */
+		}
 	}
 
-	if (status & HOPF_DSTWARN)
-	{
-		clock_time->flags |= PARSEB_ANNOUNCE;
-	}
-	
+	clock_time->flags |= (status & HOPF_DSTWARN)  ? PARSEB_ANNOUNCE : 0;
+
 	switch (status & HOPF_MODE)
 	{
-	    default:	/* dummy: we cover all 4 cases. */
 	    case HOPF_INVALID:  /* Time/Date invalid */
 		clock_time->flags |= PARSEB_POWERUP;
 		break;
@@ -202,6 +193,9 @@ cvt_hopf6021(
 	    case HOPF_RADIO:    /* Radio clock */
 	    case HOPF_RADIOHP:  /* Radio clock high precision */
 		break;
+
+	    default:
+		return CVT_FAIL|CVT_BADFMT;
 	}
 
 	return CVT_OK;
@@ -212,7 +206,7 @@ cvt_hopf6021(
  *
  * grab data from input stream
  */
-static u_long
+static unsigned long
 inp_hopf6021(
 	     parse_t      *parseio,
 	     char         ch,
@@ -221,50 +215,23 @@ inp_hopf6021(
 {
 	unsigned int rtc;
 
-	parseprintf(DD_PARSE, ("inp_hopf6021(0x%p, 0x%x, ...)\n", (void*)parseio, ch));
+	parseprintf(DD_PARSE, ("inp_hopf6021(0x%lx, 0x%x, ...)\n",
+                    (unsigned long)parseio, (unsigned)ch));
 
 	switch (ch)
 	{
 	case ETX:
 		parseprintf(DD_PARSE, ("inp_hopf6021: EOL seen\n"));
 		parseio->parse_dtime.parse_stime = *tstamp; /* collect timestamp */
-		if ((rtc = parse_addchar(parseio, ch)) == PARSE_INP_SKIP)
+		if ((rtc = parse_addchar(parseio, ch)) == PARSE_INP_SKIP) {
 			return parse_end(parseio);
-		else
+		} else {
 			return rtc;
-
+		}
 	default:
 		return parse_addchar(parseio, ch);
 	}
 }
-
-/*
- * convert a hex-digit to numeric value
- */
-static unsigned char
-hexval(
-	unsigned char ch
-	)
-{
-	unsigned int dv;
-	
-	if ((dv = ch - '0') >= 10u)
-	{
-		if ((dv -= 'A'-'0') < 6u || (dv -= 'a'-'A') < 6u)
-		{
-			dv += 10;
-		}
-		else
-		{
-			dv = 0xFF;
-		}
-	}
-	return (unsigned char)dv;
-}
-
-#else /* not (REFCLOCK && CLOCK_PARSE && CLOCK_HOPF6021) */
-int clk_hopf6021_bs;
-#endif /* not (REFCLOCK && CLOCK_PARSE && CLOCK_HOPF6021) */
 
 /*
  * History:
@@ -277,7 +244,7 @@ int clk_hopf6021_bs;
  * RECON_4_0_98F
  *
  * Revision 4.6  1998/11/15 20:27:57  kardel
- * Release 4.0.73e13 reconcilation
+ * Release 4.0.73e13 reconciliation
  *
  * Revision 4.5  1998/06/14 21:09:35  kardel
  * Sun acc cleanup

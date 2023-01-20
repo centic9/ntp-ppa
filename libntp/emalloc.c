@@ -1,7 +1,7 @@
 /*
  * emalloc - return new memory obtained from the system.  Belch if none.
  */
-#include <config.h>
+#include "config.h"
 #include "ntp_types.h"
 #include "ntp_malloc.h"
 #include "ntp_syslog.h"
@@ -42,26 +42,26 @@ ereallocz(
 
 	mem = EREALLOC_IMPL(ptr, allocsz, file, line);
 	if (NULL == mem) {
-		msyslog_term = TRUE;
+		termlogit = true;
 #ifndef EREALLOC_CALLSITE
-		msyslog(LOG_ERR, "fatal out of memory (%lu bytes)",
-			(u_long)newsz);
+		msyslog(LOG_ERR, "ERR: fatal out of memory (%lu bytes)",
+			(unsigned long)newsz);
 #else
 		msyslog(LOG_ERR,
-			"fatal out of memory %s line %d (%lu bytes)",
-			file, line, (u_long)newsz);
+			"ERR: fatal out of memory %s line %d (%lu bytes)",
+			file, line, (unsigned long)newsz);
 #endif
 		exit(1);
 	}
 
 	if (zero_init && newsz > priorsz)
-		zero_mem(mem + priorsz, newsz - priorsz);
+		memset(mem + priorsz, '\0', newsz - priorsz);
 
 	return mem;
 }
 
 /* oreallocarray.c is licensed under the following:
- * Copyright (c) 2008 Otto Moerbeek <otto@drijf.net>
+ * Copyright Otto Moerbeek <otto@drijf.net>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -76,6 +76,8 @@ ereallocz(
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <stdint.h>
+
 /*
  * This is sqrt(SIZE_MAX+1), as s1*s2 <= SIZE_MAX
  * if both s1 < MUL_NO_OVERFLOW and s2 < MUL_NO_OVERFLOW
@@ -83,11 +85,10 @@ ereallocz(
 #define MUL_NO_OVERFLOW	((size_t)1 << (sizeof(size_t) * 4))
 
 void *
-oreallocarrayxz(
+oreallocarray(
 	void *optr,
 	size_t nmemb,
-	size_t size,
-	size_t extra
+	size_t size
 #ifdef EREALLOC_CALLSITE		/* ntp_malloc.h */
 	,
 	const char *	file,
@@ -98,18 +99,18 @@ oreallocarrayxz(
 	if ((nmemb >= MUL_NO_OVERFLOW || size >= MUL_NO_OVERFLOW) &&
 	    nmemb > 0 && SIZE_MAX / nmemb < size) {
 #ifndef EREALLOC_CALLSITE
-		msyslog(LOG_ERR, "fatal allocation size overflow");
+		msyslog(LOG_ERR, "ERR: fatal allocation size overflow");
 #else
 		msyslog(LOG_ERR,
-			"fatal allocation size overflow %s line %d",
+			"ERR: fatal allocation size overflow %s line %d",
 			file, line);
 #endif
 		exit(1);
 	}
 #ifndef EREALLOC_CALLSITE
-	return ereallocz(optr, extra + (size * nmemb), 0, TRUE);
+	return ereallocz(optr, (size * nmemb), 0, false);
 #else
-	return ereallocz(optr, extra + (size * nmemb), 0, TRUE, file, line);
+	return ereallocz(optr, (size * nmemb), 0, false, file, line);
 #endif
 }
 
@@ -127,7 +128,7 @@ estrdup_impl(
 	size_t	bytes;
 
 	bytes = strlen(str) + 1;
-	copy = ereallocz(NULL, bytes, 0, FALSE
+	copy = ereallocz(NULL, bytes, 0, false
 #ifdef EREALLOC_CALLSITE
 			 , file, line
 #endif
@@ -136,15 +137,4 @@ estrdup_impl(
 
 	return copy;
 }
-
-
-#if 0
-#ifndef EREALLOC_CALLSITE
-void *
-emalloc(size_t newsz)
-{
-	return ereallocz(NULL, newsz, 0, FALSE);
-}
-#endif
-#endif
 

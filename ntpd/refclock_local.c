@@ -1,25 +1,16 @@
 
 /*
  * refclock_local - local pseudo-clock driver
- *
- * wjm 17-aug-1995: add a hook for special treatment of VMS_LOCALUNIT
  */
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
-#ifdef REFCLOCK
-
+#include "config.h"
+#include "ntp.h"
 #include "ntpd.h"
 #include "ntp_refclock.h"
 #include "ntp_stdlib.h"
+#include "ntp_syscall.h"
 
 #include <stdio.h>
 #include <ctype.h>
-
-#ifdef KERNEL_PLL
-#include "ntp_syscall.h"
-#endif
 
 /*
  * This is a hack to allow a machine to use its own system clock as a
@@ -60,50 +51,41 @@
 /*
  * Local interface definitions
  */
-#define PRECISION	(-7)	/* about 10 ms precision */
-#define DESCRIPTION "Undisciplined local clock" /* WRU */
+/* #define PRECISION	(-7)	* about 10 ms precision UNUSED */
+#define NAME		"LOCAL"	/* shortname */
+#define DESCRIPTION	"Undisciplined local clock" /* WRU */
 #define STRATUM 	5	/* default stratum */
 #define DISPERSION	.01	/* default dispersion (10 ms) */
 
 /*
- * Imported from the timer module
- */
-extern u_long current_time;
-
-/*
- * Imported from ntp_proto
- */
-extern s_char sys_precision;
-
-/*
  * Function prototypes
  */
-static	int local_start (int, struct peer *);
+static	bool	local_start (int, struct peer *);
 static	void	local_poll	(int, struct peer *);
 
 /*
  * Local variables
  */
-static	u_long poll_time;	/* last time polled */
-	
+static	unsigned long poll_time;	/* last time polled */
+
 /*
  * Transfer vector
  */
 struct	refclock refclock_local = {
+	NAME,			/* basename of driver */
 	local_start,		/* start up driver */
-	noentry,		/* shut down driver (not used) */
+	NULL,			/* shut down driver (not used) */
 	local_poll,	 	/* transmit poll message */
-	noentry,		/* not used (old lcl_control) */
-	noentry,		/* initialize driver (not used) */
-	noentry,		/* not used (old lcl_buginfo) */
-	NOFLAGS 		/* not used */
+	NULL,			/* not used (old lcl_control) */
+	NULL,			/* initialize driver (not used) */
+	NULL 			/* timer - not used */
 };
 
 
 /*
  * local_start - start up the clock
  */
-static int
+static bool
 local_start(
 	int unit,
 	struct peer *peer
@@ -111,26 +93,32 @@ local_start(
 {
 	struct refclockproc *pp;
 
+	UNUSED_ARG(unit);
+
 	pp = peer->procptr;
 
 	/*
 	 * Initialize miscellaneous variables
 	 */
-	peer->precision = sys_precision;
+	peer->precision = sys_vars.sys_precision;
 	pp->leap = LEAP_NOTINSYNC;
 	peer->stratum = STRATUM;
 	pp->stratum = STRATUM;
+	pp->clockname = NAME;
 	pp->clockdesc = DESCRIPTION;
-	memcpy(&pp->refid, "LOCL", 4);
+	memcpy(&pp->refid, "LOCL", REFIDLEN);
+	peer->sstclktype = CTL_SST_TS_LOCAL;
 	poll_time = current_time;
-	return (1);
+	if (pp->sloppyclockflag & CLK_FLAG1)
+	    loop_data.lockclock = true;
+	return true;
 }
 
 
 /*
  * local_poll - called by the transmit procedure
  *
- * LOCKCLOCK: If the kernel supports the nanokernel or microkernel
+ * If lockclock is on: If the kernel supports the nanokernel or microkernel
  * system calls, the leap bits are extracted from the kernel. If there
  * is a kernel error or the kernel leap bits are set to 11, the NTP leap
  * bits are set to 11 and the stratum is set to infinity. Otherwise, the
@@ -145,25 +133,15 @@ local_poll(
 	struct peer *peer
 	)
 {
-#if defined(KERNEL_PLL) && defined(LOCKCLOCK)
-	struct timex ntv;
-#endif /* KERNEL_PLL LOCKCLOCK */
 	struct refclockproc *pp;
+
+	UNUSED_ARG(unit);
 
 	/*
 	 * Do no evil unless the house is dark or lit with our own lamp.
 	 */
-	if (!(sys_peer == NULL || sys_peer == peer))
+	if (!(sys_vars.sys_peer == NULL || sys_vars.sys_peer == peer))
 		return;
-
-#if defined(VMS) && defined(VMS_LOCALUNIT)
-	if (unit == VMS_LOCALUNIT) {
-		extern void vms_local_poll(struct peer *);
-
-		vms_local_poll(peer);
-		return;
-	}
-#endif /* VMS && VMS_LOCALUNIT */
 
 	pp = peer->procptr;
 	pp->polls++;
@@ -180,38 +158,37 @@ local_poll(
 	 * If another process is disciplining the system clock, we set
 	 * the leap bits and quality indicators from the kernel.
 	 */
-#if defined(KERNEL_PLL) && defined(LOCKCLOCK)
-	memset(&ntv,  0, sizeof ntv);
-	switch (ntp_adjtime(&ntv)) {
-	case TIME_OK:
+	if (loop_data.lockclock) {
+		struct timex ntv;
+		memset(&ntv,  0, sizeof ntv);
+		switch (ntp_adjtime(&ntv)) {
+		case TIME_OK:
+		    pp->leap = LEAP_NOWARNING;
+		    peer->stratum = pp->stratum;
+		    break;
+
+		case TIME_INS:
+		    pp->leap = LEAP_ADDSECOND;
+		    peer->stratum = pp->stratum;
+		    break;
+
+		case TIME_DEL:
+		    pp->leap = LEAP_DELSECOND;
+		    peer->stratum = pp->stratum;
+		    break;
+
+		default:
+		    pp->leap = LEAP_NOTINSYNC;
+		    peer->stratum = STRATUM_UNSPEC;
+		}
+		pp->disp = 0;
+		pp->jitter = 0;
+	} else {
 		pp->leap = LEAP_NOWARNING;
-		peer->stratum = pp->stratum;
-		break;
-
-	case TIME_INS:
-		pp->leap = LEAP_ADDSECOND;
-		peer->stratum = pp->stratum;
-		break;
-
-	case TIME_DEL:
-		pp->leap = LEAP_DELSECOND;
-		peer->stratum = pp->stratum;
-		break;
-
-	default:
-		pp->leap = LEAP_NOTINSYNC;
-		peer->stratum = STRATUM_UNSPEC;
+		pp->disp = DISPERSION;
+		pp->jitter = 0;
 	}
-	pp->disp = 0;
-	pp->jitter = 0;
-#else /* KERNEL_PLL LOCKCLOCK */
-	pp->leap = LEAP_NOWARNING;
-	pp->disp = DISPERSION;
-	pp->jitter = 0;
-#endif /* KERNEL_PLL LOCKCLOCK */
 	pp->lastref = pp->lastrec;
 	refclock_receive(peer);
 }
-#else
-int refclock_local_bs;
-#endif /* REFCLOCK */
+

@@ -1,0 +1,516 @@
+'\" t
+.\"     Title: ntpmon
+.\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 06/07/2021
+.\"    Manual: NTPsec
+.\"    Source: NTPsec 1.2.1+
+.\"  Language: English
+.\"
+.TH "NTPMON" "1" "06/07/2021" "NTPsec 1\&.2\&.1+" "NTPsec"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+ntpmon \- real\-time NTP status monitor
+.SH "SYNOPSIS"
+.sp
+ntpmon [\-dhnuV] [\-D lvl] [\-l logfile] [host]
+.SH "DESCRIPTION"
+.sp
+This program is a real\-time status monitor for NTP\&. It presents the same information as the \fIpeers\fR, \fImrulist\fR, \fIrv\fR, and \fIcv\fR commands of ntpq(1), but using a split\-window display that also includes a status summary bar, and updates at intervals guaranteed to show status changes almost as soon as they occur\&.
+.sp
+(Specifically, the display begins updating once per second and adjusts itself to poll at twice the frequency of the shortest polling interval reported in the last peers response\&.)
+.sp
+The status bar includes the version string of the server being watched, the (local) time at which it was last updated, and the current query interval in parens following the date\&.
+.sp
+There is a detail\-display mode that dumps full information about a single selected peer in a tabular format that makes it relatively easy to see changing values\&. However, note that a default\-sized terminal emulator window (usually 25 lines) doesn\(cqt have enough room for the clock variables portion\&. The only fix for this is to resize your terminal\&.
+.sp
+^C cleanly terminates the program\&. Any keystroke will trigger a poll and update\&. A few single\-keystroke commands are also interpreted as commands\&.
+.sp
+If no hostname is specified on the command line, localhost is monitored\&.
+.sp
+Here\(cqs a breakdown of the peers display in the top window:
+.TS
+allbox tab(:);
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt.
+T{
+.sp
+Variable
+T}:T{
+.sp
+Description
+T}
+T{
+.sp
+tally
+T}:T{
+.sp
+single\-character code indicating current value of the select field of the peer status word
+T}
+T{
+.sp
+remote
+T}:T{
+.sp
+host name (or IP number) of peer
+T}
+T{
+.sp
+refid
+T}:T{
+.sp
+association ID or kiss code
+T}
+T{
+.sp
+st
+T}:T{
+.sp
+stratum
+T}
+T{
+.sp
+t
+T}:T{
+.sp
+u: unicast or manycast client, l: local (reference clock), s: symmetric (peer), server, B: broadcast server, 1\-8 NTS unicast with this number of cookies stored\&.
+T}
+T{
+.sp
+when
+T}:T{
+.sp
+sec/min/hr since last received packet
+T}
+T{
+.sp
+poll
+T}:T{
+.sp
+poll interval (log2 s)
+T}
+T{
+.sp
+reach
+T}:T{
+.sp
+reach shift register (octal)
+T}
+T{
+.sp
+delay
+T}:T{
+.sp
+roundtrip delay
+T}
+T{
+.sp
+offset
+T}:T{
+.sp
+offset of server relative to this host
+T}
+T{
+.sp
+jitter
+T}:T{
+.sp
+jitter
+T}
+.TE
+.sp 1
+.sp
+The tally code is one of the following:
+.TS
+allbox tab(:);
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt.
+T{
+.sp
+Code
+T}:T{
+.sp
+Description
+T}
+T{
+.sp
+T}:T{
+.sp
+discarded as not valid
+T}
+T{
+.sp
+x
+T}:T{
+.sp
+discarded by intersection algorithm
+T}
+T{
+.sp
+\&.
+T}:T{
+.sp
+discarded by table overflow (not used)
+T}
+T{
+.sp
+\-
+T}:T{
+.sp
+discarded by the cluster algorithm
+T}
+T{
+.sp
++
+T}:T{
+.sp
+included by the combine algorithm
+T}
+T{
+.sp
+#
+T}:T{
+.sp
+backup (more than tos maxclock sources)
+T}
+T{
+.sp
+*
+T}:T{
+.sp
+system peer
+T}
+T{
+.sp
+o
+T}:T{
+.sp
+PPS peer (when the prefer peer is valid)
+T}
+.TE
+.sp 1
+.sp
+And the MRU list in the bottom window:
+.TS
+allbox tab(:);
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt
+lt lt.
+T{
+.sp
+Column
+T}:T{
+.sp
+Description
+T}
+T{
+.sp
+lstint
+T}:T{
+.sp
+Interval in s between the receipt of the most recent packet from this address and the completion of the retrieval of the MRU list by ntpq\&.
+T}
+T{
+.sp
+avgint
+T}:T{
+.sp
+Average interval in s between packets from this address\&.
+T}
+T{
+.sp
+rstr
+T}:T{
+.sp
+Restriction flags associated with this address\&. Most are copied unchanged from the matching restrict command, however 0x400 (kod) and 0x20 (limited) flags are cleared unless the last packet from this address triggered a rate control response\&.
+T}
+T{
+.sp
+r
+T}:T{
+.sp
+Rate control indicator, either a period, L or K for no rate control response, rate limiting by discarding, or rate limiting with a KoD response, respectively\&.
+T}
+T{
+.sp
+m
+T}:T{
+.sp
+Packet mode\&.
+T}
+T{
+.sp
+v
+T}:T{
+.sp
+Packet version number\&.
+T}
+T{
+.sp
+count
+T}:T{
+.sp
+Packets received from this address\&.
+T}
+T{
+.sp
+score
+T}:T{
+.sp
+Packets per second (averaged with exponential decay)\&.
+T}
+T{
+.sp
+drop
+T}:T{
+.sp
+Packets dropped (or KoDed) from this address\&.
+T}
+T{
+.sp
+rport
+T}:T{
+.sp
+Source port of last packet from this address\&.
+T}
+T{
+.sp
+remote address
+T}:T{
+.sp
+DNS name, numeric address, or address followed by claimed DNS name which could not be verified in parentheses\&.
+T}
+.TE
+.sp 1
+.sp
+The refid field is as described under "Event Messages and Status Words" in the NTP documentation on the Web\&.
+.SH "COMMANDS"
+.PP
+a
+.RS 4
+Change peer display to apeers mode, showing association IDs\&.
+.RE
+.PP
+d
+.RS 4
+Toggle detail mode (some peer will be reverse\-video highlighted when on)\&.
+.RE
+.PP
+h
+.RS 4
+Display help screen
+.RE
+.PP
+j
+.RS 4
+Select next peer (in select mode); arrow down also works\&.
+.RE
+.PP
+k
+.RS 4
+Select previous peer (in select mode); arrow up also works\&.
+.RE
+.PP
+m
+.RS 4
+Toggle MRUlist\-only mode; suppresses peer display when on\&.
+.RE
+.PP
+n
+.RS 4
+Toggle display of hostnames vs\&. IP addresses vs ntpd supplied names plus IP addresses or ntpd supplied names and hostnames (default is hostnames)\&.
+.RE
+.PP
+o
+.RS 4
+Change peer display to opeers mode, showing destination address\&.
+.RE
+.PP
+p
+.RS 4
+Change peer display to default mode, showing refid\&.
+.RE
+.PP
+q
+.RS 4
+Cleanly terminate the program\&.
+.RE
+.PP
+r
+.RS 4
+Change to dextral mode, identical to
+\fIp\fR
+save that the refid, tally \e and remote clock are on the right\&.
+.RE
+.PP
+s
+.RS 4
+Toggle display of only reachable hosts (default is all hosts)\&.
+.RE
+.PP
+u
+.RS 4
+Toggle display of units for time values\&. (default is off)
+.RE
+.PP
+w
+.RS 4
+Toggle wide mode\&.
+.RE
+.PP
+x
+.RS 4
+Cleanly terminate the program\&.
+.RE
+.PP
+<space>
+.RS 4
+Rotate through a/n/o/p display modes\&.
+.RE
+.PP
++
+.RS 4
+Increase debugging level\&. Output goes to ntpmon\&.log
+.RE
+.PP
+\-
+.RS 4
+Decrease debugging level\&.
+.RE
+.PP
+?
+.RS 4
+Display help screen
+.RE
+.SH "OPTIONS"
+.PP
+\-d
+.RS 4
+Increase output debug message level
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+may appear multiple times
+.RE
+.RE
+.PP
+\-D
+.RS 4
+Set the output debug message level
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+may appear multiple times
+.RE
+.RE
+.PP
+\-h
+.RS 4
+Print a usage message\&.
+.RE
+.PP
+\-l
+.RS 4
+Logs debug messages to the provided filename
+.RE
+.PP
+\-n
+.RS 4
+Show IP addresses (vs\&. hostnames)
+.RE
+.PP
+\-s, \-\-srcname
+.RS 4
+Show srchost first then names and numbers
+.RE
+.PP
+\-S, \-\-srcnumber
+.RS 4
+Show srchost first then numbers
+.RE
+.PP
+\-u
+.RS 4
+Show units
+.RE
+.PP
+\-V
+.RS 4
+Display version and exit\&.
+.RE
+.SH "KNOWN BUGS"
+.sp
+When run in a terminal that does not allow UTF\-8 ntpmon will downgrade its unit display to a non\-unicode version\&. ntpmon has to interact with the curses and locale libraries, which prevents it from forcing the use of UTF\-8\&.
+.sp
+When querying a version of ntpd older than NTPsec 0\&.9\&.6, ntpmon will appear to hang when monitoring hosts with extremely long MRU lists \- in particular, public pool hosts\&. Correct behavior requires a Mode 6 protocol extension not yet present in those versions\&.
+.sp
+Even with this extension, monitoring a sufficiently high\-traffic server sometimes fails\&.
+.sp
+When using the \-u option, very old xterms may fail to render μ correctly\&. If this happens, be sure your xterm is started with the \-u8 option, or the \fIutf8\fR resource\*(Aq, and that your console font contains the UTF\-8 μ character\&. Also confirm your LANG environment variable is set to a UTF\-8 language, like this: "export LANG=en_US\&.utf8"\&.
+.sp
+Timestamp interpretation in this program is likely to fail in flaky ways if the local system clock has not already been approximately synchronized to UTC\&. Querying a server based in a different NTP era than the current one is especially likely to fail\&.
+.sp
+This program will behave in apparently buggy and only semi\-predictable ways when fetching MRU lists from \fIany\fR server with sufficiently high traffic\&.
+.sp
+The problem is fundamental\&. The Mode 6 protocol can\(cqt ship (and your client cannot accept) MRU records as fast as the daemon accepts incoming traffic\&. Under these circumstances, the daemon will repeatedly fail to ship an entire report, leading to long hangs as your client repeatedly re\-sends the request\&. Eventually the Mode 6 client library will throw an error indicating that a maximum number of restarts has been exceeded\&.
+.sp
+To avoid this problem, avoid monitoring over links that don\(cqt have enough capacity to handle the monitored server\(cqs \fIentire\fR NTP load\&.
+.SH "EXIT STATUS"
+.sp
+Always returns 0\&.

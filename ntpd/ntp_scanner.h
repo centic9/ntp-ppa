@@ -1,15 +1,17 @@
 /* ntp_scanner.h
  *
- * The header file for a simple lexical analyzer. 
+ * The header file for a simple lexical analyzer.
  *
- * Written By:	Sachin Kamboj
+ * Written By:	Sachin Kambojq
  *		University of Delaware
  *		Newark, DE 19711
- * Copyright (c) 2006
+ * Copyright Sachin Kamboj
+ * Copyright the NTPsec project contributors
+ * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#ifndef NTP_SCANNER_H
-#define NTP_SCANNER_H
+#ifndef GUARD_NTP_SCANNER_H
+#define GUARD_NTP_SCANNER_H
 
 #include "ntp_config.h"
 
@@ -42,18 +44,17 @@ typedef enum {
 	FOLLBY_NON_ACCEPTING
 } follby;
 
-#define MAXLINE		1024	/* maximum length of line */
 #define MAXINCLUDELEVEL	5	/* maximum include file levels */
 
 /* STRUCTURES
  * ----------
  */
 
-/* 
+/*
  * Define a structure to hold the FSA for the keywords.
- * The structure is actually a trie.
+ * The structure is actually a tree.
  *
- * To save space, a single u_int32 encodes four fields, and a fifth
+ * To save space, a single uint32_t encodes four fields, and a fifth
  * (the token completed for terminal states) is implied by the index of
  * the rule within the scan state array, taking advantage of the fact
  * there are more scan states than the highest T_ token number.
@@ -70,18 +71,18 @@ typedef enum {
  */
 
 #define S_ST(ch, fb, match_n, other_n) (			\
-	(u_char)((ch) & 0xff) |					\
-	((u_int32)(fb) << 8) |					\
-	((u_int32)(match_n) << 10) |				\
-	((u_int32)(other_n) << 21)				\
+	(uint8_t)((ch) & 0xff) |					\
+	((uint32_t)(fb) << 8) |					\
+	((uint32_t)(match_n) << 10) |				\
+	((uint32_t)(other_n) << 21)				\
 )
 
-#define SS_CH(ss)	((char)(u_char)((ss) & 0xff))
-#define SS_FB(ss)	(((u_int)(ss) >>  8) & 0x3)
-#define SS_MATCH_N(ss)	(((u_int)(ss) >> 10) & 0x7ff)
-#define SS_OTHER_N(ss)	(((u_int)(ss) >> 21) & 0x7ff)
+#define SS_CH(ss)	((char)(uint8_t)((ss) & 0xff))
+#define SS_FB(ss)	(((unsigned int)(ss) >>  8) & 0x3)
+#define SS_MATCH_N(ss)	(((unsigned int)(ss) >> 10) & 0x7ff)
+#define SS_OTHER_N(ss)	(((unsigned int)(ss) >> 21) & 0x7ff)
 
-typedef u_int32 scan_state;
+typedef uint32_t scan_state;
 
 struct LCPOS {
 	int nline;
@@ -96,9 +97,9 @@ struct LCPOS {
 struct FILE_INFO {
 	struct FILE_INFO * st_next;	/* next on stack */
 	FILE *		   fpi;		/* File Descriptor */
-	int                force_eof;	/* locked or not */
+	bool               force_eof;	/* locked or not */
 	int                backch;	/* ungetch buffer */
-	
+
 	struct LCPOS       curpos;	/* current scan position */
 	struct LCPOS       bakpos;	/* last line end for ungetc */
 	struct LCPOS       tokpos;	/* current token position */
@@ -108,15 +109,10 @@ struct FILE_INFO {
 };
 
 
-/* SCANNER GLOBAL VARIABLES 
+/* SCANNER GLOBAL VARIABLES
  * ------------------------
  */
 extern config_tree cfgt;	  /* Parser output stored here */
-
-/* VARIOUS EXTERNAL DECLARATIONS
- * -----------------------------
- */
-extern int old_config_style;
 
 /* VARIOUS SUBROUTINE DECLARATIONS
  * -------------------------------
@@ -126,17 +122,22 @@ extern char *quote_if_needed(char *str);
 int yylex(void);
 
 /* managing the input source stack itself */
-extern int/*BOOL*/ lex_init_stack(const char * path, const char * mode);
+extern bool lex_init_stack(const char * path, const char * mode);
 extern void        lex_drop_stack(void);
-extern int/*BOOL*/ lex_flush_stack(void);
+extern bool lex_flush_stack(void);
+
+/* path management for config directories */
+extern void reparent(char *, size_t, const char *, const char *);
+extern bool is_directory(const char *);
 
 /* add/remove a nested input source */
-extern int/*BOOL*/ lex_push_file(const char * path, const char * mode);
-extern int/*BOOL*/ lex_pop_file(void);
+extern bool lex_push_file(const char * path);
+extern bool lex_pop_file(void);
 
 /* input stack state query functions */
 extern size_t      lex_level(void);
-extern int/*BOOL*/ lex_from_file(void);
+extern bool lex_from_file(void);
 extern struct FILE_INFO * lex_current(void);
+extern const char * const keyword_text[];
 
-#endif	/* NTP_SCANNER_H */
+#endif	/* GUARD_NTP_SCANNER_H */
