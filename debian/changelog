@@ -1,6 +1,9 @@
-<<<<<<< HEAD
-ntpsec (1.2.2+dfsg1-1) unstable; urgency=medium
-=======
+ntpsec (1.2.2+dfsg1-1ubuntu0~ppa1) jammy; urgency=medium
+
+  * Backport to Jammy.
+
+ -- Dominik Stadler (Ubuntu key) <dominik.stadler@gmx.at>  Fri, 20 Jan 2023 10:42:53 +0100
+
 ntp (1:4.2.8p15+dfsg-1ubuntu3~ppa2) jammy; urgency=medium
 
   * Revert as ntpd fails to start up now.
@@ -379,7 +382,26 @@ ntp (1:4.2.8p10+dfsg-1ubuntu1) artful; urgency=medium
  -- Christian Ehrhardt <christian.ehrhardt@canonical.com>  Tue, 02 May 2017 16:24:56 +0200
 
 ntp (1:4.2.8p10+dfsg-1) unstable; urgency=high
->>>>>>> ppa/1%4.2.8p15+dfsg-1ubuntu2
+
+  * New upstream version
+    - Restore/cleanup NTPv1 support
+    - NTS supports partial wildcards, for example *.example.com
+    - Work on documentation, ntpdate, ntpheat, ntploggpg, ntpq’s sysstats,
+      ntpviz, and seccomp.
+    - NTP auth no longer breaks on NULs.
+    - The NTS server now saves 10 days worth of cookie keys. This will allow
+      clients that only poll once a day to use NTS without using NTS-KE to
+      keep cookies up to date.
+    - rawstats now logs dropped packets and their BOGON code
+    - Add 4 or 6 to DNS/NTS RefID tags to indicate that the DNS or NTS-KE has
+      succeeded but NTP has not worked yet.
+    - Fix hash validation in ntpleapfetch again
+  * Update Standards-Version to 4.6.2 (no changes)
+  * Write pidfile in parent (Closes: 1023023)
+
+ -- Richard Laager <rlaager@debian.org>  Mon, 16 Jan 2023 21:50:45 -0600
+
+ntpsec (1.2.2+dfsg1-1) unstable; urgency=medium
 
   * New upstream version
     - Restore/cleanup NTPv1 support
