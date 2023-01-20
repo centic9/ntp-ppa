@@ -6,3 +6,4 @@ libedit.patch
 debian-locfile.patch
 sntp-kod-location.patch
 glibc-2.34.patch
+resource_exhaustion_fix_bug_2646
