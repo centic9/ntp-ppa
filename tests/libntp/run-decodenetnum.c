@@ -33,14 +33,19 @@ extern void test_IPv4AddressOnly(void);
 extern void test_IPv4AddressWithPort(void);
 extern void test_IPv6AddressOnly(void);
 extern void test_IPv6AddressWithPort(void);
+extern void test_IPv6AddressWithScope(void);
+extern void test_IPv6AddressWithPortAndScope(void);
 extern void test_IllegalAddress(void);
 extern void test_IllegalCharInPort(void);
+extern void test_NameBufOverflow(void);
 
 
 //=======Suite Setup=====
 static void suite_setup(void)
 {
+extern int change_iobufs(int);
 extern int change_logfile(const char*, int);
+change_iobufs(1);
 change_logfile("stderr", 0);
 }
 
@@ -65,8 +70,11 @@ int main(int argc, char *argv[])
   RUN_TEST(test_IPv4AddressWithPort, 9);
   RUN_TEST(test_IPv6AddressOnly, 10);
   RUN_TEST(test_IPv6AddressWithPort, 11);
-  RUN_TEST(test_IllegalAddress, 12);
-  RUN_TEST(test_IllegalCharInPort, 13);
+  RUN_TEST(test_IPv6AddressWithScope, 12);
+  RUN_TEST(test_IPv6AddressWithPortAndScope, 13);
+  RUN_TEST(test_IllegalAddress, 14);
+  RUN_TEST(test_IllegalCharInPort, 15);
+  RUN_TEST(test_NameBufOverflow, 16);
 
   return (UnityEnd());
 }
